@@ -6,12 +6,9 @@
 <title>TAO. Portfolio Lab</title>
 <meta name="robots" content="noindex">
 <meta name="description" content="Chuantao Zhu (Tao), selected works 2023–2026. Experimental build.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=EB+Garamond:ital,wght@1,400&family=IBM+Plex+Mono:ital,wght@1,300&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@700&family=UnifrakturMaguntia&text=TAO.&display=block" rel="stylesheet">
 <style>
 /* Layout idea: a fixed 12-column Swiss grid drawn as hairlines on near-white grey; one word, TAO., alone on the
-   first screen, its glyphs trading typefaces while the page rests. Works then fall through the grid as a masonry
+   first screen, stretched tall in Helvetica Bold and introduced by stretching alone. Works then fall through the grid as a masonry
    (瀑布流) in WebGL, and stretch into vertical strips and dissolve as they pass the top of the screen. */
 :root{
   --paper:#F0F0F0;
@@ -61,16 +58,16 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 }
 
 /* hero */
-#hero{position:relative;height:100vh;height:100svh;display:flex;align-items:center;justify-content:center}
+#hero{position:relative;height:100vh;height:100svh;overflow:hidden}
 .mega{font-family:var(--display);font-weight:700;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
-#hero .mega{margin:0;padding:0}
-.mega .ln{display:block;overflow:hidden;padding-top:.08em;margin-top:-.08em}
-#hero .ln{display:flex;justify-content:center;padding-bottom:.06em;margin-bottom:-.06em}
+#hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:-.005em}
+.mega .ln{display:block}
+#hero .ln{display:flex;justify-content:center}
 .mega .chr{display:inline-block;transform-origin:50% 100%;will-change:transform}
-#hero .chr{display:inline-flex;justify-content:center;flex:none;line-height:inherit}
-#hero .g{display:inline-block;line-height:inherit;font-synthesis:none}
+html.intro #hero .chr{transform:scaleY(.015)}
+html:not(.ready) #nav,html:not(.ready) #bar,html:not(.ready) #lines,html:not(.ready) .hero-name{opacity:0}
+#nav,#bar,#lines,.hero-name{transition:opacity 1s ease}
 .hero-name{position:absolute;left:var(--m);bottom:14px;font-size:13px;font-weight:500}
-html.intro .mega .chr{transform:translateY(105%)}
 .mega .chr{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
 html.ready .mega .chr{transition:none}
 html.ready .mega .ln{overflow:visible}
@@ -180,7 +177,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 #viewer .v-zone{position:absolute;top:var(--navh);bottom:52px;width:50%;cursor:w-resize}
 #viewer .v-zone.nx{right:0;cursor:e-resize}
 
-@media (prefers-reduced-motion:reduce){ .mega .chr{transition:none} html.intro .mega .chr{transform:none} }
+
 </style>
 </head>
 <body>
@@ -197,7 +194,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 
 <main id="main">
   <section id="hero">
-    <h1 class="mega" aria-label="TAO."><span class="ln"><span class="chr"><span class="g">T</span></span><span class="chr"><span class="g">A</span></span><span class="chr"><span class="g">O</span></span><span class="chr"><span class="g">.</span></span></span></h1>
+    <h1 class="mega" aria-label="TAO."><span class="ln"><span class="chr">T</span><span class="chr">A</span><span class="chr">O</span><span class="chr">.</span></span></h1>
     <p class="hero-name">Chuantao Zhu</p>
   </section>
 
@@ -326,54 +323,30 @@ function distribute(n) {
 /* ---------- state ---------- */
 let vw = innerWidth, vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
 const F3 = [0, 1, -.55], F2 = [0, .85];
-const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')], glyphs = [...document.querySelectorAll('#hero .g')];
-let heroH = 1, heroLive = false, navOff = 50;
+const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')];
+let heroH = 1, navOff = 50;
 
-/* ---------- TAO.: each glyph trades typefaces while the page rests ---------- */
-const HF = '"Helvetica Neue", Helvetica, Arial, sans-serif';
-const STY = [                                   // k evens out cap heights across faces
-  { f: HF, w: 700 },
-  { f: HF, w: 200, s: 'italic' },
-  { f: '"Bodoni Moda", serif', w: 500, v: '"opsz" 96', k: 1.07, web: 1 },
-  { f: '"Bodoni Moda", serif', w: 900, s: 'italic', v: '"opsz" 96', k: 1.07, web: 1 },
-  { f: '"EB Garamond", serif', w: 400, s: 'italic', k: 1.12, web: 1 },
-  { f: '"Instrument Serif", serif', w: 400, k: 1.04, web: 1 },
-  { f: '"Instrument Serif", serif', w: 400, s: 'italic', k: 1.04, web: 1 },
-  { f: '"IBM Plex Mono", monospace', w: 300, s: 'italic', k: 1.02, web: 1 },
-  { f: '"Space Mono", monospace', w: 700, k: 1, web: 1 },
-  { f: '"Archivo", sans-serif', w: 900, v: '"wdth" 62', k: 1, web: 1 },
-  { f: '"Archivo", sans-serif', w: 100, v: '"wdth" 125', k: 1, web: 1 },
-  { f: '"UnifrakturMaguntia", serif', w: 400, k: 1.06, web: 1 },
-];
-STY.forEach(st => {
-  if (!st.web) { st.ok = true; return; }
-  if (document.fonts) document.fonts.load(`${st.s || 'normal'} ${st.w} 100px ${st.f}`, 'TAO.').then(f => { st.ok = f.length > 0; }, () => {});
-});
-function apply(g, st) {
-  if (g._st === st) return; g._st = st; const z = g.style;
-  z.fontFamily = st.f; z.fontWeight = st.w; z.fontStyle = st.s || 'normal';
-  z.fontVariationSettings = st.v || 'normal'; z.fontSize = (st.k || 1) + 'em';
+/* ---------- TAO.: stretched Helvetica, introduced by stretching alone ---------- */
+let S0 = 1, SMAX = 3, introDone = REDUCE, introT0 = 0;
+const expoOut = t => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
+const quintIO = t => (t < .5 ? 16 * t ** 5 : 1 - Math.pow(-2 * t + 2, 5) / 2);
+function intro(now) {
+  if (!introT0) introT0 = now;
+  const t = (now - introT0) / 1000;
+  let done = true;
+  chrs.forEach((c, i) => {
+    const u = t - .3 - i * .09; let k;              // each glyph: grow from a hairline past the top edge, hold, settle
+    if (u <= 0) { k = .015; done = false; }
+    else if (u < .72) { k = .015 + (SMAX - .015) * expoOut(u / .72); done = false; }
+    else if (u < .8) { k = SMAX; done = false; }
+    else if (u < 1.85) { k = SMAX + (S0 - SMAX) * quintIO((u - .8) / 1.05); done = false; }
+    else k = S0;
+    c.style.transform = `scaleY(${k.toFixed(4)})`;
+  });
+  if (t > 1.9) html.classList.add('ready');
+  if (done) { introDone = true; html.classList.remove('intro'); }
 }
-glyphs.forEach(g => apply(g, STY[0]));
-let idleSince = 0, settled = true, nextUnison = 0;
-const pick = a => a[(Math.random() * a.length) | 0];
-function cycle(now) {
-  const idle = heroLive && cur < vh * .2 && Math.abs(vel) < .35 && !vt && !document.hidden;
-  if (!idle) { idleSince = 0; if (!settled) { glyphs.forEach(g => apply(g, STY[0])); settled = true; } return; }
-  if (!idleSince) { idleSince = now; nextUnison = now + 2600; glyphs.forEach((g, i) => { g._next = now + 300 + i * 120; }); }
-  settled = false;
-  const ready = STY.filter(st => st.ok);
-  if (ready.length < 3) return;
-  if (now >= nextUnison) {                       // every few seconds all four agree for a beat
-    const st = Math.random() < .35 ? STY[0] : pick(ready);
-    glyphs.forEach((g, i) => { apply(g, st); g._next = now + 700 + i * 70; });
-    nextUnison = now + 2400 + Math.random() * 2400; return;
-  }
-  for (const g of glyphs) if (now >= g._next) {
-    let st = pick(ready); if (st === g._st) st = pick(ready);
-    apply(g, st); g._next = now + 110 + Math.random() * 380;
-  }
-}
+
 
 function fitMega(el, target) {
   const ln = el.querySelector('.ln');
@@ -384,15 +357,22 @@ function fitMega(el, target) {
 }
 function fitHero() {
   const avail = vw - 2 * parseFloat(getComputedStyle(html).getPropertyValue('--m'));
-  const h1 = $('#hero .mega'), saved = glyphs.map(g => g._st), air = 5;
-  glyphs.forEach(g => apply(g, STY[0]));               // cells are sized on Helvetica Bold
-  h1.style.fontSize = '100px'; chrs.forEach(c => { c.style.width = 'auto'; });
-  const ws = glyphs.map(g => g.offsetWidth);
-  const total = ws.reduce((a, b) => a + b + air, 0);
-  const fs = Math.min(100 * avail * .97 / total, vh * .6 / .72);
-  h1.style.fontSize = fs.toFixed(2) + 'px'; h1.style.lineHeight = (fs * .74).toFixed(2) + 'px';
-  chrs.forEach((c, i) => { c.style.width = ((ws[i] + air) / 100).toFixed(4) + 'em'; });
-  glyphs.forEach((g, i) => apply(g, saved[i] || STY[0]));
+  const h1 = $('#hero .mega'), ln = $('.ln', h1);
+  h1.style.fontSize = '100px'; h1.style.lineHeight = '100px'; ln.style.display = 'inline-flex';
+  const w = ln.getBoundingClientRect().width; ln.style.display = '';
+  const fs = 100 * avail / Math.max(1, w), L = fs;
+  h1.style.fontSize = fs.toFixed(2) + 'px'; h1.style.lineHeight = L.toFixed(2) + 'px';
+  const cx = document.createElement('canvas').getContext('2d');
+  cx.font = `700 ${fs}px ${getComputedStyle(h1).fontFamily}`;
+  const mt = cx.measureText('TAO.');
+  const cap = cx.measureText('T').actualBoundingBoxAscent || fs * .717;
+  const A = mt.fontBoundingBoxAscent || fs * .95, D = mt.fontBoundingBoxDescent || fs * .25;
+  const bo = (L - (A + D)) / 2 + A;                       // baseline, measured from the top of the line box
+  const base = vh - (vw < 700 ? 40 : 46), capTop = Math.max(vh * .19, navOffset() + 40);
+  S0 = clamp((base - capTop) / cap, .6, 5);              // rest: cap height fills the band under the nav
+  SMAX = Math.max((base + vh * .05) / cap, S0 * 1.15);   // intro peak: past the top edge of the screen
+  h1.style.top = (base - bo).toFixed(2) + 'px';
+  chrs.forEach(c => { c.style.transformOrigin = `50% ${bo.toFixed(2)}px`; if (introDone) c.style.transform = `scaleY(${S0.toFixed(4)})`; });
   fitMega($('.foot .mega'), avail);
 }
 
@@ -610,11 +590,11 @@ function frame(now) {
   vel = REDUCE ? 0 : lerp(vel, clamp((cur - prev) / k, -60, 60), .18); prev = cur;
 
   // hero letters stretch as they leave
-  if (heroLive && cur < heroH + 50) {
+  if (!introDone) intro(now);
+  else if (cur < heroH + 50) {
     const hp = clamp(cur / (heroH * .9), 0, 1);
-    chrs.forEach((c, i) => { const s = 1 + hp * hp * (.5 + i * .55); c.style.transform = `scaleY(${s.toFixed(4)}) skewX(${(-vel * .12).toFixed(2)}deg)`; });
+    chrs.forEach((c, i) => { const s = S0 * (1 + hp * hp * (.35 + i * .3)); c.style.transform = `scaleY(${s.toFixed(4)}) skewX(${(-vel * .12).toFixed(2)}deg)`; });
   }
-  cycle(now);
   // chapters: column parallax, pinned meta, marquee
   for (const ch of chapters) {
     if (cur + vh < ch.elTop - 100 || cur > ch.top + ch.h + 100) continue;
@@ -702,13 +682,7 @@ let rt = 0;
 addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 120); });
 layout();
 requestAnimationFrame(frame);
-setTimeout(() => {
-  html.classList.remove('intro');
-  chrs.forEach((c, i) => { c.style.transitionDelay = (0.05 + i * .08) + 's'; });
-  setTimeout(() => { html.classList.add('ready'); chrs.forEach(c => { c.style.transitionDelay = ''; }); heroLive = !REDUCE; }, 1550);
-}, 120);
-let lt = 0;
-if (document.fonts) document.fonts.addEventListener('loadingdone', () => { clearTimeout(lt); lt = setTimeout(layout, 60); });
+if (REDUCE) html.classList.add('ready');
 })();
 </script>
 </body>
