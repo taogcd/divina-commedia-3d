@@ -76,7 +76,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 html.intro-out #intro{opacity:0;transition:opacity .45s linear}
 html.intro-gone #intro{display:none}
 html:not(.ready) #nav,html:not(.ready) #bar,html:not(.ready) #lines,html:not(.ready) .hero-name{opacity:0}
-#nav,#bar,#lines,.hero-name{transition:opacity 1s ease}
+#nav,#bar,#lines,.hero-name{transition:opacity 1s ease;will-change:opacity}   /* stay on their own layers once faded in */
 .hero-name{position:absolute;left:var(--m);bottom:14px;font-size:13px;font-weight:700}
 .mega .chr{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
 html.ready .mega .chr{transition:none}
@@ -346,7 +346,7 @@ let heroH = 1, navOff = 50;
    (field curvature). The word slides in from above in Extra Condensed Thin with the lens near its feet; the
    lens climbs through the letters while the axes run to the resting instance; then the lens relaxes and the
    word settles. Drawn as vectors every frame, so it stays sharp at any magnification. It always plays out. */
-let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false, WEND = 100, HB = null;
+let glWarm = REDUCE, S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false, WEND = 100, HB = null;
 const IC = document.getElementById('intro'), ix = IC.getContext('2d');
 const LET = ['T', 'A', 'O', '.'], STAG = .07;
 const W0 = 50, G0 = 100, G1 = 900;                         // start: Extra Condensed Thin; end weight: 900
@@ -433,7 +433,7 @@ function introFrame(now) {
     introDone = true;
     drawIntro(INTRO_END);                                  // the canvas holds the resting frame while it fades
     html.classList.add('ready', 'intro-out'); html.classList.remove('intro');
-    setTimeout(() => html.classList.add('intro-gone'), 600); return;
+    setTimeout(() => { html.classList.add('intro-gone'); glWarm = true; }, 600); return;
   }
   drawIntro(t);
   if (t > PH.collapse[0] + .35) html.classList.add('ready');
@@ -725,7 +725,7 @@ function frame(now) {
     pRot = lerp(pRot, clamp((px - ox) * .45, -12, 12), .2);
     peek.style.transform = `translate3d(${(px + 24).toFixed(1)}px,${(py - 40).toFixed(1)}px,0) rotate(${pRot.toFixed(2)}deg)`;
   }
-  if (gl) { if (frameN++ % 8 === 0) manage(); drawGL(now); }
+  if (gl) { if (glWarm && frameN++ % 8 === 0) manage(); drawGL(now); }   // no texture uploads until the intro has handed over
 }
 
 /* ---------- viewer ---------- */
