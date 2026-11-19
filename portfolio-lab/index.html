@@ -25,7 +25,8 @@
 }
 @media (max-width:699px){ :root{ --m:16px; --gut:10px; --navh:40px; } }
 *{box-sizing:border-box;margin:0;padding:0}
-html{background:var(--paper);color:var(--ink);-webkit-text-size-adjust:100%}
+html{background:var(--paper);color:var(--ink);-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
+html.smooth{overflow-y:scroll}
 body{background:var(--paper);font:400 15px/1.45 var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 html.lock, html.lock body{overflow:hidden}
 a{color:inherit;text-decoration:none}
@@ -66,7 +67,8 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 .mega .chr{display:inline-block;transform-origin:50% 100%;will-change:transform}
 #intro{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
 html.intro #hero .chr{visibility:hidden}
-html:not(.intro) #intro{display:none}
+html:not(.intro) #intro{opacity:0;transition:opacity .35s linear}
+html.intro-gone #intro{display:none}
 html:not(.ready) #nav,html:not(.ready) #bar,html:not(.ready) #lines,html:not(.ready) .hero-name{opacity:0}
 #nav,#bar,#lines,.hero-name{transition:opacity 1s ease}
 .hero-name{position:absolute;left:var(--m);bottom:14px;font-size:13px;font-weight:500}
@@ -324,7 +326,8 @@ function distribute(n) {
 }
 
 /* ---------- state ---------- */
-let vw = innerWidth, vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
+const layoutW = () => document.getElementById('lines').getBoundingClientRect().width || document.documentElement.clientWidth;  // width of the fixed layers = the page's real layout width, scrollbar excluded
+let vw = layoutW(), vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
 const F3 = [0, 1, -.55], F2 = [0, .85];
 const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')];
 let heroH = 1, navOff = 50;
@@ -363,13 +366,14 @@ function drawIntro(t) {
   const G = IG; ix.clearRect(0, 0, vw, vh); if (!G) return;
   const capNat = G.cap * G.k, fillH = vh + 2;
   G.cells.forEach((cell, i) => {
+    const r = chrs[i].getBoundingClientRect(); cell.x = r.left; cell.w = r.width;
     const u = t - i * STAG;
     let H, su, p, yb;                                        // cap height on screen, row scale, smear point (0 top, 1 baseline), baseline y
     if (u < PH.appear[1]) { H = fillH * expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); su = Math.min(1, H / capNat); p = .985; yb = H; }
     else if (u < PH.sweep[1]) { H = fillH; su = 1; p = .985 - .96 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); yb = fillH; }
     else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = lerp(1, S0, e); H = lerp(fillH, S0 * capNat, e); p = .025; yb = lerp(fillH, G.base, e); }
     if (H < .5) return;
-    const sr = srcs[i], wS = sr.c.width, hS = sr.c.height, sx = cell.w / cell.adv, dx = cell.x - G.pad * sx, dw = wS * sx;
+    const sr = srcs[i], wS = sr.c.width, hS = sr.c.height, sx = G.k, dx = cell.x - G.pad * sx, dw = wS * sx;   // same scale as the DOM glyph
     const sk = su * G.k, E = Math.max(0, H - su * capNat), rowH = su * capNat / NB, sh = G.cap / NB;
     let tot = 0;
     for (let b = 0; b < NB; b++) { const y = (b + .5) / NB; wB[b] = Math.exp(-(((y - p) / SIG) ** 2)); tot += wB[b]; }
@@ -389,13 +393,18 @@ function introFrame(now) {
   if (t >= INTRO_END) {
     introDone = true;
     chrs.forEach(c => { c.style.transform = `scaleY(${S0.toFixed(4)})`; });
-    html.classList.add('ready'); html.classList.remove('intro'); return;
+    drawIntro(INTRO_END);                                  // the canvas holds the resting frame while it fades
+    html.classList.add('ready'); html.classList.remove('intro');
+    setTimeout(() => html.classList.add('intro-gone'), 450); return;
   }
   drawIntro(t);
   if (t > PH.collapse[0] + .35) html.classList.add('ready');
 }
-const skipIntro = () => { if (!introDone && introT0) introT0 = performance.now() - INTRO_END * 1000; };
-['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev => addEventListener(ev, skipIntro, { passive: true }));
+const holdScroll = e => { if (!introDone) e.preventDefault(); };
+addEventListener('wheel', holdScroll, { passive: false });
+addEventListener('touchmove', holdScroll, { passive: false });
+addEventListener('keydown', e => { if (!introDone && [' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) e.preventDefault(); });
+addEventListener('scroll', () => { if (!introDone && window.scrollY) window.scrollTo(0, 0); });
 
 
 function fitMega(el, target) {
@@ -427,7 +436,7 @@ function fitHero() {
 }
 
 function layout() {
-  vw = innerWidth; vh = innerHeight;
+  vw = layoutW(); vh = innerHeight;
   const n = vw < 700 ? 2 : 3;
   if (n !== nCols) distribute(n);
   A = REDUCE ? 0 : (vw < 700 ? vh * .09 : vh * .22);
@@ -732,7 +741,7 @@ let rt = 0;
 addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 120); });
 layout();
 requestAnimationFrame(frame);
-if (REDUCE) html.classList.add('ready');
+if (REDUCE) html.classList.add('ready', 'intro-gone');
 })();
 </script>
 </body>
