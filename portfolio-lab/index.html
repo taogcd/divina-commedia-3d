@@ -4,11 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TAO. Portfolio Lab</title>
+<link rel="preconnect" href="https://use.typekit.net" crossorigin>
+<link rel="stylesheet" href="https://use.typekit.net/fuc7uis.css">
 <meta name="robots" content="noindex">
 <meta name="description" content="Chuantao Zhu (Tao), selected works 2023–2026. Experimental build.">
 <style>
 /* Layout idea: a fixed 12-column Swiss grid drawn as hairlines on near-white grey; one word, TAO., alone on the
-   first screen, stretched tall in Helvetica Bold and opened by a smear that travels through the letters. Works then fall through the grid as a masonry
+   first screen, stretched tall in Gotham Ultra and opened by a smear that travels through the letters,
+   turning them from Gotham Condensed Thin into Ultra. Works then fall through the grid as a masonry
    (瀑布流) in WebGL, and stretch into vertical strips and dissolve as they pass the top of the screen. */
 :root{
   --paper:#F0F0F0;
@@ -17,8 +20,9 @@
   --rule:rgba(17,17,17,.08);
   --accent:#FF3B1F;
   --ph:#E2E2E2;
-  --display:"Helvetica Neue",Helvetica,Arial,sans-serif;
-  --body:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  --display:"gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --body:"gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --cond:"gotham-condensed","gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --cjk:"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
   --m:20px; --gut:16px; --navh:44px; --A:200px; --vg:clamp(28px,6vh,76px);
   color-scheme:light;
@@ -45,7 +49,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 
 /* nav */
 #nav{position:fixed;top:0;left:0;right:0;height:var(--navh);z-index:6;align-items:center;color:#fff;mix-blend-mode:difference;font-size:13px}
-#nav .n1{grid-column:1/4;font-weight:500}
+#nav .n1{grid-column:1/4;font-weight:700}
 #nav .n2{grid-column:4/7}
 #nav .n3{grid-column:7/10;display:flex;gap:18px;white-space:nowrap}
 #nav .n4{grid-column:10/13;display:flex;justify-content:space-between}
@@ -60,7 +64,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 
 /* hero */
 #hero{position:relative;height:100vh;height:100svh;overflow:hidden}
-.mega{font-family:var(--display);font-weight:700;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
+.mega{font-family:var(--display);font-weight:900;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
 #hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:-.005em}
 .mega .ln{display:block}
 #hero .ln{display:flex;justify-content:center}
@@ -71,7 +75,7 @@ html:not(.intro) #intro{opacity:0;transition:opacity .35s linear}
 html.intro-gone #intro{display:none}
 html:not(.ready) #nav,html:not(.ready) #bar,html:not(.ready) #lines,html:not(.ready) .hero-name{opacity:0}
 #nav,#bar,#lines,.hero-name{transition:opacity 1s ease}
-.hero-name{position:absolute;left:var(--m);bottom:14px;font-size:13px;font-weight:500}
+.hero-name{position:absolute;left:var(--m);bottom:14px;font-size:13px;font-weight:700}
 .mega .chr{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
 html.ready .mega .chr{transition:none}
 html.ready .mega .ln{overflow:visible}
@@ -79,7 +83,7 @@ html.ready .mega .ln{overflow:visible}
 /* index */
 #index{padding:13vh 0 16vh}
 .sec-h{align-items:end;padding-bottom:12px}
-.sec-h h2{grid-column:1/7;font-family:var(--display);font-weight:700;font-size:clamp(28px,3.4vw,52px);line-height:.95;letter-spacing:-.025em}
+.sec-h h2{grid-column:1/7;font-family:var(--display);font-weight:700;font-size:clamp(28px,3.4vw,52px);line-height:.95;letter-spacing:-.02em}
 .sec-h p{grid-column:7/13}
 .th,.row{align-items:baseline}
 .th{color:var(--ink-2);padding-block:8px;border-bottom:1px solid var(--ink)}
@@ -93,7 +97,7 @@ html.ready .mega .ln{overflow:visible}
 .row:hover,.row:focus-visible{color:var(--paper)}
 .row:hover::before,.row:focus-visible::before{transform:scaleY(1)}
 .row:hover .c-no{color:var(--accent)}
-.row .c-t{font-family:var(--display);font-weight:500;font-size:clamp(19px,2.15vw,34px);line-height:1.05;letter-spacing:-.02em}
+.row .c-t{font-family:var(--display);font-weight:400;font-size:clamp(19px,2.15vw,34px);line-height:1.05;letter-spacing:-.02em}
 .row .c-f{font-size:13px;line-height:1.3;color:inherit;opacity:.72}
 #peek{position:fixed;left:0;top:0;width:21vw;z-index:7;pointer-events:none;opacity:0;transition:opacity .3s;will-change:transform}
 #peek.on{opacity:1}
@@ -112,8 +116,8 @@ html.ready .mega .ln{overflow:visible}
 .ch-num .ch-num-f{grid-column:4/13;color:var(--ink-2)}
 .mq{overflow:hidden;margin-top:1.2vh;padding-bottom:.6vh}
 .mq-track{display:flex;width:max-content;will-change:transform}
-.mq-track span{font-family:var(--display);font-weight:700;font-size:13vw;line-height:.8;letter-spacing:-.035em;text-transform:uppercase;white-space:nowrap;padding-right:.14em;display:flex;align-items:flex-start}
-.mq-track i{font:500 12px/1 var(--body);letter-spacing:0;font-style:normal;margin:.9em .9em 0 .5em;font-variant-numeric:tabular-nums}
+.mq-track span{font-family:var(--cond);font-weight:700;font-size:16vw;line-height:.8;letter-spacing:-.01em;text-transform:uppercase;white-space:nowrap;padding-right:.14em;display:flex;align-items:flex-start}
+.mq-track i{font:400 12px/1 var(--body);letter-spacing:0;font-style:normal;margin:.9em .9em 0 .5em;font-variant-numeric:tabular-nums}
 .ch-body{padding-block:calc(var(--A) * .55 + 40px) calc(var(--A) * .55 + 60px);align-items:start}
 .ch-meta{grid-column:1/4;position:relative;z-index:3}
 .ch-meta-in{position:sticky;top:calc(var(--navh) + 24px);will-change:transform}
@@ -145,13 +149,13 @@ html:not(.gl) .tile-im{background:var(--ph)}
 }
 @media (max-width:699px){
   .ms{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .mq-track span{font-size:19vw}
+  .mq-track span{font-size:23vw}
   .ch-num .ch-num-f{display:none}
 }
 
 /* info */
 #info{padding:18vh 0 0}
-.state{grid-column:1/11;font-family:var(--display);font-weight:400;font-size:clamp(28px,4.3vw,66px);line-height:1.04;letter-spacing:-.03em;text-wrap:balance}
+.state{grid-column:1/11;font-family:var(--display);font-weight:400;font-size:clamp(26px,3.8vw,60px);line-height:1.08;letter-spacing:-.025em;text-wrap:balance}
 .state em{font-style:normal;color:var(--accent)}
 .facts{margin-top:12vh;row-gap:36px}
 .facts div{grid-column:span 3;border-top:1px solid var(--ink);padding-top:8px}
@@ -332,62 +336,75 @@ const F3 = [0, 1, -.55], F2 = [0, .85];
 const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')];
 let heroH = 1, navOff = 50;
 
-/* ---------- TAO.: stretched Helvetica Bold at rest ----------
-   Intro (canvas), after the opening of Obys' Grids: the word drops in from the top edge until it fills the
-   screen, its lowest row smeared down to the bottom; the smear point then travels up through each glyph, so the
-   letterforms slide down while everything above them becomes long vertical strokes; finally the word compresses
-   into its resting size. Helvetica Bold throughout. The last frame equals the resting DOM word, which takes over.
-   Scroll, click or a key skips to the end. */
-let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null;
+/* ---------- TAO.: stretched Gotham Ultra at rest ----------
+   Intro (canvas), after the opening of Obys' Grids: the word drops in from the top edge in Gotham Condensed Thin
+   until it fills the screen, its lowest row smeared down to the bottom; the smear point then travels up through
+   each glyph, and every row it has passed is redrawn from Gotham Ultra, so the letters turn from Condensed Thin to
+   Ultra from the bottom up while the part above the smear becomes long strokes; finally the word compresses into
+   its resting size. The last frame equals the resting DOM word, which takes over. The intro always plays out. */
+let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false;
 const IC = document.getElementById('intro'), ix = IC.getContext('2d');
 const LET = ['T', 'A', 'O', '.'], STAG = .07, NB = 180, SIG = .011;
+const FACE = { T: ['100', '"gotham-condensed"'], U: ['900', '"gotham"'] };   // thin start, ultra end
 const PH = { appear: [.12, .72], sweep: [.72, 2.65], collapse: [2.65, 3.4] };
 const INTRO_END = PH.collapse[1] + STAG * 3 + .06;
-const srcs = LET.map(() => { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; });
+const mk = () => { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; };
+const srcs = LET.map(() => ({ T: mk(), U: mk() }));
 const qio = t => (t < .5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
 const expoOut = t => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 const expoIO = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < .5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
 function introGeom(fs, base) {
-  const F = clamp(fs * 3, 500, 1000);                       // large source so the smear stays sharp
-  const fam = getComputedStyle($('#hero .mega')).fontFamily, m = srcs[0].x;
-  m.font = `700 ${F}px ${fam}`;
-  const cap = m.measureText('T').actualBoundingBoxAscent || F * .717, pad = F * .06;
-  const cells = chrs.map((c, i) => { const r = c.getBoundingClientRect(); return { x: r.left, w: r.width, adv: m.measureText(LET[i]).width }; });
-  srcs.forEach((sr, i) => {
-    sr.c.width = Math.ceil(cells[i].adv + 2 * pad); sr.c.height = Math.ceil(cap + 2 * pad);
-    const x = sr.x; x.font = `700 ${F}px ${fam}`; x.fillStyle = '#111111'; x.fillText(LET[i], pad, pad + cap);
+  const F = clamp(fs * 3, 500, 1000), pad = F * .06;       // large source so the smear stays sharp
+  const fb = '"Helvetica Neue",Helvetica,Arial,sans-serif';
+  srcs.forEach((s2, i) => {
+    for (const key of ['T', 'U']) {
+      const sr = s2[key], x = sr.x, font = `${FACE[key][0]} ${F}px ${FACE[key][1]},${fb}`;
+      x.font = font;
+      const cap = x.measureText('T').actualBoundingBoxAscent || F * .7, adv = x.measureText(LET[i]).width;
+      sr.c.width = Math.ceil(adv + 2 * pad); sr.c.height = Math.ceil(cap + 2 * pad);
+      x.font = font; x.fillStyle = '#111111'; x.fillText(LET[i], pad, pad + cap);
+      Object.assign(sr, { cap, adv });
+    }
   });
-  IG = { cap, pad, cells, base, k: fs / F };
+  IG = { pad, base, k: fs / F, cap: srcs[0].U.cap };
   const D = Math.min(window.devicePixelRatio || 1, 2);
   IC.width = Math.round(vw * D); IC.height = Math.round(vh * D); ix.setTransform(D, 0, 0, D, 0, 0);
 }
 const wB = new Float32Array(NB);
 function drawIntro(t) {
   const G = IG; ix.clearRect(0, 0, vw, vh); if (!G) return;
-  const capNat = G.cap * G.k, fillH = vh + 2;
-  G.cells.forEach((cell, i) => {
-    const r = chrs[i].getBoundingClientRect(); cell.x = r.left; cell.w = r.width;
+  const capNat = G.cap * G.k, fillH = vh + 2, k = G.k;
+  chrs.forEach((chr, i) => {
+    const cellX = chr.getBoundingClientRect().left;         // live position of the resting glyph
     const u = t - i * STAG;
-    let H, su, p, yb;                                        // cap height on screen, row scale, smear point (0 top, 1 baseline), baseline y
-    if (u < PH.appear[1]) { H = fillH * expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); su = Math.min(1, H / capNat); p = .985; yb = H; }
-    else if (u < PH.sweep[1]) { H = fillH; su = 1; p = .985 - .96 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); yb = fillH; }
-    else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = lerp(1, S0, e); H = lerp(fillH, S0 * capNat, e); p = .025; yb = lerp(fillH, G.base, e); }
+    let H, su, p, q, yb;    // cap height on screen, row scale, smear point and Thin/Ultra boundary (0 top, 1 baseline), baseline y
+    if (u < PH.appear[1]) { H = fillH * expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); su = Math.min(1, H / capNat); p = .985; q = 1.01; yb = H; }
+    else if (u < PH.sweep[1]) { H = fillH; su = 1; p = .985 - .96 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); q = p; yb = fillH; }
+    else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = lerp(1, S0, e); H = lerp(fillH, S0 * capNat, e); p = .025; q = -.01; yb = lerp(fillH, G.base, e); }
     if (H < .5) return;
-    const sr = srcs[i], wS = sr.c.width, hS = sr.c.height, sx = G.k, dx = cell.x - G.pad * sx, dw = wS * sx;   // same scale as the DOM glyph
-    const sk = su * G.k, E = Math.max(0, H - su * capNat), rowH = su * capNat / NB, sh = G.cap / NB;
+    const U = srcs[i].U, T = srcs[i].T, uAdv = U.adv * k;
+    const place = sr => { const w = sr.c.width * k; return { dx: cellX + (uAdv - sr.adv * k) / 2 - G.pad * k, dw: w }; };   // centred on the Ultra advance
+    const pU = place(U), pT = place(T);
+    const E = Math.max(0, H - su * capNat), rowH = su * capNat / NB, sk = su * k;
     let tot = 0;
     for (let b = 0; b < NB; b++) { const y = (b + .5) / NB; wB[b] = Math.exp(-(((y - p) / SIG) ** 2)); tot += wB[b]; }
-    ix.drawImage(sr.c, 0, G.pad + G.cap, wS, hS - G.pad - G.cap, dx, yb, dw, (hS - G.pad - G.cap) * sk);   // below the baseline
+    const lo = q < 1 ? U : T, plo = lo === U ? pU : pT;      // below the baseline: whichever face holds the bottom row
+    ix.drawImage(lo.c, 0, G.pad + lo.cap, lo.c.width, lo.c.height - G.pad - lo.cap, plo.dx, yb, plo.dw, (lo.c.height - G.pad - lo.cap) * sk);
     let y = yb;
     for (let b = NB - 1; b >= 0; b--) {
-      const h = rowH + E * wB[b] / tot;
-      if (y > -2 && y - h < vh + 2) ix.drawImage(sr.c, 0, G.pad + b * sh, wS, sh, dx, y - h, dw, h + .7);
+      const h = rowH + E * wB[b] / tot, yn = (b + .5) / NB;
+      if (y > -2 && y - h < vh + 2) {
+        const sr = yn >= q ? U : T, pl = sr === U ? pU : pT, sh = sr.cap / NB;
+        ix.drawImage(sr.c, 0, G.pad + b * sh, sr.c.width, sh, pl.dx, y - h, pl.dw, h + .7);
+      }
       y -= h;
     }
-    ix.drawImage(sr.c, 0, 0, wS, G.pad, dx, y - G.pad * sk, dw, G.pad * sk);                              // above the cap (overshoot)
+    const hi = q > 0 ? T : U, phi = hi === U ? pU : pT;      // above the cap: whichever face holds the top row
+    ix.drawImage(hi.c, 0, 0, hi.c.width, G.pad, phi.dx, y - G.pad * sk, phi.dw, G.pad * sk);
   });
 }
 function introFrame(now) {
+  if (!fontsReady) return;                                 // the screen stays empty until Gotham has arrived
   if (!introT0) introT0 = now;
   const t = (now - introT0) / 1000;
   if (t >= INTRO_END) {
@@ -422,7 +439,7 @@ function fitHero() {
   const fs = 100 * avail / Math.max(1, w), L = fs;
   h1.style.fontSize = fs.toFixed(2) + 'px'; h1.style.lineHeight = L.toFixed(2) + 'px';
   const cx = document.createElement('canvas').getContext('2d');
-  cx.font = `700 ${fs}px ${getComputedStyle(h1).fontFamily}`;
+  cx.font = `${getComputedStyle(h1).fontWeight} ${fs}px ${getComputedStyle(h1).fontFamily}`;
   const mt = cx.measureText('TAO.');
   const cap = cx.measureText('T').actualBoundingBoxAscent || fs * .717;
   const A = mt.fontBoundingBoxAscent || fs * .95, D = mt.fontBoundingBoxDescent || fs * .25;
@@ -742,6 +759,12 @@ addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(layout, 120
 layout();
 requestAnimationFrame(frame);
 if (REDUCE) html.classList.add('ready', 'intro-gone');
+// wait for the Gotham faces (Adobe Fonts kit) before measuring the word and starting the intro; give up after 4 s
+const faces = ['900 100px "gotham"', '100 100px "gotham-condensed"', '400 16px "gotham"', '700 16px "gotham"', '700 100px "gotham-condensed"'];
+Promise.race([document.fonts ? Promise.all(faces.map(f => document.fonts.load(f, 'TAO.'))) : Promise.resolve(), new Promise(r => setTimeout(r, 4000))])
+  .catch(() => {}).then(() => { layout(); fontsReady = true; });
+let lt = 0;
+if (document.fonts) document.fonts.addEventListener('loadingdone', () => { clearTimeout(lt); lt = setTimeout(layout, 80); });
 })();
 </script>
 </body>
