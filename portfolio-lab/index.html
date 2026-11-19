@@ -70,9 +70,10 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 .mega .ln{display:block}
 #hero .ln{display:flex;justify-content:center}
 .mega .chr{display:inline-block;transform-origin:50% 100%;will-change:transform}
-#intro{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
-html.intro #hero .chr{visibility:hidden}
-html:not(.intro) #intro{opacity:0;transition:opacity .35s linear}
+/* the intro canvas is opaque paper: the resting word is already painted underneath it, so revealing it at the
+   end is only a compositor fade, with no first paint of the huge glyphs at that moment */
+#intro{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;background:var(--paper);will-change:opacity;opacity:.999}   /* not quite opaque, so the browser keeps rasterising what is under it */
+html.intro-out #intro{opacity:0;transition:opacity .45s linear}
 html.intro-gone #intro{display:none}
 html:not(.ready) #nav,html:not(.ready) #bar,html:not(.ready) #lines,html:not(.ready) .hero-name{opacity:0}
 #nav,#bar,#lines,.hero-name{transition:opacity 1s ease}
@@ -430,10 +431,9 @@ function introFrame(now) {
   const t = (now - introT0) / 1000;
   if (t >= INTRO_END) {
     introDone = true;
-    chrs.forEach(c => { c.style.transform = 'none'; });
     drawIntro(INTRO_END);                                  // the canvas holds the resting frame while it fades
-    html.classList.add('ready'); html.classList.remove('intro');
-    setTimeout(() => html.classList.add('intro-gone'), 450); return;
+    html.classList.add('ready', 'intro-out'); html.classList.remove('intro');
+    setTimeout(() => html.classList.add('intro-gone'), 600); return;
   }
   drawIntro(t);
   if (t > PH.collapse[0] + .35) html.classList.add('ready');
