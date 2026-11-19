@@ -70,8 +70,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 .mega .ln{display:block}
 #hero .ln{display:flex;justify-content:center}
 .mega .chr{display:inline-block;transform-origin:50% 100%;will-change:transform}
-#intro{position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden}
-#intro .ip{position:absolute;top:0;display:flex;justify-content:center;white-space:nowrap;transform-origin:0 0;font-family:var(--acu);color:var(--ink)}
+#intro{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
 html.intro #hero .chr{visibility:hidden}
 html:not(.intro) #intro{opacity:0;transition:opacity .35s linear}
 html.intro-gone #intro{display:none}
@@ -193,7 +192,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <body>
 <div id="lines" class="grid" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
 <canvas id="gl" aria-hidden="true"></canvas>
-<div id="intro" aria-hidden="true"></div>
+<canvas id="intro" aria-hidden="true"></canvas>
 
 <nav id="nav" class="grid mono" aria-label="Site">
   <a class="n1" href="#hero" data-go="hero">Chuantao Zhu</a>
@@ -340,53 +339,89 @@ let heroH = 1, navOff = 50;
 
 /* ---------- TAO.: Acumin Variable, never distorted at rest ----------
    Rest: wght 900 at the width (wdth 50–115) that lets the word fill both the width and the band under the nav
-   at its true proportions. Intro, after the opening of Obys' Grids: each glyph drops in from the top edge as
-   Extra Condensed Thin until it fills the screen, its lowest rows smeared down to the bottom; the smear point
-   then climbs through the glyph while the font's width and weight axes run continuously to the resting
-   instance; finally the word compresses to rest. Each glyph is three live text pieces (above, in and below the
-   smear) clipped and scaled, so the variable font renders every in-between instance. It always plays out. */
-let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false, WEND = 100;
-const IL = document.getElementById('intro');
-const LET = ['T', 'A', 'O', '.'], STAG = .07, DEL = .008;
+   at its true proportions. Intro: an optical lens. The glyph outlines come straight from the variable font
+   (HarfBuzz, at every in-between width/weight instance), and every outline point is pushed through a smooth
+   lens: a band of strong vertical magnification with a horizontal bulge, strongest at the centre of the word
+   (field curvature). The word slides in from above in Extra Condensed Thin with the lens near its feet; the
+   lens climbs through the letters while the axes run to the resting instance; then the lens relaxes and the
+   word settles. Drawn as vectors every frame, so it stays sharp at any magnification. It always plays out. */
+let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false, WEND = 100, HB = null;
+const IC = document.getElementById('intro'), ix = IC.getContext('2d');
+const LET = ['T', 'A', 'O', '.'], STAG = .07;
 const W0 = 50, G0 = 100, G1 = 900;                         // start: Extra Condensed Thin; end weight: 900
-const wPath = (u, wEnd) => {                               // width: out from Extra Condensed, swelling mid-sweep, back to rest
-  const a = qio(clamp((u - PH.sweep[0]) / ((PH.sweep[0] + PH.sweep[1]) / 2 - PH.sweep[0]), 0, 1));
-  const b = qio(clamp((u - (PH.sweep[0] + PH.sweep[1]) / 2) / (PH.collapse[0] + .25 - (PH.sweep[0] + PH.sweep[1]) / 2), 0, 1));
-  const mid = Math.max(wEnd, 82); return u < (PH.sweep[0] + PH.sweep[1]) / 2 ? W0 + (mid - W0) * a : mid + (wEnd - mid) * b;
-};
-const PH = { appear: [.12, .72], sweep: [.72, 2.65], collapse: [2.65, 3.4] };
+const LR = .11, LA = 8, LB = .3, LC = .35;                 // lens radius (in cap heights), magnification, bulge, field curvature
+const PH = { appear: [.12, .8], sweep: [.8, 2.75], collapse: [2.75, 3.6] };
 const INTRO_END = PH.collapse[1] + STAG * 3 + .06;
 const qio = t => (t < .5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
 const expoOut = t => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 const expoIO = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < .5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
-const pieces = LET.map(ch => ['t', 'm', 'b'].map(() => { const d = document.createElement('div'); d.className = 'ip'; d.textContent = ch; IL.appendChild(d); return d; }));
+const wPath = (u, wEnd) => {                               // width: out from Extra Condensed, swelling mid-sweep, back to rest
+  const m = (PH.sweep[0] + PH.sweep[1]) / 2, mid = Math.max(wEnd, 82);
+  return u < m ? W0 + (mid - W0) * qio(clamp((u - PH.sweep[0]) / (m - PH.sweep[0]), 0, 1))
+               : mid + (wEnd - mid) * qio(clamp((u - m) / (PH.collapse[0] + .25 - m), 0, 1));
+};
+const KIT_CSS = fetch('https://use.typekit.net/fuc7uis.css').then(r => r.text());
+const acuminBlock = css => [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(m => m[1]).find(b => /acumin-variable/.test(b));
+const hbReady = (async () => {                             // the variable font's outlines, via HarfBuzz
+  const blk = acuminBlock(await KIT_CSS);
+  const urls = [...blk.matchAll(/url\("([^"]+)"\)\s*format\("([^"]+)"\)/g)];
+  const otf = (urls.find(m => m[2] === 'opentype' || m[2] === 'truetype') || [])[1];
+  const [hb, buf] = await Promise.all([import('https://cdn.jsdelivr.net/npm/harfbuzzjs@1.6.4/dist/index.mjs'), fetch(otf).then(r => r.arrayBuffer())]);
+  const face = new hb.Face(new hb.Blob(buf)), font = new hb.Font(face);
+  const gids = LET.map(ch => font.glyph(ch.codePointAt(0)));
+  font.setVariations([new hb.Variation('wdth', 100), new hb.Variation('wght', 900)]);
+  HB = { hb, font, upem: face.upem, gids, capH: font.glyphExtents(gids[0]).yBearing };
+})().catch(e => console.warn('intro outlines unavailable:', e));
 function introGeom(fs, base, bo, cap) {
-  IG = { fs, base, bo, cap, L: fs };
-  pieces.forEach(ps => ps.forEach(d => { d.style.fontSize = fs + 'px'; d.style.lineHeight = fs + 'px'; d.style.height = fs + 'px'; }));
+  IG = { fs, base, cap };
+  const D = Math.min(window.devicePixelRatio || 1, 2);
+  IC.width = Math.round(vw * D); IC.height = Math.round(vh * D); ix.setTransform(D, 0, 0, D, 0, 0);
+}
+function outline(i, wdth, wght) {                          // contours as flat point lists, in font units (y up)
+  const f = HB.font, hb = HB.hb;
+  f.setVariations([new hb.Variation('wdth', wdth), new hb.Variation('wght', wght)]);
+  const cmds = f.glyphToJson(HB.gids[i]), adv = f.glyphHAdvance(HB.gids[i]), seg = HB.capH / 220, out = [];
+  let c = null, x = 0, y = 0;
+  const pt = (nx, ny) => { c.push(nx, ny); x = nx; y = ny; };
+  const line = (x1, y1) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x, y1 - y) / seg)), x0 = x, y0 = y; for (let k = 1; k <= n; k++) pt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n); };
+  for (const m of cmds) {
+    const v = m.values;
+    if (m.type === 'M') { c = []; out.push(c); pt(v[0], v[1]); }
+    else if (m.type === 'L') line(v[0], v[1]);
+    else if (m.type === 'Q') { const x0 = x, y0 = y, n = Math.max(4, Math.ceil((Math.hypot(v[0] - x0, v[1] - y0) + Math.hypot(v[2] - v[0], v[3] - v[1])) / seg));
+      for (let k = 1; k <= n; k++) { const t = k / n, a = (1 - t) ** 2, b = 2 * (1 - t) * t, d = t * t; pt(a * x0 + b * v[0] + d * v[2], a * y0 + b * v[1] + d * v[3]); } }
+    else if (m.type === 'C') { const x0 = x, y0 = y, n = Math.max(4, Math.ceil((Math.hypot(v[0] - x0, v[1] - y0) + Math.hypot(v[2] - v[0], v[3] - v[1]) + Math.hypot(v[4] - v[2], v[5] - v[3])) / seg));
+      for (let k = 1; k <= n; k++) { const t = k / n, a = (1 - t) ** 3, b = 3 * (1 - t) ** 2 * t, e = 3 * (1 - t) * t * t, d = t ** 3; pt(a * x0 + b * v[0] + e * v[2] + d * v[4], a * y0 + b * v[1] + e * v[3] + d * v[5]); } }
+  }
+  return { out, adv };
 }
 function drawIntro(t) {
-  const G = IG; if (!G) return;
-  const fillH = vh + 2, cap = G.cap, L = G.L, row = y => (G.bo - cap) + y * cap;   // glyph row (0 cap top, 1 baseline) -> px in the piece
+  const G = IG; ix.clearRect(0, 0, vw, vh); if (!G || !HB) return;
+  const sc = G.fs / HB.upem, Hn = G.cap, capU = HB.capH, fillH = vh + 2;
+  const r0 = chrs[0].getBoundingClientRect(), r3 = chrs[3].getBoundingClientRect();
+  const cxW = (r0.left + r3.right) / 2, half = Math.max(1, (r3.right - r0.left) / 2);
+  ix.fillStyle = '#111111';
   chrs.forEach((chr, i) => {
-    const r = chr.getBoundingClientRect(), u = t - i * STAG, [pt, pm, pb] = pieces[i];
-    let H, su, p, yb;
-    if (u < PH.appear[1]) { H = fillH * expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); su = Math.min(1, H / cap); p = .985; yb = H; }
-    else if (u < PH.sweep[1]) { H = fillH; su = 1; p = .985 - .96 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); yb = fillH; }
-    else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = 1; H = lerp(fillH, cap, e); p = .025; yb = lerp(fillH, G.base, e); }
-    const show = H > .5 ? '' : 'hidden';
-    // the font's axes run continuously from Extra Condensed Thin to the resting instance
+    const r = chr.getBoundingClientRect(), u = t - i * STAG;
+    let A, p, B, yb;                                        // lens strength, lens position (0 cap top, 1 baseline), bulge, baseline y
+    if (u < PH.appear[1]) { const e = expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); A = LA; p = .86; B = LB; yb = fillH * e; }
+    else if (u < PH.sweep[1]) { A = LA; p = .86 - .74 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); B = LB; yb = fillH; }
+    else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); A = LA * (1 - e); p = .12; B = LB * (1 - e); yb = lerp(fillH, G.base, e); }
+    if (yb < 1) return;
     const eg = qio(clamp((u - PH.sweep[0] + .1) / (PH.sweep[1] - PH.sweep[0]), 0, 1));
-    const fvs = `"wdth" ${wPath(u, WEND).toFixed(2)}, "wght" ${(G0 + (G1 - G0) * eg).toFixed(1)}`;
-    const E = Math.max(0, H - su * cap);
-    const ra = row(p - DEL), rb = row(p + DEL), band = rb - ra;
-    const yBot = yb + (rb - G.bo) * su;                   // screen y of the lower edge of the smear band
-    const yTop = yBot - band * su - E;                    // screen y of its upper edge
-    const sm = (yBot - yTop) / band;
-    const set = (d, ty, sy, ins) => { const z = d.style; z.visibility = show; z.left = r.left + 'px'; z.width = r.width + 'px'; z.fontVariationSettings = fvs;
-      z.transform = `translate3d(0,${ty.toFixed(2)}px,0) scaleY(${sy.toFixed(5)})`; z.clipPath = ins; };
-    set(pb, yb - G.bo * su, su, `inset(${(rb - .3).toFixed(2)}px -50% 0 -50%)`);
-    set(pm, yTop - ra * sm, sm, `inset(${ra.toFixed(2)}px -50% ${(L - rb).toFixed(2)}px -50%)`);
-    set(pt, yTop - ra * su, su, `inset(-50% -50% ${(L - ra - .3).toFixed(2)}px -50%)`);
+    const { out, adv } = outline(i, wPath(u, WEND), G0 + (G1 - G0) * eg);
+    const x0 = r.left + r.width / 2 - adv * sc / 2, tb = Math.tanh((1 - p) / LR);
+    ix.beginPath();
+    for (const c of out) {
+      for (let k = 0; k < c.length; k += 2) {
+        const xl = x0 + c[k] * sc, g = 1 - c[k + 1] / capU, d = (g - p) / LR, ch = Math.cosh(d), s = 1 / (ch * ch);
+        const dx = clamp((xl - cxW) / half, -1.3, 1.3), Ax = A * (1 - LC * dx * dx);
+        const X = cxW + (xl - cxW) * (1 + B * s), Y = yb - (1 - g) * Hn + Ax * LR * Hn * (Math.tanh(d) - tb);
+        if (k) ix.lineTo(X, Y); else ix.moveTo(X, Y);
+      }
+      ix.closePath();
+    }
+    ix.fill('nonzero');
   });
 }
 function introFrame(now) {
@@ -396,7 +431,7 @@ function introFrame(now) {
   if (t >= INTRO_END) {
     introDone = true;
     chrs.forEach(c => { c.style.transform = 'none'; });
-    drawIntro(INTRO_END);                                  // the pieces hold the resting frame while they fade
+    drawIntro(INTRO_END);                                  // the canvas holds the resting frame while it fades
     html.classList.add('ready'); html.classList.remove('intro');
     setTimeout(() => html.classList.add('intro-gone'), 450); return;
   }
@@ -753,14 +788,13 @@ if (REDUCE) html.classList.add('ready', 'intro-gone');
 // wait for the Gotham faces (Adobe Fonts kit) before measuring the word and starting the intro; give up after 4 s
 // The kit declares Acumin Variable with font-stretch: normal, which pins its width axis. Re-declare the same
 // Adobe-hosted file as "tao-acumin" with the axis ranges the font really has (wdth 50–115, wght 100–900).
-const acumin = fetch('https://use.typekit.net/fuc7uis.css').then(r => r.text()).then(css => {
-  const blk = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(m => m[1]).find(b => /acumin-variable/.test(b));
-  const ff = new FontFace('tao-acumin', blk.match(/src:([^;]+);/)[1], { weight: '100 900', stretch: '50% 115%', style: 'normal' });
+const acumin = KIT_CSS.then(css => {
+  const ff = new FontFace('tao-acumin', acuminBlock(css).match(/src:([^;]+);/)[1], { weight: '100 900', stretch: '50% 115%', style: 'normal' });
   document.fonts.add(ff); return ff.load();
 }).catch(() => {});
 const faces = ['900 100px "acumin-variable"', '900 100px "gotham"', '100 100px "gotham-condensed"', '400 16px "gotham"', '700 16px "gotham"', '700 100px "gotham-condensed"'];
-Promise.race([document.fonts ? Promise.all(faces.map(f => document.fonts.load(f, 'TAO.')).concat(acumin)) : Promise.resolve(), new Promise(r => setTimeout(r, 4000))])
-  .catch(() => {}).then(() => { layout(); fontsReady = true; });
+Promise.race([document.fonts ? Promise.all(faces.map(f => document.fonts.load(f, 'TAO.')).concat(acumin, hbReady)) : Promise.resolve(), new Promise(r => setTimeout(r, 4000))])
+  .catch(() => {}).then(() => { layout(); fontsReady = true; if (!HB && !introDone) { introT0 = -1e9; } });   // no outlines: go straight to rest
 let lt = 0;
 if (document.fonts) document.fonts.addEventListener('loadingdone', () => { clearTimeout(lt); lt = setTimeout(layout, 80); });
 })();
