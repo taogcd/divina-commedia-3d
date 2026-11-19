@@ -70,7 +70,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 html:not(.smooth) .stage-frame{position:sticky;top:0}
 html.smooth .stage-frame{will-change:transform}
 #hero{position:absolute;inset:0}
-.threads{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.stage-cv{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
 .mega{font-family:var(--display);font-weight:900;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
 #hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:0;font-family:var(--acu);will-change:transform}
 .mega .ln{display:block}
@@ -213,10 +213,10 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <main id="main">
   <section id="stage">
     <div class="stage-frame">
-      <svg class="threads" aria-hidden="true"></svg>
       <section id="hero">
         <h1 class="mega" aria-label="TAO."><span class="ln"><span class="chr">T</span><span class="chr">A</span><span class="chr">O</span><span class="chr">.</span></span></h1>
       </section>
+      <canvas class="stage-cv" aria-hidden="true"></canvas>
       <section id="index" class="ix" aria-labelledby="index-h">
         <div class="ix-list">
           <h2 class="ix-h" id="index-h"><span class="c1 mk"><span>Index</span></span></h2>
@@ -353,8 +353,8 @@ let heroH = 1, navOff = 50, topClear = 60, stretch = 1, SD = 1, BASE = 0;
 const STRETCH = 2.6;                                      // height multiple of TAO. as it is pulled out of the frame
 const stageEl = $('#stage'), stageFrameEl = $('.stage-frame');
 const easeOut3 = t => 1 - Math.pow(1 - t, 3);
-let ixParts = null, FEET = null, threadPaths = [];
-const threadsSvg = $('.threads');
+let ixParts = null, SG = null, stageInk = false;
+const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
   // The first screen stays pinned for SD px of scroll; progress q scrubs the change, reversible and still on any frame:
   //  rise  (q 0–.22)  TAO. is pulled up and stretched until only its feet hang under the nav;
@@ -371,65 +371,79 @@ function stageFrame() {
   else if (q < .40) { yb = y1 - 26 * e2; sy = 2.2 + .3 * e2; }
   else { yb = lerp(y1 - 26, -vh * .1, e3); sy = 2.5 + .5 * e3; }
   heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
-  drawThreads(q, yb, sy);
+  drawStage(q, yb, sy);
   if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
   ixParts.forEach((pt, i) => {
-    const a0 = i < 2 ? .40 + i * .03 : .50 + (i - 2) * .035;      // labels land as the threads thin onto their lines, rows follow
+    const a0 = i < 2 ? .40 + i * .03 : .50 + (i - 2) * .035;      // labels arrive as the ink fades into the columns, rows follow
     pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .025) / .14, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
     if (pt.r) pt.r.style.transform = `scaleX(${easeOut3(clamp((q - (i < 2 ? .47 : a0)) / .14, 0, 1)).toFixed(4)})`;
   });
   const live = q > .74; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
 }
-/* the word's feet: where each glyph meets its baseline, from the variable font's outlines at the resting instance */
-function computeFeet() {
-  if (!HB || !IG) return;
-  const yS = HB.capH * .04, sc = IG.fs / HB.upem, sp = [...document.querySelectorAll('#lines span')];
-  const cols = sp.map(e => e.getBoundingClientRect().left + .5); cols.push(sp[sp.length - 1].getBoundingClientRect().right - .5);
-  const feet = [];
-  chrs.forEach((chr, i) => {
-    const { out } = outline(i, WEND, 900), xs = [], left = chr.getBoundingClientRect().left;
+/* While the stage moves, the word is drawn from its own outlines (same font instance as the DOM word), so it can be
+   extruded: everything below a cut just above the baseline is pushed straight down and the glyph's edges are carried down
+   with it. Each edge leaves the cut with its own slope and bends to vertical within BL px, so the extrusion is continuous
+   with the letter and every foot stays symmetric about itself; the ink then fades down into the columns. */
+const BL = 70, sstep = t => t * t * (3 - 2 * t), bendG = t => (t >= 1 ? 1 / 3 : (1 - Math.pow(1 - t, 3)) / 3);
+function stageGeom() {
+  if (!HB || !IG) return null;
+  const D = Math.min(window.devicePixelRatio || 1, 2);
+  stageCv.width = Math.round(vw * D); stageCv.height = Math.round(vh * D); sx2.setTransform(D, 0, 0, D, 0, 0);
+  const sc = IG.fs / HB.upem, yc = HB.capH * .05;
+  const glyphs = chrs.map((chr, i) => {
+    const { out, adv } = outline(i, WEND, 900), r = chr.getBoundingClientRect(), x0 = r.left + r.width / 2 - adv * sc / 2, xs = [];
     for (const c of out) for (let k = 0; k < c.length; k += 2) {
       const k2 = (k + 2) % c.length, x1 = c[k], y1 = c[k + 1], x2 = c[k2], y2 = c[k2 + 1];
-      if ((y1 <= yS) !== (y2 <= yS)) xs.push(x1 + (yS - y1) * (x2 - x1) / (y2 - y1));
+      if ((y1 < yc) !== (y2 < yc)) xs.push({ x: x0 + (x1 + (yc - y1) * (x2 - x1) / (y2 - y1)) * sc, s: y1 > y2 ? (x2 - x1) / (y1 - y2) : (x1 - x2) / (y2 - y1) });
     }
-    xs.sort((a, b) => a - b);
-    for (let k = 0; k + 1 < xs.length; k += 2) if (xs[k + 1] - xs[k] > HB.capH * .02) feet.push({ a: left + xs[k] * sc, b: left + xs[k + 1] * sc });
+    xs.sort((a, b) => a.x - b.x);
+    const feet = []; for (let k = 0; k + 1 < xs.length; k += 2) feet.push({ a: xs[k].x, b: xs[k + 1].x, sa: xs[k].s, sb: xs[k + 1].s });
+    return { out, x0, feet };
   });
-  // Each foot docks onto a grid line, preferring the lines the Index is set on (No. / Title / Year / image edges),
-  // in left-to-right order so no two threads cross: a small DP over (foot, line).
-  const near = x => cols.reduce((b, c, k) => (Math.abs(c - x) < Math.abs(cols[b] - x) ? k : b), 0), axis = new Set();
-  ['.ix-head .c1', '.ix-head .c2', '.ix-head .c3'].forEach(q => axis.add(near(ixEl.querySelector(q).getBoundingClientRect().left)));
-  const ir = ixImg.getBoundingClientRect(); if (ir.width > 0) { axis.add(near(ir.left)); axis.add(near(ir.right)); }
-  feet.sort((u, v) => u.a - v.a);
-  const n = feet.length, m = cols.length, cost = (i, j) => Math.abs((feet[i].a + feet[i].b) / 2 - cols[j]) - (axis.has(j) ? 1e5 : 0);
-  const D = [...Array(n + 1)].map(() => Array(m + 1).fill(1e12)), P = [...Array(n + 1)].map(() => Array(m + 1).fill(0));
-  for (let j = 0; j <= m; j++) D[0][j] = 0;
-  for (let i = 1; i <= n; i++) for (let j = i; j <= m; j++) {
-    const take = D[i - 1][j - 1] + cost(i - 1, j - 1), skip = D[i][j - 1];
-    if (take <= skip) { D[i][j] = take; P[i][j] = 1; } else D[i][j] = skip;
-  }
-  for (let i = n, j = m; i > 0; j--) if (P[i][j]) { feet[i - 1].tx = cols[j - 1]; i--; }
-  FEET = feet; FEET.lift = yS * sc;
-  threadsSvg.textContent = '';
-  threadPaths = FEET.map(() => { const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); threadsSvg.appendChild(p); return p; });
+  return { sc, yc, glyphs };
 }
-function drawThreads(q, yb, sy) {
-  if (!FEET) computeFeet();
-  if (!FEET || q < .19 || q > .6) { threadsSvg.style.visibility = 'hidden'; return; }
-  threadsSvg.style.visibility = '';
-  // pour .19–.40: each foot drips to the bottom edge, its tail swinging over onto its grid line
-  // thin .38–.48: the ribbon narrows to a 1px hairline (around the foot, so it stays attached)
-  // settle .50–.58: with the word gone, the S-bend straightens into the grid line;  pale .50–.60: ink → grid grey
+function drawStage(q, yb, sy) {
+  if (!SG) SG = stageGeom();
+  const on = !!SG && q > 0 && q < .6;
+  heroH1.style.visibility = on || (SG && q >= .6) ? 'hidden' : '';
+  if (!on) { if (stageInk) { sx2.clearRect(0, 0, vw, vh); stageInk = false; } return; }
+  stageInk = true;
   const seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
-  const grow = easeInOut(seg(.19, .40)), swing = Math.pow(grow, 1.5), thin = easeInOut(seg(.38, .48)), settle = easeInOut(seg(.50, .58)), pale = seg(.50, .60);
-  const k = Math.round(17 + 208 * pale), fill = `rgb(${k},${k},${k - Math.round(pale)})`;
-  const yT = yb - FEET.lift * sy, yB = lerp(yb, vh + 2, grow), r = lerp(yb, yB, .18), m = lerp(r, yB, .5), p = x => x.toFixed(1);
-  FEET.forEach((f, n) => {
-    const fc = (f.a + f.b) / 2, wt = lerp(f.b - f.a, 1, thin) / 2, xt = lerp(fc, f.tx, settle), xb = lerp(fc, f.tx, swing);
-    const L = xt - wt, R = xt + wt;
-    threadPaths[n].setAttribute('d', `M${p(L)},${p(yT)}L${p(L)},${p(r)}C${p(L)},${p(m)} ${p(xb - .5)},${p(m)} ${p(xb - .5)},${p(yB)}L${p(xb + .5)},${p(yB)}C${p(xb + .5)},${p(m)} ${p(R)},${p(m)} ${p(R)},${p(r)}L${p(R)},${p(yT)}Z`);
-    threadPaths[n].setAttribute('fill', fill);
-  });
+  const k = SG.sc * sy, Ycut = yb - SG.yc * k;
+  // pour .19–.40: the cut opens straight down to past the bottom edge; .40–.56 the word leaves and the bottom stays put
+  const E = (vh + 40 - Ycut) * easeInOut(seg(.19, .40)), fade = sstep(seg(.40, .55));
+  const bend = sl => clamp(sl / sy, -1.5, 1.5) * BL;      // screen offset scale for an edge of font slope sl (dx per -dy)
+  const ds = []; for (let n = 0; n <= 10; n++) ds.push(Math.min(E, BL * n / 10)); if (E > BL) ds.push(E);
+  const gE = bendG(E / BL);
+  sx2.clearRect(0, 0, vw, vh); sx2.beginPath();
+  for (const g of SG.glyphs) {
+    const cap = X => {                                       // the glyph's own bottom, carried to the end of the extrusion
+      let f = g.feet[0], bd = 1e9;
+      for (const h of g.feet) { const d = X < h.a ? h.a - X : X > h.b ? X - h.b : 0; if (d < bd) { bd = d; f = h; } }
+      if (!f) return X;
+      const t = clamp((X - f.a) / Math.max(1e-6, f.b - f.a), 0, 1);
+      return X + lerp(bend(f.sa), bend(f.sb), t) * gE;
+    };
+    for (const c of g.out) {
+      const n = c.length; let first = true;
+      const put = (X, Y) => { if (first) { sx2.moveTo(X, Y); first = false; } else sx2.lineTo(X, Y); };
+      for (let i = 0; i < n; i += 2) {
+        const x = c[i], y = c[i + 1], X = g.x0 + x * SG.sc;
+        if (y >= SG.yc) put(X, yb - y * k);
+        else put(cap(X), Ycut + E + (SG.yc - y) * k);
+        const j = (i + 2) % n, x2 = c[j], y2 = c[j + 1];
+        if ((y >= SG.yc) !== (y2 >= SG.yc) && E > .25) {      // this edge crosses the cut: it becomes a side of the extrusion
+          const down = y >= SG.yc, xi = g.x0 + (x + (SG.yc - y) * (x2 - x) / (y2 - y)) * SG.sc;
+          const o = bend(down ? (x2 - x) / (y - y2) : (x - x2) / (y2 - y));
+          for (let m = 0; m < ds.length; m++) { const d = ds[down ? m : ds.length - 1 - m]; put(xi + o * bendG(d / BL), Ycut + d); }
+        }
+      }
+      sx2.closePath();
+    }
+  }
+  const gr = sx2.createLinearGradient(0, Ycut, 0, Ycut + Math.max(E, 1)), ink = a => `rgba(17,17,17,${a.toFixed(3)})`, e1 = clamp(30 / Math.max(E, 1), .001, .3);
+  gr.addColorStop(0, ink(1)); gr.addColorStop(e1, ink(1 - fade)); gr.addColorStop(Math.max(e1, .3), ink(1 - fade)); gr.addColorStop(1, ink(0));
+  sx2.fillStyle = gr; sx2.fill('nonzero');
 }
 
 /* ---------- TAO.: Acumin Variable, never distorted at rest ----------
@@ -581,7 +595,7 @@ function layout() {
   PIN = SMOOTH && vw >= 1100;
   html.style.setProperty('--A', A + 'px');
   SD = vh * (vw < 700 ? 1.8 : 2.2); stageEl.style.height = (vh + SD).toFixed(0) + 'px';
-  fitHero(); FEET = null;
+  fitHero(); SG = null;
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
   chapters.forEach(ch => {
