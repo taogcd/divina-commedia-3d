@@ -343,7 +343,8 @@ const layoutW = () => document.getElementById('lines').getBoundingClientRect().w
 let vw = layoutW(), vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
 const F3 = [0, 1, -.55], F2 = [0, .85];
 const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')], heroH1 = $('#hero .mega');
-let heroH = 1, navOff = 50, topClear = 60;
+let heroH = 1, navOff = 50, topClear = 60, stretch = 1;
+const STRETCH = 2.6;                                      // height multiple while scrolling, whatever the speed
 
 /* ---------- TAO.: Acumin Variable, never distorted at rest ----------
    Rest: wght 900 at the width (wdth 50–115) that lets the word fill both the width and the band under the nav
@@ -699,8 +700,9 @@ function frame(now) {
 
   // hero letters stretch as they leave
   if (!introDone) introFrame(now);
-  else if (cur < heroH + vh) {                            // scrolling drags TAO. upward; faster scrolling, longer stretch
-    heroH1.style.transform = `scaleY(${(1 + clamp(Math.abs(vel) * .035, 0, 1.2)).toFixed(4)})`;
+  else {                                                  // while the page moves, TAO. is dragged upward to one fixed length
+    stretch = lerp(stretch, Math.abs(vel) > .3 ? STRETCH : 1, 1 - Math.pow(1 - .14, k));
+    if (cur < heroH + vh) heroH1.style.transform = `scaleY(${stretch.toFixed(4)})`;
   }
   // chapters: column parallax, pinned meta, marquee
   for (const ch of chapters) {
