@@ -10,8 +10,8 @@
 <meta name="description" content="Chuantao Zhu (Tao), selected works 2023–2026. Experimental build.">
 <style>
 /* Layout idea: a fixed 12-column Swiss grid drawn as hairlines on near-white grey; one word, TAO., alone on the
-   first screen, stretched tall in Gotham Ultra and opened by a smear that travels through the letters,
-   turning them from Gotham Condensed Thin into Ultra. Works then fall through the grid as a masonry
+   first screen in Acumin Variable at true proportions, opened by a smear that travels through the letters
+   while the width and weight axes run from Extra Condensed Thin to Black. Works then fall through the grid as a masonry
    (瀑布流) in WebGL, and stretch into vertical strips and dissolve as they pass the top of the screen. */
 :root{
   --paper:#F0F0F0;
@@ -22,6 +22,7 @@
   --ph:#E2E2E2;
   --display:"gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --body:"gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --acu:"acumin-variable","gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --cond:"gotham-condensed","gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --cjk:"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
   --m:20px; --gut:16px; --navh:44px; --A:200px; --vg:clamp(28px,6vh,76px);
@@ -65,11 +66,12 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 /* hero */
 #hero{position:relative;height:100vh;height:100svh;overflow:hidden}
 .mega{font-family:var(--display);font-weight:900;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
-#hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:-.005em}
+#hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:0;font-family:var(--acu)}
 .mega .ln{display:block}
 #hero .ln{display:flex;justify-content:center}
 .mega .chr{display:inline-block;transform-origin:50% 100%;will-change:transform}
-#intro{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}
+#intro{position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+#intro .ip{position:absolute;top:0;display:flex;justify-content:center;white-space:nowrap;transform-origin:0 0;font-family:var(--acu);color:var(--ink)}
 html.intro #hero .chr{visibility:hidden}
 html:not(.intro) #intro{opacity:0;transition:opacity .35s linear}
 html.intro-gone #intro{display:none}
@@ -165,7 +167,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 .facts a{border-bottom:1px solid var(--rule)}
 .facts a:hover{border-color:currentColor}
 .foot{margin-top:16vh;padding-bottom:10px}
-.foot .mega{margin:0;padding:0;font-size:30vw;line-height:.74;grid-column:1/13}
+.foot .mega{margin:0;padding:0;font-size:30vw;line-height:.74;grid-column:1/13;font-family:var(--acu);font-variation-settings:"wdth" 50,"wght" 900}
 .foot p{grid-column:1/13;display:flex;justify-content:space-between;margin-top:14px;padding-bottom:40px}
 @media (max-width:699px){ .state{grid-column:1/13} .facts div{grid-column:span 12} }
 
@@ -191,7 +193,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <body>
 <div id="lines" class="grid" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
 <canvas id="gl" aria-hidden="true"></canvas>
-<canvas id="intro" aria-hidden="true"></canvas>
+<div id="intro" aria-hidden="true"></div>
 
 <nav id="nav" class="grid mono" aria-label="Site">
   <a class="n1" href="#hero" data-go="hero">Chuantao Zhu</a>
@@ -336,71 +338,51 @@ const F3 = [0, 1, -.55], F2 = [0, .85];
 const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')];
 let heroH = 1, navOff = 50;
 
-/* ---------- TAO.: stretched Gotham Ultra at rest ----------
-   Intro (canvas), after the opening of Obys' Grids: the word drops in from the top edge in Gotham Condensed Thin
-   until it fills the screen, its lowest row smeared down to the bottom; the smear point then travels up through
-   each glyph, and every row it has passed is redrawn from Gotham Ultra, so the letters turn from Condensed Thin to
-   Ultra from the bottom up while the part above the smear becomes long strokes; finally the word compresses into
-   its resting size. The last frame equals the resting DOM word, which takes over. The intro always plays out. */
-let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false;
-const IC = document.getElementById('intro'), ix = IC.getContext('2d');
-const LET = ['T', 'A', 'O', '.'], STAG = .07, NB = 180, SIG = .011;
-const FACE = { T: ['100', '"gotham-condensed"'], U: ['900', '"gotham"'] };   // thin start, ultra end
+/* ---------- TAO.: Acumin Variable, never distorted at rest ----------
+   Rest: wght 900 at the width (wdth 50–115) that lets the word fill both the width and the band under the nav
+   at its true proportions. Intro, after the opening of Obys' Grids: each glyph drops in from the top edge as
+   Extra Condensed Thin until it fills the screen, its lowest rows smeared down to the bottom; the smear point
+   then climbs through the glyph while the font's width and weight axes run continuously to the resting
+   instance; finally the word compresses to rest. Each glyph is three live text pieces (above, in and below the
+   smear) clipped and scaled, so the variable font renders every in-between instance. It always plays out. */
+let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false, WEND = 100;
+const IL = document.getElementById('intro');
+const LET = ['T', 'A', 'O', '.'], STAG = .07, DEL = .008;
+const W0 = 50, G0 = 100, G1 = 900;                         // start: Extra Condensed Thin; end weight: 900
 const PH = { appear: [.12, .72], sweep: [.72, 2.65], collapse: [2.65, 3.4] };
 const INTRO_END = PH.collapse[1] + STAG * 3 + .06;
-const mk = () => { const c = document.createElement('canvas'); return { c, x: c.getContext('2d') }; };
-const srcs = LET.map(() => ({ T: mk(), U: mk() }));
 const qio = t => (t < .5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
 const expoOut = t => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 const expoIO = t => (t <= 0 ? 0 : t >= 1 ? 1 : t < .5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2);
-function introGeom(fs, base) {
-  const F = clamp(fs * 3, 500, 1000), pad = F * .06;       // large source so the smear stays sharp
-  const fb = '"Helvetica Neue",Helvetica,Arial,sans-serif';
-  srcs.forEach((s2, i) => {
-    for (const key of ['T', 'U']) {
-      const sr = s2[key], x = sr.x, font = `${FACE[key][0]} ${F}px ${FACE[key][1]},${fb}`;
-      x.font = font;
-      const cap = x.measureText('T').actualBoundingBoxAscent || F * .7, adv = x.measureText(LET[i]).width;
-      sr.c.width = Math.ceil(adv + 2 * pad); sr.c.height = Math.ceil(cap + 2 * pad);
-      x.font = font; x.fillStyle = '#111111'; x.fillText(LET[i], pad, pad + cap);
-      Object.assign(sr, { cap, adv });
-    }
-  });
-  IG = { pad, base, k: fs / F, cap: srcs[0].U.cap };
-  const D = Math.min(window.devicePixelRatio || 1, 2);
-  IC.width = Math.round(vw * D); IC.height = Math.round(vh * D); ix.setTransform(D, 0, 0, D, 0, 0);
+const pieces = LET.map(ch => ['t', 'm', 'b'].map(() => { const d = document.createElement('div'); d.className = 'ip'; d.textContent = ch; IL.appendChild(d); return d; }));
+function introGeom(fs, base, bo, cap) {
+  IG = { fs, base, bo, cap, L: fs };
+  pieces.forEach(ps => ps.forEach(d => { d.style.fontSize = fs + 'px'; d.style.lineHeight = fs + 'px'; d.style.height = fs + 'px'; }));
 }
-const wB = new Float32Array(NB);
 function drawIntro(t) {
-  const G = IG; ix.clearRect(0, 0, vw, vh); if (!G) return;
-  const capNat = G.cap * G.k, fillH = vh + 2, k = G.k;
+  const G = IG; if (!G) return;
+  const fillH = vh + 2, cap = G.cap, L = G.L, row = y => (G.bo - cap) + y * cap;   // glyph row (0 cap top, 1 baseline) -> px in the piece
   chrs.forEach((chr, i) => {
-    const cellX = chr.getBoundingClientRect().left;         // live position of the resting glyph
-    const u = t - i * STAG;
-    let H, su, p, q, yb;    // cap height on screen, row scale, smear point and Thin/Ultra boundary (0 top, 1 baseline), baseline y
-    if (u < PH.appear[1]) { H = fillH * expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); su = Math.min(1, H / capNat); p = .985; q = 1.01; yb = H; }
-    else if (u < PH.sweep[1]) { H = fillH; su = 1; p = .985 - .96 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); q = p; yb = fillH; }
-    else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = lerp(1, S0, e); H = lerp(fillH, S0 * capNat, e); p = .025; q = -.01; yb = lerp(fillH, G.base, e); }
-    if (H < .5) return;
-    const U = srcs[i].U, T = srcs[i].T, uAdv = U.adv * k;
-    const place = sr => { const w = sr.c.width * k; return { dx: cellX + (uAdv - sr.adv * k) / 2 - G.pad * k, dw: w }; };   // centred on the Ultra advance
-    const pU = place(U), pT = place(T);
-    const E = Math.max(0, H - su * capNat), rowH = su * capNat / NB, sk = su * k;
-    let tot = 0;
-    for (let b = 0; b < NB; b++) { const y = (b + .5) / NB; wB[b] = Math.exp(-(((y - p) / SIG) ** 2)); tot += wB[b]; }
-    const lo = q < 1 ? U : T, plo = lo === U ? pU : pT;      // below the baseline: whichever face holds the bottom row
-    ix.drawImage(lo.c, 0, G.pad + lo.cap, lo.c.width, lo.c.height - G.pad - lo.cap, plo.dx, yb, plo.dw, (lo.c.height - G.pad - lo.cap) * sk);
-    let y = yb;
-    for (let b = NB - 1; b >= 0; b--) {
-      const h = rowH + E * wB[b] / tot, yn = (b + .5) / NB;
-      if (y > -2 && y - h < vh + 2) {
-        const sr = yn >= q ? U : T, pl = sr === U ? pU : pT, sh = sr.cap / NB;
-        ix.drawImage(sr.c, 0, G.pad + b * sh, sr.c.width, sh, pl.dx, y - h, pl.dw, h + .7);
-      }
-      y -= h;
-    }
-    const hi = q > 0 ? T : U, phi = hi === U ? pU : pT;      // above the cap: whichever face holds the top row
-    ix.drawImage(hi.c, 0, 0, hi.c.width, G.pad, phi.dx, y - G.pad * sk, phi.dw, G.pad * sk);
+    const r = chr.getBoundingClientRect(), u = t - i * STAG, [pt, pm, pb] = pieces[i];
+    let H, su, p, yb;
+    if (u < PH.appear[1]) { H = fillH * expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); su = Math.min(1, H / cap); p = .985; yb = H; }
+    else if (u < PH.sweep[1]) { H = fillH; su = 1; p = .985 - .96 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); yb = fillH; }
+    else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = 1; H = lerp(fillH, cap, e); p = .025; yb = lerp(fillH, G.base, e); }
+    const show = H > .5 ? '' : 'hidden';
+    // the font's axes run continuously from Extra Condensed Thin to the resting instance
+    const ew = qio(clamp((u - PH.sweep[0]) / (PH.collapse[0] + .25 - PH.sweep[0]), 0, 1));
+    const eg = qio(clamp((u - PH.sweep[0] + .1) / (PH.sweep[1] - PH.sweep[0]), 0, 1));
+    const fvs = `"wdth" ${(W0 + (WEND - W0) * ew).toFixed(2)}, "wght" ${(G0 + (G1 - G0) * eg).toFixed(1)}`;
+    const E = Math.max(0, H - su * cap);
+    const ra = row(p - DEL), rb = row(p + DEL), band = rb - ra;
+    const yBot = yb + (rb - G.bo) * su;                   // screen y of the lower edge of the smear band
+    const yTop = yBot - band * su - E;                    // screen y of its upper edge
+    const sm = (yBot - yTop) / band;
+    const set = (d, ty, sy, ins) => { const z = d.style; z.visibility = show; z.left = r.left + 'px'; z.width = r.width + 'px'; z.fontVariationSettings = fvs;
+      z.transform = `translate3d(0,${ty.toFixed(2)}px,0) scaleY(${sy.toFixed(5)})`; z.clipPath = ins; };
+    set(pb, yb - G.bo * su, su, `inset(${(rb - .3).toFixed(2)}px -50% 0 -50%)`);
+    set(pm, yTop - ra * sm, sm, `inset(${ra.toFixed(2)}px -50% ${(L - rb).toFixed(2)}px -50%)`);
+    set(pt, yTop - ra * su, su, `inset(-50% -50% ${(L - ra - .3).toFixed(2)}px -50%)`);
   });
 }
 function introFrame(now) {
@@ -409,8 +391,8 @@ function introFrame(now) {
   const t = (now - introT0) / 1000;
   if (t >= INTRO_END) {
     introDone = true;
-    chrs.forEach(c => { c.style.transform = `scaleY(${S0.toFixed(4)})`; });
-    drawIntro(INTRO_END);                                  // the canvas holds the resting frame while it fades
+    chrs.forEach(c => { c.style.transform = 'none'; });
+    drawIntro(INTRO_END);                                  // the pieces hold the resting frame while they fade
     html.classList.add('ready'); html.classList.remove('intro');
     setTimeout(() => html.classList.add('intro-gone'), 450); return;
   }
@@ -434,22 +416,27 @@ function fitMega(el, target) {
 function fitHero() {
   const avail = vw - 2 * parseFloat(getComputedStyle(html).getPropertyValue('--m'));
   const h1 = $('#hero .mega'), ln = $('.ln', h1);
-  h1.style.fontSize = '100px'; h1.style.lineHeight = '100px'; ln.style.display = 'inline-flex';
-  const w = ln.getBoundingClientRect().width; ln.style.display = '';
-  const fs = 100 * avail / Math.max(1, w), L = fs;
-  h1.style.fontSize = fs.toFixed(2) + 'px'; h1.style.lineHeight = L.toFixed(2) + 'px';
+  const base = vh - (vw < 700 ? 40 : 46), boxH = base - Math.max(vh * .19, navOffset() + 40);
   const cx = document.createElement('canvas').getContext('2d');
-  cx.font = `${getComputedStyle(h1).fontWeight} ${fs}px ${getComputedStyle(h1).fontFamily}`;
-  const mt = cx.measureText('TAO.');
-  const cap = cx.measureText('T').actualBoundingBoxAscent || fs * .717;
-  const A = mt.fontBoundingBoxAscent || fs * .95, D = mt.fontBoundingBoxDescent || fs * .25;
-  const bo = (L - (A + D)) / 2 + A;                       // baseline, measured from the top of the line box
-  const base = vh - (vw < 700 ? 40 : 46), capTop = Math.max(vh * .19, navOffset() + 40);
-  S0 = clamp((base - capTop) / cap, .6, 5);              // rest: cap height fills the band under the nav
+  cx.font = `900 100px ${getComputedStyle(h1).fontFamily}`;
+  const mt = cx.measureText('TAO.'), capR = (cx.measureText('T').actualBoundingBoxAscent || 70) / 100;
+  const AR = (mt.fontBoundingBoxAscent || 95) / 100, DR = (mt.fontBoundingBoxDescent || 25) / 100;
+  h1.style.fontSize = '100px'; h1.style.lineHeight = '100px';
+  const widthAt = w => { h1.style.fontVariationSettings = `"wdth" ${w}, "wght" 900`; ln.style.display = 'inline-flex'; const x = ln.getBoundingClientRect().width; ln.style.display = ''; return x; };
+  const target = avail * capR * 100 / boxH;              // word width at 100px for which width-fit gives cap = band height
+  let w;
+  if (widthAt(50) >= target) w = 50; else if (widthAt(115) <= target) w = 115;
+  else { let lo = 50, hi = 115; for (let k = 0; k < 12; k++) { const mid = (lo + hi) / 2; if (widthAt(mid) < target) lo = mid; else hi = mid; } w = (lo + hi) / 2; }
+  WEND = w;
+  const fs = Math.min(100 * avail / widthAt(w), boxH / capR), L = fs, cap = capR * fs;
+  h1.style.fontSize = fs.toFixed(2) + 'px'; h1.style.lineHeight = L.toFixed(2) + 'px';
+  h1.style.fontVariationSettings = `"wdth" ${w.toFixed(2)}, "wght" 900`;
+  const bo = (L - (AR + DR) * fs) / 2 + AR * fs;          // baseline, measured from the top of the line box
+  S0 = 1;                                                 // true proportions at rest
   h1.style.top = (base - bo).toFixed(2) + 'px';
-  chrs.forEach(c => { c.style.transformOrigin = `50% ${bo.toFixed(2)}px`; if (introDone) c.style.transform = `scaleY(${S0.toFixed(4)})`; });
+  chrs.forEach(c => { c.style.transformOrigin = `50% ${bo.toFixed(2)}px`; if (introDone) c.style.transform = 'none'; });
   fitMega($('.foot .mega'), avail);
-  introGeom(fs, base);
+  introGeom(fs, base, bo, cap);
 }
 
 function layout() {
@@ -760,7 +747,7 @@ layout();
 requestAnimationFrame(frame);
 if (REDUCE) html.classList.add('ready', 'intro-gone');
 // wait for the Gotham faces (Adobe Fonts kit) before measuring the word and starting the intro; give up after 4 s
-const faces = ['900 100px "gotham"', '100 100px "gotham-condensed"', '400 16px "gotham"', '700 16px "gotham"', '700 100px "gotham-condensed"'];
+const faces = ['900 100px "acumin-variable"', '900 100px "gotham"', '100 100px "gotham-condensed"', '400 16px "gotham"', '700 16px "gotham"', '700 100px "gotham-condensed"'];
 Promise.race([document.fonts ? Promise.all(faces.map(f => document.fonts.load(f, 'TAO.'))) : Promise.resolve(), new Promise(r => setTimeout(r, 4000))])
   .catch(() => {}).then(() => { layout(); fontsReady = true; });
 let lt = 0;
