@@ -358,53 +358,67 @@ const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
   // The first screen stays pinned for SD px of scroll; progress q scrubs the change, reversible and still on any frame:
   //  rise  (q 0–.22)  TAO. is pulled up and stretched until only its feet hang under the nav;
-  //  hang  (.22–.40)  each foot pours down as an ink ribbon that tapers into a hairline on the nearest grid column,
-  //                   while 'Index' and the column labels come in;
-  //  exit  (.40–.56)  the word leaves through the top, the ribbons thin to hairlines and pale into the grid lines
-  //                   themselves; then the header rule draws and the rows enter (.44–.92).
+  //  pour  (.19–.36)  each letter is extruded straight down past the bottom edge (see drawStage);
+  //  light (.30–.42)  the weight falls 900 → 200, so the black blocks become thick lines;
+  //  bend  (.36–.47)  each line bends left onto the grid line at the left of its column;
+  //  exit  (.44–.58)  the word leaves through the top, the lines thin to 1px and pale into the grid lines themselves;
+  //                   'Index' and its labels arrive from .40, the header rule and rows from .47.
   const q = clamp(cur / SD, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
   const y1 = navOff + vh * .11, io3 = easeInOut;
-  const e1 = io3(seg(0, .22)), e2 = seg(.22, .40), e3 = Math.pow(seg(.40, .56), 1.8);
+  const e1 = io3(seg(0, .22)), e2 = seg(.22, .44), e3 = Math.pow(seg(.44, .58), 1.8);
   let yb, sy;
   if (q < .22) { yb = lerp(BASE, y1, e1); sy = 1 + 1.2 * e1; }
-  else if (q < .40) { yb = y1 - 26 * e2; sy = 2.2 + .3 * e2; }
-  else { yb = lerp(y1 - 26, -vh * .1, e3); sy = 2.5 + .5 * e3; }
+  else if (q < .44) { yb = y1 - 26 * e2; sy = 2.2 + .3 * e2; }
+  else { yb = lerp(y1 - 26, -vh * .45, e3); sy = 2.5 + .5 * e3; }   // far enough that the bends leave with the word
   heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
   drawStage(q, yb, sy);
   if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
   ixParts.forEach((pt, i) => {
-    const a0 = i < 2 ? .40 + i * .03 : .50 + (i - 2) * .035;      // labels arrive as the ink fades into the columns, rows follow
+    const a0 = i < 2 ? .40 + i * .03 : .50 + (i - 2) * .035;      // labels arrive as the lines bend onto the grid, rows follow
     pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .025) / .14, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
     if (pt.r) pt.r.style.transform = `scaleX(${easeOut3(clamp((q - (i < 2 ? .47 : a0)) / .14, 0, 1)).toFixed(4)})`;
   });
   const live = q > .74; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
 }
-/* While the stage moves, the word is drawn from its own outlines (same font instance as the DOM word), so it can be
-   extruded: everything below a cut just above the baseline is pushed straight down and the glyph's edges are carried down
-   with it. Each edge leaves the cut with its own slope and bends to vertical within BL px, so the extrusion is continuous
-   with the letter and every foot stays symmetric about itself; the ink then fades down into the columns. */
-const BL = 70, sstep = t => t * t * (3 - 2 * t), bendG = t => (t >= 1 ? 1 / 3 : (1 - Math.pow(1 - t, 3)) / 3);
+/* While the stage moves, the word is drawn from its own outlines (same font as the DOM word), so it can be extruded
+   and re-weighted live: everything below a cut (where the glyph's sides run straight) is pushed straight down and the
+   sides are carried down with it, so the extrusion is the letter itself. Then the weight falls to ExtraLight, each
+   stem's extrusion bends left onto the grid line at the left of its column, thins to 1px and pales into that line. */
+const BL = 70, WLIGHT = 200, sstep = t => t * t * (3 - 2 * t), bendG = t => (t >= 1 ? 1 / 3 : (1 - Math.pow(1 - t, 3)) / 3);
+const stageCuts = new Map();
+function crossings(out, yc) {
+  const xs = [];
+  for (const c of out) for (let k = 0; k < c.length; k += 2) {
+    const k2 = (k + 2) % c.length, x1 = c[k], y1 = c[k + 1], x2 = c[k2], y2 = c[k2 + 1];
+    if ((y1 < yc) !== (y2 < yc)) xs.push({ x: x1 + (yc - y1) * (x2 - x1) / (y2 - y1), s: y1 > y2 ? (x2 - x1) / (y1 - y2) : (x1 - x2) / (y2 - y1) });
+  }
+  return xs.sort((a, b) => a.x - b.x);
+}
+function cutFor(i, w, out) {                                // lowest height (from 5% cap) where every crossing edge is near vertical
+  const key = i + ':' + Math.round(w / 10);
+  if (stageCuts.has(key)) return stageCuts.get(key);
+  let yc = HB.capH * .05;
+  for (let f = .05; f <= .5; f += .01) { const c = crossings(out, HB.capH * f); if (c.length && c.length % 2 === 0 && c.every(e => Math.abs(e.s) <= .2)) { yc = HB.capH * f; break; } }
+  stageCuts.set(key, yc); return yc;
+}
 function stageGeom() {
   if (!HB || !IG) return null;
   const D = Math.min(window.devicePixelRatio || 1, 2);
   stageCv.width = Math.round(vw * D); stageCv.height = Math.round(vh * D); sx2.setTransform(D, 0, 0, D, 0, 0);
-  const sc = IG.fs / HB.upem;
-  const cross = (out, yc) => { const xs = [];
-    for (const c of out) for (let k = 0; k < c.length; k += 2) {
-      const k2 = (k + 2) % c.length, x1 = c[k], y1 = c[k + 1], x2 = c[k2], y2 = c[k2 + 1];
-      if ((y1 < yc) !== (y2 < yc)) xs.push({ x: x1 + (yc - y1) * (x2 - x1) / (y2 - y1), s: y1 > y2 ? (x2 - x1) / (y1 - y2) : (x1 - x2) / (y2 - y1) });
-    }
-    return xs; };
+  const sc = IG.fs / HB.upem, sp = [...document.querySelectorAll('#lines span')];
+  const px = x => Math.round(x * D) / D;                   // grid borders sit on device pixels; so do the lines that join them
+  const cols = sp.map(e => px(e.getBoundingClientRect().left) + .5); cols.push(px(sp[sp.length - 1].getBoundingClientRect().right) - .5);
   const glyphs = chrs.map((chr, i) => {
-    const { out, adv } = outline(i, WEND, 900), r = chr.getBoundingClientRect(), x0 = r.left + r.width / 2 - adv * sc / 2;
-    // cut where the sides run straight (T, A, '.' at their feet; O above its round bottom, which then rides down intact)
-    let yc = HB.capH * .05;
-    for (let f = .05; f <= .5; f += .01) { const c = cross(out, HB.capH * f); if (c.length && c.length % 2 === 0 && c.every(e => Math.abs(e.s) <= .2)) { yc = HB.capH * f; break; } }
-    const xs = cross(out, yc).map(e => ({ x: x0 + e.x * sc, s: e.s }));
-    xs.sort((a, b) => a.x - b.x);
-    const feet = []; for (let k = 0; k + 1 < xs.length; k += 2) feet.push({ a: xs[k].x, b: xs[k + 1].x, sa: xs[k].s, sb: xs[k + 1].s });
-    return { out, x0, feet, yc };
+    const r = chr.getBoundingClientRect(), cx = r.left + r.width / 2;
+    // where each stem goes: the grid line at the left of the column it stands in, judged at the light weight
+    const L = outline(i, WEND, WLIGHT), xs = crossings(L.out, cutFor(i, WLIGHT, L.out)), x0 = cx - L.adv * sc / 2, tg = [];
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const c = x0 + (xs[k].x + xs[k + 1].x) / 2 * sc; let g = cols[0];
+      for (const x of cols) if (x <= c - 2) g = x;
+      tg.push(g);
+    }
+    return { i, cx, tg };
   });
   return { sc, glyphs };
 }
@@ -415,42 +429,56 @@ function drawStage(q, yb, sy) {
   if (!on) { if (stageInk) { sx2.clearRect(0, 0, vw, vh); stageInk = false; } return; }
   stageInk = true;
   const seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
-  const k = SG.sc * sy, grow = easeInOut(seg(.19, .40)), fade = sstep(seg(.40, .55));
-  // the downward fade only exists once the pour has begun: at rest and while rising each letter keeps its own bottom
-  const m = sstep(seg(.19, .27)), ink = a => `rgba(17,17,17,${a.toFixed(3)})`;
-  const bend = sl => clamp(sl / sy, -1.5, 1.5) * BL;      // screen offset scale for an edge of font slope sl (dx per -dy)
+  const k = SG.sc * sy, grow = easeInOut(seg(.19, .36)), W = lerp(900, WLIGHT, easeInOut(seg(.30, .42)));
+  const bendAmt = easeInOut(seg(.36, .47)), thin = easeInOut(seg(.46, .555)), pale = seg(.48, .57);
+  const d0 = vh * .1, BLEN = vh * .2;                       // the bend starts d0 below the cut and takes BLEN
+  const bendP = d => sstep(clamp((d - d0) / BLEN, 0, 1));
+  const slope = sl => clamp(sl / sy, -1.5, 1.5) * BL;     // continuation of an edge's own slope, faded to vertical within BL
+  const pc = Math.round(17 + 208 * pale), lineCol = `rgb(${pc},${pc},${pc - Math.round(pale)})`;
   sx2.clearRect(0, 0, vw, vh);
   for (const g of SG.glyphs) {
-    const Ycut = yb - g.yc * k, E = (vh + 40 - Ycut) * grow, gE = bendG(E / BL);
-    const ds = []; for (let n = 0; n <= 10; n++) ds.push(Math.min(E, BL * n / 10)); if (E > BL) ds.push(E);
-    const cap = X => {                                       // the glyph's own bottom, carried to the end of the extrusion
-      let f = g.feet[0], bd = 1e9;
-      for (const h of g.feet) { const d = X < h.a ? h.a - X : X > h.b ? X - h.b : 0; if (d < bd) { bd = d; f = h; } }
+    const { out, adv } = outline(g.i, WEND, W), yc = cutFor(g.i, W, out), x0 = g.cx - adv * SG.sc / 2;
+    const Ycut = yb - yc * k, E = (vh + 40 - Ycut) * grow, xs = crossings(out, yc);
+    const feet = [];
+    for (let n = 0; n + 1 < xs.length; n += 2) {
+      const a = x0 + xs[n].x * SG.sc, b = x0 + xs[n + 1].x * SG.sc, c = (a + b) / 2;
+      feet.push({ a, b, c, h: Math.max(.5, (b - a) / 2), sa: xs[n].s, sb: xs[n + 1].s, tg: g.tg[n / 2] ?? g.tg[g.tg.length - 1] ?? c });
+    }
+    const footAt = X => { let f = feet[0], bd = 1e9; for (const h of feet) { const d = X < h.a ? h.a - X : X > h.b ? X - h.b : 0; if (d < bd) { bd = d; f = h; } } return f; };
+    // a point of the extrusion at depth d under the cut: its own slope, then bent left onto the target and thinned
+    const warp = (X, d, f) => {
       if (!f) return X;
-      const t = clamp((X - f.a) / Math.max(1e-6, f.b - f.a), 0, 1);
-      return X + lerp(bend(f.sa), bend(f.sb), t) * gE;
+      const p = bendP(d), w = lerp(1, .5 / f.h, thin * p);
+      return f.c + (X - f.c) * w + (f.tg - f.c) * bendAmt * p;
     };
+    const ds = [];
+    for (let n = 0; n <= 8; n++) ds.push(BL * n / 8);
+    for (let n = 1; n <= 12; n++) ds.push(d0 + BLEN * n / 12);
+    const dl = [...new Set(ds.filter(d => d < E).concat([E]))].sort((a, b) => a - b);
+    const gE = bendG(E / BL);
     sx2.beginPath();
-    for (const c of g.out) {
+    for (const c of out) {
       const n = c.length; let first = true;
       const put = (X, Y) => { if (first) { sx2.moveTo(X, Y); first = false; } else sx2.lineTo(X, Y); };
       for (let i = 0; i < n; i += 2) {
-        const x = c[i], y = c[i + 1], X = g.x0 + x * SG.sc;
-        if (y >= g.yc) put(X, yb - y * k);
-        else put(cap(X), Ycut + E + (g.yc - y) * k);
+        const x = c[i], y = c[i + 1], X = x0 + x * SG.sc;
+        if (y >= yc) put(X, yb - y * k);
+        else {                                               // the glyph's own bottom, carried to the end of the extrusion
+          const f = footAt(X);
+          const t = f ? clamp((X - f.a) / Math.max(1e-6, f.b - f.a), 0, 1) : 0;
+          put(warp(X + (f ? lerp(slope(f.sa), slope(f.sb), t) * gE : 0), E, f), Ycut + E + (yc - y) * k);
+        }
         const j = (i + 2) % n, x2 = c[j], y2 = c[j + 1];
-        if ((y >= g.yc) !== (y2 >= g.yc) && E > .25) {        // this edge crosses the cut: it becomes a side of the extrusion
-          const down = y >= g.yc, xi = g.x0 + (x + (g.yc - y) * (x2 - x) / (y2 - y)) * SG.sc;
-          const o = bend(down ? (x2 - x) / (y - y2) : (x - x2) / (y2 - y));
-          for (let mm = 0; mm < ds.length; mm++) { const d = ds[down ? mm : ds.length - 1 - mm]; put(xi + o * bendG(d / BL), Ycut + d); }
+        if ((y >= yc) !== (y2 >= yc) && E > .25) {           // this edge crosses the cut: it becomes a side of the extrusion
+          const down = y >= yc, xi = x0 + (x + (yc - y) * (x2 - x) / (y2 - y)) * SG.sc, f = footAt(xi);
+          const o = slope(down ? (x2 - x) / (y - y2) : (x - x2) / (y2 - y));
+          for (let m = 0; m < dl.length; m++) { const d = dl[down ? m : dl.length - 1 - m]; put(warp(xi + o * bendG(d / BL), d, f), Ycut + d); }
         }
       }
       sx2.closePath();
     }
-    // solid to mid-screen, then the extrusion fades into the columns toward the bottom edge; .40–.55 it all fades out
-    const span = Math.max(1, vh - Ycut), e1 = clamp(30 / span, .001, .3), f0 = clamp((vh * .5 - Ycut) / span, e1, .98);
-    const gr = sx2.createLinearGradient(0, Ycut, 0, Ycut + span);
-    gr.addColorStop(0, ink(1)); gr.addColorStop(e1, ink(1 - fade)); gr.addColorStop(f0, ink(1 - fade)); gr.addColorStop(1, ink((1 - fade) * (1 - m)));
+    const gr = sx2.createLinearGradient(0, Ycut + d0, 0, Ycut + d0 + BLEN);
+    gr.addColorStop(0, '#111111'); gr.addColorStop(1, lineCol);
     sx2.fillStyle = gr; sx2.fill('nonzero');
   }
 }
@@ -604,7 +632,7 @@ function layout() {
   PIN = SMOOTH && vw >= 1100;
   html.style.setProperty('--A', A + 'px');
   SD = vh * (vw < 700 ? 1.8 : 2.2); stageEl.style.height = (vh + SD).toFixed(0) + 'px';
-  fitHero(); SG = null;
+  fitHero(); SG = null; stageCuts.clear();
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
   chapters.forEach(ch => {
