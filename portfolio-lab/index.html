@@ -70,6 +70,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 html:not(.smooth) .stage-frame{position:sticky;top:0}
 html.smooth .stage-frame{will-change:transform}
 #hero{position:absolute;inset:0}
+.threads{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 .mega{font-family:var(--display);font-weight:900;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
 #hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:0;font-family:var(--acu);will-change:transform}
 .mega .ln{display:block}
@@ -212,6 +213,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <main id="main">
   <section id="stage">
     <div class="stage-frame">
+      <svg class="threads" aria-hidden="true"></svg>
       <section id="hero">
         <h1 class="mega" aria-label="TAO."><span class="ln"><span class="chr">T</span><span class="chr">A</span><span class="chr">O</span><span class="chr">.</span></span></h1>
       </section>
@@ -272,6 +274,7 @@ const url = (im, w) => LOCAL ? `img/${im[0]}-${w}.jpg` : `${CDN}/w/${w}/i/${im[0
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const pad = n => String(n).padStart(2, '0');
 const ease = t => 1 - Math.pow(1 - t, 4);
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -350,21 +353,83 @@ let heroH = 1, navOff = 50, topClear = 60, stretch = 1, SD = 1, BASE = 0;
 const STRETCH = 2.6;                                      // height multiple of TAO. as it is pulled out of the frame
 const stageEl = $('#stage'), stageFrameEl = $('.stage-frame');
 const easeOut3 = t => 1 - Math.pow(1 - t, 3);
-let ixParts = null;
+let ixParts = null, FEET = null, threadPaths = [];
+const threadsSvg = $('.threads');
 function stageFrame() {
-  // the first screen stays pinned for SD px of scroll; progress q scrubs: TAO. is stretched upward and pulled out
-  // through the top (q 0-.5) while the index enters line by line (q .28-.9). Reversible, holds wherever scroll stops.
-  const q = clamp(cur / SD, 0, 1);
+  // The first screen stays pinned for SD px of scroll; progress q scrubs the change, reversible and still on any frame:
+  //  rise  (q 0–.22)  TAO. is pulled up and stretched until only its feet hang under the nav;
+  //  hang  (.22–.40)  each foot pours down as an ink ribbon that tapers into a hairline on the nearest grid column,
+  //                   while 'Index' and the column labels come in;
+  //  exit  (.40–.56)  the word leaves through the top, the ribbons thin to hairlines and pale into the grid lines
+  //                   themselves; then the header rule draws and the rows enter (.44–.92).
+  const q = clamp(cur / SD, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
-  const a = clamp(q / .5, 0, 1);
-  heroH1.style.transform = `translate3d(0,${(-Math.pow(a, 2.2) * (BASE + vh * .08)).toFixed(2)}px,0) scaleY(${(1 + (STRETCH - 1) * Math.pow(a, 1.4)).toFixed(4)})`;
+  const y1 = navOff + vh * .11, io3 = easeInOut;
+  const e1 = io3(seg(0, .22)), e2 = seg(.22, .40), e3 = Math.pow(seg(.40, .56), 1.8);
+  let yb, sy;
+  if (q < .22) { yb = lerp(BASE, y1, e1); sy = 1 + 1.2 * e1; }
+  else if (q < .40) { yb = y1 - 26 * e2; sy = 2.2 + .3 * e2; }
+  else { yb = lerp(y1 - 26, -vh * .1, e3); sy = 2.5 + .5 * e3; }
+  heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
+  drawThreads(q, yb, sy);
   if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
   ixParts.forEach((pt, i) => {
-    const a0 = .28 + i * .04, e = easeOut3(clamp((q - a0) / .16, 0, 1));
-    pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .025) / .16, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
-    if (pt.r) pt.r.style.transform = `scaleX(${e.toFixed(4)})`;
+    const a0 = i < 2 ? .40 + i * .03 : .50 + (i - 2) * .035;      // labels land as the threads thin onto their lines, rows follow
+    pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .025) / .14, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
+    if (pt.r) pt.r.style.transform = `scaleX(${easeOut3(clamp((q - (i < 2 ? .47 : a0)) / .14, 0, 1)).toFixed(4)})`;
   });
-  const live = q > .55; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
+  const live = q > .74; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
+}
+/* the word's feet: where each glyph meets its baseline, from the variable font's outlines at the resting instance */
+function computeFeet() {
+  if (!HB || !IG) return;
+  const yS = HB.capH * .04, sc = IG.fs / HB.upem, sp = [...document.querySelectorAll('#lines span')];
+  const cols = sp.map(e => e.getBoundingClientRect().left + .5); cols.push(sp[sp.length - 1].getBoundingClientRect().right - .5);
+  const feet = [];
+  chrs.forEach((chr, i) => {
+    const { out } = outline(i, WEND, 900), xs = [], left = chr.getBoundingClientRect().left;
+    for (const c of out) for (let k = 0; k < c.length; k += 2) {
+      const k2 = (k + 2) % c.length, x1 = c[k], y1 = c[k + 1], x2 = c[k2], y2 = c[k2 + 1];
+      if ((y1 <= yS) !== (y2 <= yS)) xs.push(x1 + (yS - y1) * (x2 - x1) / (y2 - y1));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) if (xs[k + 1] - xs[k] > HB.capH * .02) feet.push({ a: left + xs[k] * sc, b: left + xs[k + 1] * sc });
+  });
+  // Each foot docks onto a grid line, preferring the lines the Index is set on (No. / Title / Year / image edges),
+  // in left-to-right order so no two threads cross: a small DP over (foot, line).
+  const near = x => cols.reduce((b, c, k) => (Math.abs(c - x) < Math.abs(cols[b] - x) ? k : b), 0), axis = new Set();
+  ['.ix-head .c1', '.ix-head .c2', '.ix-head .c3'].forEach(q => axis.add(near(ixEl.querySelector(q).getBoundingClientRect().left)));
+  const ir = ixImg.getBoundingClientRect(); if (ir.width > 0) { axis.add(near(ir.left)); axis.add(near(ir.right)); }
+  feet.sort((u, v) => u.a - v.a);
+  const n = feet.length, m = cols.length, cost = (i, j) => Math.abs((feet[i].a + feet[i].b) / 2 - cols[j]) - (axis.has(j) ? 1e5 : 0);
+  const D = [...Array(n + 1)].map(() => Array(m + 1).fill(1e12)), P = [...Array(n + 1)].map(() => Array(m + 1).fill(0));
+  for (let j = 0; j <= m; j++) D[0][j] = 0;
+  for (let i = 1; i <= n; i++) for (let j = i; j <= m; j++) {
+    const take = D[i - 1][j - 1] + cost(i - 1, j - 1), skip = D[i][j - 1];
+    if (take <= skip) { D[i][j] = take; P[i][j] = 1; } else D[i][j] = skip;
+  }
+  for (let i = n, j = m; i > 0; j--) if (P[i][j]) { feet[i - 1].tx = cols[j - 1]; i--; }
+  FEET = feet; FEET.lift = yS * sc;
+  threadsSvg.textContent = '';
+  threadPaths = FEET.map(() => { const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); threadsSvg.appendChild(p); return p; });
+}
+function drawThreads(q, yb, sy) {
+  if (!FEET) computeFeet();
+  if (!FEET || q < .19 || q > .6) { threadsSvg.style.visibility = 'hidden'; return; }
+  threadsSvg.style.visibility = '';
+  // pour .19–.40: each foot drips to the bottom edge, its tail swinging over onto its grid line
+  // thin .38–.48: the ribbon narrows to a 1px hairline (around the foot, so it stays attached)
+  // settle .50–.58: with the word gone, the S-bend straightens into the grid line;  pale .50–.60: ink → grid grey
+  const seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
+  const grow = easeInOut(seg(.19, .40)), swing = Math.pow(grow, 1.5), thin = easeInOut(seg(.38, .48)), settle = easeInOut(seg(.50, .58)), pale = seg(.50, .60);
+  const k = Math.round(17 + 208 * pale), fill = `rgb(${k},${k},${k - Math.round(pale)})`;
+  const yT = yb - FEET.lift * sy, yB = lerp(yb, vh + 2, grow), r = lerp(yb, yB, .18), m = lerp(r, yB, .5), p = x => x.toFixed(1);
+  FEET.forEach((f, n) => {
+    const fc = (f.a + f.b) / 2, wt = lerp(f.b - f.a, 1, thin) / 2, xt = lerp(fc, f.tx, settle), xb = lerp(fc, f.tx, swing);
+    const L = xt - wt, R = xt + wt;
+    threadPaths[n].setAttribute('d', `M${p(L)},${p(yT)}L${p(L)},${p(r)}C${p(L)},${p(m)} ${p(xb - .5)},${p(m)} ${p(xb - .5)},${p(yB)}L${p(xb + .5)},${p(yB)}C${p(xb + .5)},${p(m)} ${p(R)},${p(m)} ${p(R)},${p(r)}L${p(R)},${p(yT)}Z`);
+    threadPaths[n].setAttribute('fill', fill);
+  });
 }
 
 /* ---------- TAO.: Acumin Variable, never distorted at rest ----------
@@ -516,7 +581,7 @@ function layout() {
   PIN = SMOOTH && vw >= 1100;
   html.style.setProperty('--A', A + 'px');
   SD = vh * (vw < 700 ? 1.8 : 2.2); stageEl.style.height = (vh + SD).toFixed(0) + 'px';
-  fitHero();
+  fitHero(); FEET = null;
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
   chapters.forEach(ch => {
