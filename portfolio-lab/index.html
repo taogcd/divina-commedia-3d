@@ -391,7 +391,7 @@ function stageFrame() {
    left on a rounded corner at the height of one Index rule (stems left→right ↦ header rule, rows 1…5, so the corners
    nest and never cross) and grows left along it. Then the lines let go of the word, slide through the corner into
    their rules, thin to 1px and take the rule's colour; the DOM rules finish drawing outward from the joint. */
-const BL = 70, TAPER = 110, WLIGHT = 200, sstep = t => t * t * (3 - 2 * t), bendG = t => (t >= 1 ? 1 / 3 : (1 - Math.pow(1 - t, 3)) / 3);
+const BL = 70, WLIGHT = 200, sstep = t => t * t * (3 - 2 * t), bendG = t => (t >= 1 ? 1 / 3 : (1 - Math.pow(1 - t, 3)) / 3);
 const stageCuts = new Map();
 function crossings(out, yc) {
   const xs = [];
@@ -443,7 +443,10 @@ function stageGeom() {
     const rk = Math.min(k, rules.length - 1), ru = rules[rk], c = (f.a + f.b) / 2, R = Math.max(R0, (f.b - f.a) / 2 + 6);
     f.g.rk[f.n] = rk; ru.driven = true; ru.ox = clamp(Math.min(c - R, ru.r) - ru.l, 0, ru.r - ru.l);
   });
-  return { sc, glyphs, rules, R0 };
+  // one line weight for all: the median ExtraLight stem, but never more than ~2/5 of the row pitch so stacked arms stay apart
+  const hs = all.map(f => (f.b - f.a) / 2).sort((u, v) => u - v), pitch = (rules[Math.min(5, rules.length - 1)].y - rules[0].y) / Math.max(1, Math.min(5, rules.length - 1));
+  const H0 = Math.max(2, Math.min(hs.length ? hs[hs.length >> 1] : 8, pitch * .2));
+  return { sc, glyphs, rules, R0, H0 };
 }
 function drawStage(q, yb, sy) {
   if (!SG) SG = stageGeom();
@@ -454,7 +457,7 @@ function drawStage(q, yb, sy) {
   const seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   const k = SG.sc * sy, W = lerp(900, WLIGHT, easeInOut(seg(.28, .40)));
   const growV = easeInOut(seg(.19, .34)), growH = easeInOut(seg(.34, .48)), slide = easeInOut(seg(.46, .57));
-  const thin = sstep(seg(.50, .58)), pale = seg(.50, .58), xL = SG.rules[0].l;
+  const thin = sstep(seg(.50, .58)), pale = seg(.50, .58), xL = SG.rules[0].l, conv = sstep(seg(.31, .40));   // conv: every line settles to one weight
   const slope = sl => clamp(sl / sy, -1.5, 1.5) * BL;      // an edge's own slope, faded to vertical within BL
   const rc = Math.round(17 + 208 * pale), rowCol = `rgb(${rc},${rc},${rc - Math.round(pale)})`;
   sx2.clearRect(0, 0, vw, vh);
@@ -471,12 +474,12 @@ function drawStage(q, yb, sy) {
     const F = footsOf(out, yc).map((f, n) => {
       const rule = SG.rules[g.rk[n] ?? g.rk[g.rk.length - 1] ?? 0];
       const a = x0 + f.fa * SG.sc, b = x0 + f.fb * SG.sc, xc = (a + b) / 2, h = Math.max(.5, (b - a) / 2);
-      const R = Math.max(SG.R0, h + 6), Vr = rule.y - R - Ycut;
+      const R = Math.max(SG.R0, lerp(h, SG.H0, conv) + 6), Vr = rule.y - R - Ycut;
       const V = Vr >= 0 && growH > 0 ? Vr : Infinity;      // the corner only exists once the turn has begun
       return { f, rule, a, b, xc, h, R, V, Vr, A: Math.PI * R / 2, elbowX: xc - R };
     });
     if (!F.length) continue;
-    const capS = 1 - sstep(seg(.26, .33));
+    const capS = 1 - sstep(seg(.24, .31));             // the bottom flattens first, then the lines even out
     let capMax = 0; for (const p of below) for (const P of p) capMax = Math.max(capMax, (yc - P[1]) * k * capS);
     const Vmin = Math.min(...F.map(e => e.Vr)), Pg = Math.max(0, Vmin - capMax);
     const one = pale <= 0;                                   // all ink: one shape per letter (no seam inside the O)
@@ -487,9 +490,10 @@ function drawStage(q, yb, sy) {
       const Ehead = V + A + Math.max(0, elbowX - xL - capLen);
       const turn = isFinite(V), E = turn && growH > 0 ? Pg + (Ehead - Pg) * growH : Pg * growV;
       const sT = turn ? Math.min(E, (V + A + Math.max(0, elbowX - rule.r)) * slide) : 0;
-      const oa = slope(f.sa), ob = slope(f.sb), wT = lerp(1, .6, growH), w1 = .5 / h;
-      // full stem width at the letter, narrowing to a line within TAPER px; then everything thins to 1px
-      const wAt = s => lerp(lerp(1, wT, sstep(clamp(s / TAPER, 0, 1))), w1, thin), w = wAt(1e9);
+      // even weight along the whole line, straight and round the corners alike: it starts as the stem's own width,
+      // settles to the one shared weight H0 for every line, and finally all thin to 1px together
+      const hT = lerp(lerp(h, SG.H0, conv), .5, thin), hw = () => hT;
+      const lean = s => (slope(f.sa) + slope(f.sb)) / 2 * bendG(Math.max(s, 0) / BL);   // the stem's lean, faded to vertical
       const at = (s, u) => {                                 // centre line: down, a quarter turn left, then left along the rule
         if (s <= V) return [xc + u, Ycut + s];
         if (s <= V + A) { const th = (s - V) / R; return [xc - R + (R + u) * Math.cos(th), Ycut + V + (R + u) * Math.sin(th)]; }
@@ -498,24 +502,24 @@ function drawStage(q, yb, sy) {
       if (!one) sx2.beginPath();
       if (E - sT > .3) {
         const s0 = sT > 0 ? sT : -.6, S = [s0];
-        for (let m = 1; m <= 8; m++) S.push(TAPER * m / 8);
+        for (let m = 1; m <= 6; m++) S.push(BL * m / 6);
         for (let m = 0; m <= 18; m++) S.push(V + A * m / 18);
         S.push(E);
         const SS = [...new Set(S.filter(s => s >= s0 && s <= E))].sort((u, v) => u - v);
-        const uL = s => ((a - xc) + oa * bendG(Math.max(s, 0) / BL)) * wAt(s), uR = s => ((b - xc) + ob * bendG(Math.max(s, 0) / BL)) * wAt(s);
+        const uL = s => lean(s) - hw(s), uR = s => lean(s) + hw(s);
         SS.forEach((s, m) => { const [X, Y] = at(s, uL(s)); if (m) sx2.lineTo(X, Y); else sx2.moveTo(X, Y); });
         for (let m = SS.length - 1; m >= 0; m--) { const [X, Y] = at(SS[m], uR(SS[m])); sx2.lineTo(X, Y); }
         sx2.closePath();
       }
       const ext = easeOut3(seg(.52, .59)), xt = Math.min(elbowX, rule.r);
       if (turn && ext > 0 && rule.r - xt > .5) {                    // the rule completes itself to the right of the joint
-        const t0 = (a - xc) * w, t1 = (b - xc) * w;
-        sx2.rect(xt - 1, rule.y + Math.min(t0, t1), (rule.r - xt) * ext + 1, Math.abs(t1 - t0));
+        const hh = hw(1e9);
+        sx2.rect(xt - 1, rule.y - hh, (rule.r - xt) * ext + 1, 2 * hh);
       }
       for (const p of pieces) {                              // the head: the glyph's own bottom, carried down with it
         p.forEach((P, m) => {
-          const X = x0 + P[0] * SG.sc, e = (yc - P[1]) * k * capS, t = clamp((X - a) / Math.max(1e-6, b - a), 0, 1);
-          const [PX, PY] = at(E + e, ((X - xc) + lerp(oa, ob, t) * bendG(E / BL)) * wAt(E + e));   // rides rigidly on the line's end
+          const X = x0 + P[0] * SG.sc, e = (yc - P[1]) * k * capS;
+          const [PX, PY] = at(E + e, lean(E) + (X - xc) * hw(E + e) / h);   // rides on the line's end, at the line's weight
           if (m) sx2.lineTo(PX, PY); else sx2.moveTo(PX, PY);
         });
         sx2.closePath();
