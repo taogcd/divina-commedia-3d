@@ -22,7 +22,7 @@
   --ph:#E2E2E2;
   --display:"gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --body:"gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
-  --acu:"acumin-variable","gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --acu:"tao-acumin","acumin-variable","gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --cond:"gotham-condensed","gotham","Helvetica Neue",Helvetica,Arial,sans-serif;
   --cjk:"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
   --m:20px; --gut:16px; --navh:44px; --A:200px; --vg:clamp(28px,6vh,76px);
@@ -349,6 +349,11 @@ let S0 = 1, introDone = REDUCE, introT0 = 0, IG = null, fontsReady = false, WEND
 const IL = document.getElementById('intro');
 const LET = ['T', 'A', 'O', '.'], STAG = .07, DEL = .008;
 const W0 = 50, G0 = 100, G1 = 900;                         // start: Extra Condensed Thin; end weight: 900
+const wPath = (u, wEnd) => {                               // width: out from Extra Condensed, swelling mid-sweep, back to rest
+  const a = qio(clamp((u - PH.sweep[0]) / ((PH.sweep[0] + PH.sweep[1]) / 2 - PH.sweep[0]), 0, 1));
+  const b = qio(clamp((u - (PH.sweep[0] + PH.sweep[1]) / 2) / (PH.collapse[0] + .25 - (PH.sweep[0] + PH.sweep[1]) / 2), 0, 1));
+  const mid = Math.max(wEnd, 82); return u < (PH.sweep[0] + PH.sweep[1]) / 2 ? W0 + (mid - W0) * a : mid + (wEnd - mid) * b;
+};
 const PH = { appear: [.12, .72], sweep: [.72, 2.65], collapse: [2.65, 3.4] };
 const INTRO_END = PH.collapse[1] + STAG * 3 + .06;
 const qio = t => (t < .5 ? 8 * t ** 4 : 1 - Math.pow(-2 * t + 2, 4) / 2);
@@ -370,9 +375,8 @@ function drawIntro(t) {
     else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); su = 1; H = lerp(fillH, cap, e); p = .025; yb = lerp(fillH, G.base, e); }
     const show = H > .5 ? '' : 'hidden';
     // the font's axes run continuously from Extra Condensed Thin to the resting instance
-    const ew = qio(clamp((u - PH.sweep[0]) / (PH.collapse[0] + .25 - PH.sweep[0]), 0, 1));
     const eg = qio(clamp((u - PH.sweep[0] + .1) / (PH.sweep[1] - PH.sweep[0]), 0, 1));
-    const fvs = `"wdth" ${(W0 + (WEND - W0) * ew).toFixed(2)}, "wght" ${(G0 + (G1 - G0) * eg).toFixed(1)}`;
+    const fvs = `"wdth" ${wPath(u, WEND).toFixed(2)}, "wght" ${(G0 + (G1 - G0) * eg).toFixed(1)}`;
     const E = Math.max(0, H - su * cap);
     const ra = row(p - DEL), rb = row(p + DEL), band = rb - ra;
     const yBot = yb + (rb - G.bo) * su;                   // screen y of the lower edge of the smear band
@@ -747,8 +751,15 @@ layout();
 requestAnimationFrame(frame);
 if (REDUCE) html.classList.add('ready', 'intro-gone');
 // wait for the Gotham faces (Adobe Fonts kit) before measuring the word and starting the intro; give up after 4 s
+// The kit declares Acumin Variable with font-stretch: normal, which pins its width axis. Re-declare the same
+// Adobe-hosted file as "tao-acumin" with the axis ranges the font really has (wdth 50–115, wght 100–900).
+const acumin = fetch('https://use.typekit.net/fuc7uis.css').then(r => r.text()).then(css => {
+  const blk = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(m => m[1]).find(b => /acumin-variable/.test(b));
+  const ff = new FontFace('tao-acumin', blk.match(/src:([^;]+);/)[1], { weight: '100 900', stretch: '50% 115%', style: 'normal' });
+  document.fonts.add(ff); return ff.load();
+}).catch(() => {});
 const faces = ['900 100px "acumin-variable"', '900 100px "gotham"', '100 100px "gotham-condensed"', '400 16px "gotham"', '700 16px "gotham"', '700 100px "gotham-condensed"'];
-Promise.race([document.fonts ? Promise.all(faces.map(f => document.fonts.load(f, 'TAO.'))) : Promise.resolve(), new Promise(r => setTimeout(r, 4000))])
+Promise.race([document.fonts ? Promise.all(faces.map(f => document.fonts.load(f, 'TAO.')).concat(acumin)) : Promise.resolve(), new Promise(r => setTimeout(r, 4000))])
   .catch(() => {}).then(() => { layout(); fontsReady = true; });
 let lt = 0;
 if (document.fonts) document.fonts.addEventListener('loadingdone', () => { clearTimeout(lt); lt = setTimeout(layout, 80); });
