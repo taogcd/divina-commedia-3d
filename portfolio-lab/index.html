@@ -358,7 +358,8 @@ const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
   // The first screen stays pinned for SD px of scroll; progress q scrubs the change, reversible and still on any frame:
   //  rise  (q 0–.22)  TAO. is pulled up and stretched until only its feet hang under the nav;
-  //  morph (.19–.30)  the letters' visible stems straighten and slim into six even vertical lines (900 → 200);
+  //  morph (.17–.31)  weight 900 → 200; the O (and A) open from inside their counter; every visible stem
+  //                   straightens and slims into six even vertical lines;
   //  pour  (.30–.38)  the lines run down to the heights of their Index rules (see drawStage);
   //  turn  (.38–.50)  each line turns left on a rounded corner and grows along its rule;
   //  dock  (.48–.60)  the lines slide into their rules, thin to 1px and take the rule colour;
@@ -445,13 +446,16 @@ function drawStage(q, yb, sy) {
   if (!on) { if (stageInk) { sx2.clearRect(0, 0, vw, vh); stageInk = false; } return; }
   stageInk = true;
   const seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
-  const m = easeInOut(seg(.19, .30)), W = lerp(900, WLIGHT, m), k = SG.sc * sy;
-  const growV = easeInOut(seg(.30, .38)), growH = easeInOut(seg(.38, .50)), slide = easeInOut(seg(.48, .58));
+  // the weight falls first (the O becomes a thin ring by itself); then a two-stem letter opens its thin bottom stroke
+  // from inside the counter; then every stem straightens into its line
+  const W = lerp(900, WLIGHT, easeInOut(seg(.17, .26))), split = easeInOut(seg(.235, .275));
+  const m1 = easeInOut(seg(.22, .31)), m2 = easeInOut(seg(.26, .31)), m = m1, k = SG.sc * sy;
+  const growV = easeInOut(seg(.31, .38)), growH = easeInOut(seg(.38, .50)), slide = easeInOut(seg(.48, .58));
   const thin = sstep(seg(.52, .59)), pale = seg(.52, .59), ext = easeOut3(seg(.53, .595));
   const ov = clamp(2 - sy, 0, 1), H = lerp(SG.H0, .5, thin), Y0 = -4, xL = SG.rules[0].l;
   const rc = Math.round(17 + 208 * pale), rowCol = `rgb(${rc},${rc},${rc - Math.round(pale)})`, INK = '#111111';
   sx2.clearRect(0, 0, vw, vh);
-  if (m < 1) {
+  if (m2 < 1) {
     // 1 · the letters. Stretched about their own bottoms, which sit on the baseline (overshoot not magnified).
     sx2.beginPath();
     for (const g of SG.glyphs) {
@@ -459,32 +463,60 @@ function drawStage(q, yb, sy) {
       let ymin = 0, ymax = 0;
       for (const c of out) for (let i = 1; i < c.length; i += 2) { if (c[i] < ymin) ymin = c[i]; if (c[i] > ymax) ymax = c[i]; }
       const base = yb - ymin * SG.sc * ov, Ym = y => base - (y - ymin) * k;
-      if (m <= 0) {
+      const multi = g.stems.length > 1, mg = multi ? m2 : m1;
+      if (mg <= 0 && (!multi || split <= 0)) {
         for (const c of out) { for (let i = 0; i < c.length; i += 2) { const X = x0 + c[i] * SG.sc, Y = Ym(c[i + 1]); if (i) sx2.lineTo(X, Y); else sx2.moveTo(X, Y); } sx2.closePath(); }
         continue;
       }
-      // 2 · the morph: each stem's visible slices straighten and slim into its vertical line (cells meet with .5px overlap)
-      const cuts = g.bounds.map(b => b + adv / 2), ov5 = .5 / SG.sc, Ybot = Ym(ymin), Ya = Math.max(Y0, Ym(ymax));
-      const Ls = g.stems.map(() => []), Rs = g.stems.map(() => []);
+      // 2 · the morph, slice by slice. A two-stem letter (O, A) is opened from inside, never cut: below its counter the
+      // counter keeps going — a slit of the final gap width with a rounded tip runs down through the closed band (the O's
+      // bowl, the A's crossbar), so the letter parts into its two sides; then everything straightens into the lines.
+      const sc = SG.sc, Ybot = Ym(ymin), Ya = Math.max(Y0, Ym(ymax)), S = g.stems, runs = S.map(() => [[]]);
+      const scr = x => x0 + x * sc, yfOf = Y => ymin + (base - Y) / k;
+      const push = (j, a, b, Y) => { const rr = runs[j]; if (b - a < .05) { if (rr[rr.length - 1].length) rr.push([]); return; } rr[rr.length - 1].push([a, b, Y]); };
       const Ys = []; for (let Y = Ya; Y < Ybot; Y += 2.5) Ys.push(Y); Ys.push(Ybot - .01);
-      for (const Y of Ys) {
-        const xs = crossings(out, ymin + (base - Y) / k);
-        g.stems.forEach((st, j) => {
-          const cL = j ? cuts[j - 1] : -1e9, cR = j < cuts.length ? cuts[j] : 1e9;
-          let lo = 1e9, hi = -1e9;
-          for (let n = 0; n + 1 < xs.length; n += 2) {
-            const a = Math.max(xs[n].x, cL - ov5), b = Math.min(xs[n + 1].x, cR + ov5);
-            if (b > a) { if (a < lo) lo = a; if (b > hi) hi = b; }
-          }
-          if (hi > lo) { Ls[j].push([lerp(x0 + lo * SG.sc, st.c - H, m), Y]); Rs[j].push([lerp(x0 + hi * SG.sc, st.c + H, m), Y]); }
-        });
+      if (!multi) {
+        for (const Y of Ys) {
+          const xs = crossings(out, yfOf(Y));
+          if (xs.length < 2) { push(0, 0, 0, Y); continue; }
+          push(0, lerp(scr(xs[0].x), S[0].c - H, mg), lerp(scr(xs[xs.length - 1].x), S[0].c + H, mg), Y);
+        }
+      } else {
+        const b0 = g.bounds[0] + adv / 2, cL = S[0].c, cR = S[1].c;
+        const gapNear = xs => { let best = null, bd = 1e9; for (let n = 1; n + 2 < xs.length; n += 2) { const L = xs[n].x, R = xs[n + 1].x, d = Math.abs((L + R) / 2 - b0); if (R > L && d < bd) { bd = d; best = [L, R]; } } return best; };
+        const spans = xs => { for (let n = 0; n + 1 < xs.length; n += 2) if (xs[n].x < b0 && xs[n + 1].x > b0) return true; return false; };
+        // the thickest closed band that has the counter above it (the O's bottom stroke, the A's crossbar)
+        let Dmax = 0, open0 = null; const st = HB.capH * .005;
+        for (let yy = ymin + st / 2; yy <= ymax; yy += st) {
+          const sp = spans(crossings(out, yy));
+          if (sp && open0 === null) open0 = yy;
+          if (!sp && open0 !== null) { Dmax = Math.max(Dmax, yy - open0); open0 = null; }
+        }
+        // the counter sinks by D: at each height the gap is the counter as it is D higher up, so the closed band is
+        // opened from inside by the counter's own round end — the two sides part as hooks, no straight cut
+        const D = split * (Dmax * 1.25 + HB.capH * .01);
+        for (const Y of Ys) {
+          const yf = yfOf(Y), xs = crossings(out, yf);
+          if (xs.length < 2) { push(0, 0, 0, Y); push(1, 0, 0, Y); continue; }
+          const x0f = xs[0].x, x1f = xs[xs.length - 1].x;
+          const gn = gapNear(xs), gs = D > 0 ? gapNear(crossings(out, yf + D)) : null;
+          const gp = gn && gs ? [Math.min(gn[0], gs[0]), Math.max(gn[1], gs[1])] : (gn || gs);
+          let gL = gp ? scr(gp[0]) : scr(x1f), gR = gp ? scr(gp[1]) : scr(x0f);   // no gap yet: both sides are the whole slice
+          const sw = 2 * SG.H0, wid = scr(x1f) - scr(x0f);
+          if (gp && wid > 2.1 * sw) { gL = Math.max(gL, scr(x0f) + sw); gR = Math.min(gR, scr(x1f) - sw); }   // each side keeps one stroke
+          const oL = lerp(scr(x0f), cL - H, mg), oR = lerp(scr(x1f), cR + H, mg), wmin = 2 * H * mg;
+          let l1 = lerp(gL, cL + H, mg), r0 = lerp(gR, cR - H, mg);
+          if (l1 - oL < wmin) l1 = oL + wmin;
+          if (oR - r0 < wmin) r0 = oR - wmin;
+          push(0, oL, l1, Y); push(1, r0, oR, Y);
+        }
       }
-      g.stems.forEach((st, j) => {
-        if (Ls[j].length < 2) return;
-        Ls[j].forEach(([X, Y], n) => (n ? sx2.lineTo(X, Y) : sx2.moveTo(X, Y)));
-        for (let n = Rs[j].length - 1; n >= 0; n--) sx2.lineTo(Rs[j][n][0], Rs[j][n][1]);
+      for (const rr of runs) for (const r of rr) {
+        if (r.length < 2) continue;
+        r.forEach(([XL, , Y], n) => (n ? sx2.lineTo(XL, Y) : sx2.moveTo(XL, Y)));
+        for (let n = r.length - 1; n >= 0; n--) sx2.lineTo(r[n][1], r[n][2]);
         sx2.closePath();
-      });
+      }
     }
     sx2.fillStyle = INK; sx2.fill('nonzero');
     return;
