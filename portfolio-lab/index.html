@@ -451,82 +451,38 @@ function stageGeom() {
   const H0 = Math.max(2, Math.min(hs.length ? hs[hs.length >> 1] : 8, pitch * .2));
   return { sc, glyphs, rules, R0, H0 };
 }
-/* The O (a two-sided letter whose bottom is closed): it stays bold until it is cut exactly down its middle, with clean
-   vertical cut faces. From that moment each half both slims to one even-width line along its outer edge and unbends
-   toward the vertical line — one continuous change, the end face turning from vertical to horizontal as it goes.
-   Returns polygons in screen space. */
+/* The O (a two-sided letter whose bottom is closed): it stays bold until it is cut exactly down its middle. From the
+   cut on it is no longer the letter: each half is a plain line with a rounded corner — straight down, a quarter turn,
+   ending in the clean vertical cut — wide enough at first to fill the half, then slimming to the line weight while the
+   corner unbends into the vertical line (the end face turning from vertical to horizontal). Screen-space polygons. */
 const QC = .20;
 function bowlPolys(g, q, yb, sy, k, ov, H, Y0, seg) {
   const O9 = outline(g.i, WEND, 900), sc = SG.sc, adv = O9.adv, x0 = g.cx - adv * sc / 2, out = O9.out;
   let ymin = 0; for (const c of out) for (let i = 1; i < c.length; i += 2) if (c[i] < ymin) ymin = c[i];
   const base = yb - ymin * sc * ov, Ym = y => base - (y - ymin) * k, yfOf = Y => ymin + (base - Y) / k, scr = x => x0 + x * sc;
-  const c = scr(g.bounds[0] + adv / 2), gap = 6 * sstep(seg(QC, QC + .012)), w = 2 * H, Ybot = Ym(ymin);
-  const tb = easeOut3(seg(QC, QC + .03)), u = easeInOut(seg(QC, .30));
-  const RS = 2, rows = [];
-  for (let Y = Y0; Y < Ybot; Y += RS) rows.push(Y); rows.push(Ybot - .01);
-  const R = rows.map(Y => {
-    const xs = crossings(out, yfOf(Y)); if (xs.length < 2) return null;
-    let gL = c, gR = c;                                      // the counter, where it is on screen
-    for (let n = 1; n + 2 < xs.length; n += 2) { const a = scr(xs[n].x), b = scr(xs[n + 1].x); if (a < c && b > c) { gL = a; gR = b; } }
-    return { Y, oL: scr(xs[0].x), oR: scr(xs[xs.length - 1].x), gL, gR };
-  });
+  const c = scr(g.bounds[0] + adv / 2), Ybot = Ym(ymin), Ytop = Math.min(Y0, Ybot - 4);
+  const xs = crossings(out, yfOf(Math.max(Ytop, Ym(ymax(out)) )));
+  const oL0 = xs.length >= 2 ? scr(xs[0].x) : c - 40, oR0 = xs.length >= 2 ? scr(xs[xs.length - 1].x) : c + 40;
+  const gap = 6 * sstep(seg(QC, QC + .012)), tb = easeOut3(seg(QC, QC + .035)), u = easeInOut(seg(QC, .30)), w1 = 2 * H;
   const polys = [];
-  [[1, g.stems[0].c], [-1, g.stems[1].c]].forEach(([side, target]) => {
-    const cut = c - side * gap / 2;
-    // the half's outer edge, top edge of the screen → bottom centre (the cut)
-    const E = R.filter(r => r && (side > 0 ? r.oL < cut : r.oR > cut)).map(r => [side > 0 ? r.oL : r.oR, r.Y]);
-    E.push([cut, Ybot]);
-    if (E.length < 3) return;
-    const cum = [0]; for (let n = 1; n < E.length; n++) cum.push(cum[n - 1] + Math.hypot(E[n][0] - E[n - 1][0], E[n][1] - E[n - 1][1]));
-    const N = 72, Le = cum[cum.length - 1], P = [];
-    for (let n = 0, j = 0; n < N; n++) { const s = Le * n / (N - 1); while (j < E.length - 2 && cum[j + 1] < s) j++; const t = clamp((s - cum[j]) / Math.max(1e-6, cum[j + 1] - cum[j]), 0, 1); P.push([lerp(E[j][0], E[j + 1][0], t), lerp(E[j][1], E[j + 1][1], t)]); }
-    const phi = P.map((p, n) => { const a = P[Math.max(0, n - 1)], b = P[Math.min(N - 1, n + 1)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); });
+  [[1, oL0, g.stems[0].c], [-1, oR0, g.stems[1].c]].forEach(([side, a, target]) => {
+    const cut = c - side * gap / 2, R = Math.max(1, Math.min(Math.abs(cut - a), Ybot - Ytop - 1)), Lv = Ybot - R - Ytop;
+    const Le = Lv + R * Math.PI / 2, w = Math.max(w1, lerp(R, w1, tb));
+    const N = 90, Lt = lerp(Le, Ybot - Ytop, u), ds = Lt / (N - 1);
+    const phiAt = n => { const s = Le * n / (N - 1); return side * (s <= Lv ? 0 : Math.min(Math.PI / 2, (s - Lv) / R)); };
     const nrm = f => (side > 0 ? [Math.cos(f), -Math.sin(f)] : [-Math.cos(f), Math.sin(f)]);   // toward the inside
-    // the slimming half, row by row: from the outer edge to (the counter / the cut) → (the outer edge moved in by w)
-    const I = P.map((p, n) => { const v = nrm(phi[n]); return [p[0] + v[0] * w, p[1] + v[1] * w]; });
-    const innerAt = Y => { for (let n = 0; n + 1 < I.length; n++) { const a = I[n], b = I[n + 1]; if ((a[1] - Y) * (b[1] - Y) <= 0 && a[1] !== b[1]) return a[0] + (Y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]); } return null; };
-    const span = R.map(r => {
-      if (!r) return null;
-      const o = side > 0 ? r.oL : r.oR; if (side > 0 ? o >= cut : o <= cut) return null;
-      const nat = side > 0 ? Math.min(r.gL, cut) : Math.max(r.gR, cut);
-      let inn = innerAt(r.Y); inn = inn === null ? cut : (side > 0 ? clamp(inn, o, cut) : clamp(inn, cut, o));
-      const e = lerp(nat, inn, tb);
-      return side > 0 ? [o, e] : [e, o];
-    });
-    if (u < .002) {                                          // just cut: draw the half exactly
-      const Lp = [], Rp = [];
-      span.forEach((sp, n) => { if (sp) { Lp.push([sp[0], R[n].Y]); Rp.push([sp[1], R[n].Y]); } });
-      Lp.push([side > 0 ? E[E.length - 2][0] : cut, Ybot]); Rp.push([side > 0 ? cut : E[E.length - 2][0], Ybot]);
-      polys.push(Lp.concat(Rp.reverse()));
-      return;
-    }
-    // depth of the half along each inward normal (march through the rows), then unbend: every angle × (1 − u),
-    // the length eased to the straight height, the depth eased to the line weight
-    const inside = (x, Y) => {                               // rows interpolated, so the depth is smooth
-      const fn = (Y - Y0) / RS, n0 = Math.floor(fn), f = fn - n0;
-      const a0 = n0 >= 0 && n0 < span.length ? span[n0] : null, a1 = n0 + 1 >= 0 && n0 + 1 < span.length ? span[n0 + 1] : null;
-      const sp = a0 && a1 ? [lerp(a0[0], a1[0], f), lerp(a0[1], a1[1], f)] : (a0 || a1);
-      return !!sp && x >= sp[0] - .5 && x <= sp[1] + .5;
-    };
-    const d0 = P.map((p, n) => {
-      const v = nrm(phi[n]); let t = 0;
-      while (t < 800 && inside(p[0] + v[0] * (t + 2), p[1] + v[1] * (t + 2))) t += 2;
-      let lo = t, hi = t + 2; for (let it = 0; it < 6; it++) { const m = (lo + hi) / 2; if (inside(p[0] + v[0] * m, p[1] + v[1] * m)) lo = m; else hi = m; }
-      return Math.max(lo, 1);
-    });
-    const d = d0.map((_, n) => (d0[Math.max(0, n - 1)] + 2 * d0[n] + d0[Math.min(N - 1, n + 1)]) / 4);
-    const Lt = lerp(Le, Ybot - P[0][1], u), ds = Lt / (N - 1);
-    let x = lerp(P[0][0], target - side * H, u), y = P[0][1];
+    let x = lerp(a, target - side * H, u), y = Ytop;
     const A = [], B = [];
     for (let n = 0; n < N; n++) {
-      const f = phi[n] * (1 - u), v = nrm(f), dd = lerp(d[n], w, Math.max(u, tb));   // once slim: exactly the line weight, end cut square
-      A.push([x, y]); B.push([x + v[0] * dd, y + v[1] * dd]);
-      if (n < N - 1) { const f2 = phi[n + 1] * (1 - u); x += Math.sin((f + f2) / 2) * ds; y += Math.cos((f + f2) / 2) * ds; }
+      const f = phiAt(n) * (1 - u), v = nrm(f);
+      A.push([x, y]); B.push([x + v[0] * w, y + v[1] * w]);
+      if (n < N - 1) { const f2 = phiAt(n + 1) * (1 - u); x += Math.sin((f + f2) / 2) * ds; y += Math.cos((f + f2) / 2) * ds; }
     }
     polys.push(A.concat(B.reverse()));
   });
   return polys;
 }
+function ymax(out) { let m = -1e9; for (const c of out) for (let i = 1; i < c.length; i += 2) if (c[i] > m) m = c[i]; return m; }
 function drawStage(q, yb, sy) {
   if (!SG) SG = stageGeom();
   const on = !!SG && q > 0 && q < .6;
