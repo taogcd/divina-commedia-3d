@@ -580,6 +580,7 @@ function drawStage(q, yb, sy) {
         const P = r.map(([XL, , Y]) => [XL, Y]); for (let n = r.length - 1; n >= 0; n--) P.push([r[n][1], r[n][2]]);
         polys.push(P);
       }
+      if (multi) (window.__sd || (window.__sd = {}))[g.i] = { shut: g.shut, gooR: +gooR.toFixed(2), polys: polys.length, b0: multi ? +(g.bounds[0] + adv / 2).toFixed(1) : 0, adv: +adv.toFixed(1) };   // debug
       const loops = multi && g.shut && gooR >= .5 ? gooTrace(polys, gooR) : null;
       if (loops) {                                           // traced outline: its own even-odd fill
         sx2.fillStyle = INK; sx2.fill('nonzero'); sx2.beginPath();
