@@ -560,7 +560,7 @@ function drawStage(q, yb, sy) {
           if (xs.length < 2) { push(0, cL - H * mg, cL + H * mg, Y); push(1, cR - H * mg, cR + H * mg, Y); continue; }
           const x0f = xs[0].x, x1f = xs[xs.length - 1].x, gn = gapNear(xs), shut = spans(xs);
           const oL = lerp(scr(x0f), cL - H, mg), oR = lerp(scr(x1f), cR + H, mg), wmin = 2 * H * mg;
-          if (shut && Y === Ys[Ys.length - 1]) g.shut = true;
+          g.shut = shut;                                     // ends up as: is the lowest inked slice closed (a bowl)?
           if (shut && gg < .25 && mg <= 0) { push(0, oL, oR, Y); push(1, oL, oR, Y); continue; }   // still whole: one shape
           let l1 = lerp(gn && !shut ? scr(gn[0]) : scr(b0), cL + H, mg), r0 = lerp(gn && !shut ? scr(gn[1]) : scr(b0), cR - H, mg);
           l1 = Math.min(l1, cx - gg / 2); r0 = Math.max(r0, cx + gg / 2);
