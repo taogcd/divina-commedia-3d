@@ -559,13 +559,13 @@ function drawStage(q, yb, sy) {
         const spans = xs => { for (let n = 0; n + 1 < xs.length; n += 2) if (xs[n].x < b0 && xs[n + 1].x > b0) return true; return false; };
         // the two sides part along a straight split that widens; drawn through the viscous filter below, the closed part
         // (the O's bottom) pinches into a neck, snaps cleanly and leaves round ends
-        const gMax = 2 * clamp(SG.H0 * 1.2, 4, 14) + 2 * SG.H0, gg = split * gMax, cx = lerp(scr(b0), gcT0, mg);
+        const gMax = 2 * clamp(SG.H0 * 1.2, 4, 14) + 2 * SG.H0, gg = split * gMax, cx = lerp(scr(b0), gcT0, mg), shutLog = [];
         for (const Y of Ys) {
           const yf = yfOf(Y), xs = crossings(out, yf);
           if (xs.length < 2) { push(0, cL - H * mg, cL + H * mg, Y); push(1, cR - H * mg, cR + H * mg, Y); continue; }
           const x0f = xs[0].x, x1f = xs[xs.length - 1].x, gn = gapNear(xs), shut = spans(xs);
           const oL = lerp(scr(x0f), cL - H, mg), oR = lerp(scr(x1f), cR + H, mg), wmin = 2 * H * mg;
-          g.shut = shut;                                     // ends up as: is the lowest inked slice closed (a bowl)?
+          shutLog.push(shut);                                // which inked slices are closed, top to bottom
           if (shut && gg < .25 && mg <= 0) { push(0, oL, oR, Y); push(1, oL, oR, Y); continue; }   // still whole: one shape
           let l1 = lerp(gn && !shut ? scr(gn[0]) : scr(b0), cL + H, mg), r0 = lerp(gn && !shut ? scr(gn[1]) : scr(b0), cR - H, mg);
           l1 = Math.min(l1, cx - gg / 2); r0 = Math.max(r0, cx + gg / 2);
@@ -573,6 +573,7 @@ function drawStage(q, yb, sy) {
           if (oR - r0 < wmin) r0 = oR - wmin;
           push(0, oL, l1, Y); push(1, r0, oR, Y);
         }
+        g.shut = shutLog.slice(-12).some(Boolean);          // a closed bowl at the bottom (the O), not a crossbar higher up
       }
       const polys = [];
       for (const rr of runs) for (const r of rr) {
@@ -580,7 +581,6 @@ function drawStage(q, yb, sy) {
         const P = r.map(([XL, , Y]) => [XL, Y]); for (let n = r.length - 1; n >= 0; n--) P.push([r[n][1], r[n][2]]);
         polys.push(P);
       }
-      if (multi) (window.__sd || (window.__sd = {}))[g.i] = { shut: g.shut, gooR: +gooR.toFixed(2), polys: polys.length, b0: multi ? +(g.bounds[0] + adv / 2).toFixed(1) : 0, adv: +adv.toFixed(1) };   // debug
       const loops = multi && g.shut && gooR >= .5 ? gooTrace(polys, gooR) : null;
       if (loops) {                                           // traced outline: its own even-odd fill
         sx2.fillStyle = INK; sx2.fill('nonzero'); sx2.beginPath();
