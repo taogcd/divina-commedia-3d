@@ -358,8 +358,9 @@ const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
   // The first screen stays pinned for SD px of scroll; progress q scrubs the change, reversible and still on any frame:
   //  rise  (q 0–.22)  TAO. is pulled up and stretched until only its feet hang under the nav;
-  //  morph (.17–.31)  weight 900 → 200; the O (and A) open from inside their counter; every visible stem
-  //                   straightens and slims into six even vertical lines;
+  //  thin  (.03–.22)  while it is stretched, the word's weight falls 900 → 100 (Thin);
+  //  split (.225–.30) the O is cut down its middle and its halves unbend; every visible stem straightens into one of
+  //                   six even vertical lines;
   //  pour  (.30–.38)  the lines run down to the heights of their Index rules (see drawStage);
   //  turn  (.38–.50)  each line turns left on a rounded corner and grows along its rule;
   //  dock  (.48–.60)  the lines slide into their rules, thin to 1px and take the rule colour;
@@ -393,7 +394,7 @@ function stageFrame() {
    down, turn left on rounded corners at the heights of the Index rules (stems left→right ↦ header rule, rows 1…5, so
    the corners nest and never cross) and grow along them; finally they slide into their rules, thin to 1px and take the
    rule colour, and the DOM rules take over. */
-const WLIGHT = 200, sstep = t => t * t * (3 - 2 * t);
+const WLIGHT = 100, sstep = t => t * t * (3 - 2 * t);
 const stageCuts = new Map();
 function crossings(out, yc) {
   const xs = [];
@@ -451,38 +452,71 @@ function stageGeom() {
   const H0 = Math.max(2, Math.min(hs.length ? hs[hs.length >> 1] : 8, pitch * .2));
   return { sc, glyphs, rules, R0, H0 };
 }
-/* The O (a two-sided letter whose bottom is closed): it stays bold until it is cut exactly down its middle. From the
-   cut on it is no longer the letter: each half is a plain line with a rounded corner — straight down, a quarter turn,
-   ending in the clean vertical cut — wide enough at first to fill the half, then slimming to the line weight while the
-   corner unbends into the vertical line (the end face turning from vertical to horizontal). Screen-space polygons. */
-const QC = .20;
-function bowlPolys(g, q, yb, sy, k, ov, H, Y0, seg) {
-  const O9 = outline(g.i, WEND, 900), sc = SG.sc, adv = O9.adv, x0 = g.cx - adv * sc / 2, out = O9.out;
+/* The O (a two-sided letter whose bottom is closed). The whole word thins to Thin while it is stretched; by then the O
+   is a thin ring, so it is simply cut down its middle — through its thin bottom stroke, clean vertical faces — and
+   each half (already a thin line with a rounded corner) unbends into its vertical line, its stroke easing to the line
+   weight and its cut face turning from vertical to horizontal. Screen-space polygons. */
+const QC = .225;
+function bowlPolys(g, q, yb, sy, k, ov, H, Y0, seg, W) {
+  const OW = outline(g.i, WEND, W), sc = SG.sc, adv = OW.adv, x0 = g.cx - adv * sc / 2, out = OW.out;
   let ymin = 0; for (const c of out) for (let i = 1; i < c.length; i += 2) if (c[i] < ymin) ymin = c[i];
   const base = yb - ymin * sc * ov, Ym = y => base - (y - ymin) * k, yfOf = Y => ymin + (base - Y) / k, scr = x => x0 + x * sc;
-  const c = scr(g.bounds[0] + adv / 2), Ybot = Ym(ymin), Ytop = Math.min(Y0, Ybot - 4);
-  const xs = crossings(out, yfOf(Math.max(Ytop, Ym(ymax(out)) )));
-  const oL0 = xs.length >= 2 ? scr(xs[0].x) : c - 40, oR0 = xs.length >= 2 ? scr(xs[xs.length - 1].x) : c + 40;
-  const gap = 6 * sstep(seg(QC, QC + .012)), tb = easeOut3(seg(QC, QC + .035)), u = easeInOut(seg(QC, .30)), w1 = 2 * H;
+  const c = scr(g.bounds[0] + adv / 2), gap = 6 * sstep(seg(QC, QC + .01)), w = 2 * H, Ybot = Ym(ymin);
+  const u = easeInOut(seg(QC, .30));
+  const RS = 2, rows = [];
+  for (let Y = Y0; Y < Ybot; Y += RS) rows.push(Y); rows.push(Ybot - .01);
+  const R = rows.map(Y => {
+    const xs = crossings(out, yfOf(Y)); if (xs.length < 2) return null;
+    let gL = c, gR = c;                                      // the counter, where the slice crosses it
+    for (let n = 1; n + 2 < xs.length; n += 2) { const a = scr(xs[n].x), b = scr(xs[n + 1].x); if (a < c && b > c) { gL = a; gR = b; } }
+    return { Y, oL: scr(xs[0].x), oR: scr(xs[xs.length - 1].x), gL, gR };
+  });
   const polys = [];
-  [[1, oL0, g.stems[0].c], [-1, oR0, g.stems[1].c]].forEach(([side, a, target]) => {
-    const cut = c - side * gap / 2, R = Math.max(1, Math.min(Math.abs(cut - a), Ybot - Ytop - 1)), Lv = Ybot - R - Ytop;
-    const Le = Lv + R * Math.PI / 2, w = Math.max(w1, lerp(R, w1, tb));
-    const N = 90, Lt = lerp(Le, Ybot - Ytop, u), ds = Lt / (N - 1);
-    const phiAt = n => { const s = Le * n / (N - 1); return side * (s <= Lv ? 0 : Math.min(Math.PI / 2, (s - Lv) / R)); };
+  [[1, g.stems[0].c], [-1, g.stems[1].c]].forEach(([side, target]) => {
+    const cut = c - side * gap / 2;
+    const span = R.map(r => {                                // this half of the ring, row by row
+      if (!r) return null;
+      const o = side > 0 ? r.oL : r.oR; if (side > 0 ? o >= cut : o <= cut) return null;
+      const e = side > 0 ? Math.min(r.gL, cut) : Math.max(r.gR, cut);
+      return side > 0 ? [o, e] : [e, o];
+    });
+    // outer edge: top edge of the screen → bottom centre; inner edge: the counter's edge → the top of the cut face
+    const E = R.filter(r => r && (side > 0 ? r.oL < cut : r.oR > cut)).map(r => [side > 0 ? r.oL : r.oR, r.Y]);
+    E.push([cut, Ybot]);
+    const Iq = []; let Ycb = null;
+    R.forEach((r, n) => { const sp = span[n]; if (!r || !sp) return; const e = side > 0 ? sp[1] : sp[0]; if (side > 0 ? e < cut - .01 : e > cut + .01) { Iq.push([e, r.Y]); Ycb = r.Y; } });
+    if (E.length < 3) return;
+    if (Iq.length < 2) { Iq.length = 0; Iq.push([cut, E[0][1]]); Ycb = Ybot - w; }
+    Iq.push([cut, Math.min(Ybot - 1, (Ycb ?? Ybot - w) + RS)]);
+    const resample = (Lst, N) => {
+      const cum = [0]; for (let n = 1; n < Lst.length; n++) cum.push(cum[n - 1] + Math.hypot(Lst[n][0] - Lst[n - 1][0], Lst[n][1] - Lst[n - 1][1]));
+      const L = cum[cum.length - 1], out = [];
+      for (let n = 0, j = 0; n < N; n++) { const s = L * n / (N - 1); while (j < Lst.length - 2 && cum[j + 1] < s) j++; const t = clamp((s - cum[j]) / Math.max(1e-6, cum[j + 1] - cum[j]), 0, 1); out.push([lerp(Lst[j][0], Lst[j + 1][0], t), lerp(Lst[j][1], Lst[j + 1][1], t)]); }
+      return { pts: out, len: L };
+    };
+    const N = 80, { pts: P, len: Le } = resample(E, N), { pts: Q } = resample(Iq, N);
+    const phi = P.map((p, n) => { const a = P[Math.max(0, n - 1)], b = P[Math.min(N - 1, n + 1)]; return Math.atan2(b[0] - a[0], b[1] - a[1]); });
     const nrm = f => (side > 0 ? [Math.cos(f), -Math.sin(f)] : [-Math.cos(f), Math.sin(f)]);   // toward the inside
-    let x = lerp(a, target - side * H, u), y = Ytop;
+    // the inner edge as an offset from the outer edge in its own frame (along, across)
+    const off = P.map((p, n) => { const t = [Math.sin(phi[n]), Math.cos(phi[n])], v = nrm(phi[n]), dx = Q[n][0] - p[0], dy = Q[n][1] - p[1]; return [dx * t[0] + dy * t[1], dx * v[0] + dy * v[1]]; });
+    // unbend: every angle × (1 − u), the length eased to the straight height; the offset eases to (0, line weight).
+    // the outer edge is integrated for u and for 0 and the difference kept, so the shape is exact at both ends
+    const walk = (uu, x00) => {
+      const Lt = lerp(Le, Ybot - P[0][1], uu), ds = Lt / (N - 1), o = []; let x = x00, y = P[0][1];
+      for (let n = 0; n < N; n++) { const f = phi[n] * (1 - uu); o.push([x, y, f]); if (n < N - 1) { const f2 = phi[n + 1] * (1 - uu); x += Math.sin((f + f2) / 2) * ds; y += Math.cos((f + f2) / 2) * ds; } }
+      return o;
+    };
+    const W0 = walk(0, P[0][0]), Wu = walk(u, lerp(P[0][0], target - side * H, u));
     const A = [], B = [];
     for (let n = 0; n < N; n++) {
-      const f = phiAt(n) * (1 - u), v = nrm(f);
-      A.push([x, y]); B.push([x + v[0] * w, y + v[1] * w]);
-      if (n < N - 1) { const f2 = phiAt(n + 1) * (1 - u); x += Math.sin((f + f2) / 2) * ds; y += Math.cos((f + f2) / 2) * ds; }
+      const x = Wu[n][0] + (P[n][0] - W0[n][0]) * (1 - u), y = Wu[n][1] + (P[n][1] - W0[n][1]) * (1 - u), f = Wu[n][2];
+      const t = [Math.sin(f), Math.cos(f)], v = nrm(f), a = off[n][0] * (1 - u), b = lerp(off[n][1], w, u);
+      A.push([x, y]); B.push([x + t[0] * a + v[0] * b, y + t[1] * a + v[1] * b]);
     }
     polys.push(A.concat(B.reverse()));
   });
   return polys;
 }
-function ymax(out) { let m = -1e9; for (const c of out) for (let i = 1; i < c.length; i += 2) if (c[i] > m) m = c[i]; return m; }
 function drawStage(q, yb, sy) {
   if (!SG) SG = stageGeom();
   const on = !!SG && q > 0 && q < .6;
@@ -492,9 +526,10 @@ function drawStage(q, yb, sy) {
   const seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   // the weight falls first (the O becomes a thin ring by itself); then a two-stem letter opens its thin bottom stroke
   // from inside the counter; then every stem straightens into its line
-  const W = lerp(900, WLIGHT, easeInOut(seg(.17, .26))), split = easeInOut(seg(.235, .28));
-  const m1 = easeInOut(seg(.22, .31)), m2 = easeInOut(seg(.26, .31)), m = m1, k = SG.sc * sy;
-  const growV = easeInOut(seg(.31, .38)), growH = easeInOut(seg(.38, .50)), slide = easeInOut(seg(.48, .58));
+  // the weight falls 900 → 100 (Thin) all the way through the stretch; then the O is cut and every stem becomes its line
+  const W = lerp(900, WLIGHT, sstep(seg(.02, .22))), split = easeInOut(seg(.225, .26));
+  const m1 = easeInOut(seg(.22, .30)), m2 = easeInOut(seg(.23, .30)), m = m1, k = SG.sc * sy;
+  const growV = easeInOut(seg(.30, .38)), growH = easeInOut(seg(.38, .50)), slide = easeInOut(seg(.48, .58));
   const thin = sstep(seg(.52, .59)), pale = seg(.52, .59), ext = easeOut3(seg(.53, .595));
   const ov = clamp(2 - sy, 0, 1), H = lerp(SG.H0, .5, thin), Y0 = -4, xL = SG.rules[0].l;
   const rc = Math.round(17 + 208 * pale), rowCol = `rgb(${rc},${rc},${rc - Math.round(pale)})`, INK = '#111111';
@@ -504,10 +539,10 @@ function drawStage(q, yb, sy) {
     sx2.beginPath();
     for (const g of SG.glyphs) {
       if (g.bowl && q >= QC) {                               // the O: cut, banded and unbent (bowlPolys)
-        for (const P of bowlPolys(g, q, yb, sy, k, ov, H, Y0, seg)) { P.forEach(([X, Y], n) => (n ? sx2.lineTo(X, Y) : sx2.moveTo(X, Y))); sx2.closePath(); }
+        for (const P of bowlPolys(g, q, yb, sy, k, ov, H, Y0, seg, W)) { P.forEach(([X, Y], n) => (n ? sx2.lineTo(X, Y) : sx2.moveTo(X, Y))); sx2.closePath(); }
         continue;
       }
-      const { out, adv } = outline(g.i, WEND, g.bowl ? 900 : W), x0 = g.cx - adv * SG.sc / 2;   // the O stays bold until it is cut
+      const { out, adv } = outline(g.i, WEND, W), x0 = g.cx - adv * SG.sc / 2;
       let ymin = 0, ymax = 0;
       for (const c of out) for (let i = 1; i < c.length; i += 2) { if (c[i] < ymin) ymin = c[i]; if (c[i] > ymax) ymax = c[i]; }
       const base = yb - ymin * SG.sc * ov, Ym = y => base - (y - ymin) * k;
