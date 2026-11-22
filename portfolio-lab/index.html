@@ -9,12 +9,12 @@
 <meta name="robots" content="noindex">
 <meta name="description" content="Chuantao Zhu (Tao), selected works 2023–2026. Experimental build.">
 <style>
-/* Layout idea: a fixed 12-column Swiss grid drawn as hairlines on near-white grey; one word, TAO., alone on the
+/* Layout idea: an implicit four-column grid on white (its hairlines only draw in once the Index has formed); one word, TAO., alone on the
    first screen in Acumin Variable at true proportions, opened by a smear that travels through the letters
    while the width and weight axes run from Extra Condensed Thin to Black. Works then fall through the grid as a masonry
    (瀑布流) in WebGL, and stretch into vertical strips and dissolve as they pass the top of the screen. */
 :root{
-  --paper:#F3F3F2;
+  --paper:#FFFFFF;
   --ink:#111111;
   --ink-2:#7C7C7C;
   --rule:rgba(17,17,17,.08);
@@ -24,24 +24,26 @@
   --body:"tao-acumin","acumin-variable","Helvetica Neue",Helvetica,Arial,sans-serif;
   --acu:"tao-acumin","acumin-variable","Helvetica Neue",Helvetica,Arial,sans-serif;
   --cjk:"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
-  --m:20px; --gut:16px; --navh:44px; --A:200px; --vg:clamp(28px,6vh,76px);
+  --m:20px; --gut:20px; --navh:44px; --A:200px; --vg:clamp(28px,6vh,76px);
+  /* text: 12px on a 1440 screen, scaling with the width; 14 leading; -2% tracking */
+  --t:max(11px,.8333vw); --tl:1.1667; --tr:-.02em; --L:calc(var(--t) * var(--tl));
   color-scheme:light;
 }
 @media (max-width:699px){ :root{ --m:16px; --gut:10px; --navh:40px; } }
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--paper);color:var(--ink);-webkit-text-size-adjust:100%;scrollbar-gutter:stable}
 html.smooth{overflow-y:scroll}
-body{background:var(--paper);font:300 14px/1.5 var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{background:var(--paper);font:400 var(--t)/var(--tl) var(--body);letter-spacing:var(--tr);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 html.lock, html.lock body{overflow:hidden}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.mono{font-family:var(--body);font-size:11px;line-height:1.35;letter-spacing:.005em;font-variant-numeric:tabular-nums}
+.mono{font-family:var(--body);font-size:var(--t);line-height:var(--tl);letter-spacing:var(--tr);font-variant-numeric:tabular-nums}
 .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:var(--gut);padding-inline:var(--m)}
 
 /* fixed layers */
-#lines{position:fixed;inset:0;z-index:0;pointer-events:none}
-#lines span{border-left:1px solid var(--rule);height:100%}
+#lines{position:fixed;inset:0;z-index:0;pointer-events:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:var(--gut);padding-inline:var(--m)}
+#lines span{border-left:1px solid var(--rule);height:100%;transform:scaleY(0);transform-origin:50% 0;will-change:transform}
 #lines span:last-child{border-right:1px solid var(--rule)}
 #gl{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
 #main{position:relative;z-index:2}
@@ -49,7 +51,7 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 
 /* nav */
 #nav{position:fixed;top:0;left:0;right:0;height:var(--navh);z-index:6;align-items:center;color:#fff;mix-blend-mode:difference;
-  font-family:var(--acu);font-size:11px;font-variation-settings:"wght" 200,"wdth" 100;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+  font-family:var(--acu);font-size:var(--t);line-height:var(--tl);font-variation-settings:"wght" 400,"wdth" 100;letter-spacing:var(--tr);font-variant-numeric:tabular-nums}
 #nav .nv{overflow:hidden;white-space:nowrap;line-height:1.4}
 #nav .nv > *{display:inline-block}
 #nav .n1{grid-column:1/4}
@@ -81,15 +83,12 @@ html.smooth .stage-frame{will-change:transform}
 #intro{position:fixed;inset:0;width:100%;height:100%;z-index:4;pointer-events:none;background:var(--paper);will-change:opacity;opacity:.999}   /* not quite opaque, so the browser keeps rasterising what is under it */
 html.intro-out #intro{opacity:0;transition:opacity .45s linear}
 html.intro-gone #intro{display:none}
-/* after TAO. settles, the grid is drawn down from the top edge, column by column (no fade), and each nav label
-   drops in with the line of its column */
-#lines span{transform-origin:50% 0;transition:transform 1.15s cubic-bezier(.65,0,.2,1);transition-delay:calc(.15s + var(--c) * .05s);will-change:transform}
-html:not(.ready) #lines span{transform:scaleY(0)}
+/* after TAO. settles, each nav label drops in (the four column lines only draw in once the Index has formed) */
 #nav .nv > *{transition:transform .9s cubic-bezier(.16,1,.3,1);transition-delay:calc(.15s + var(--c) * .05s)}
 html:not(.ready) #nav .nv > *{transform:translateY(-110%)}
 html:not(.ready) #bar{opacity:0}
 #bar{transition:opacity .6s ease .9s}
-@media (prefers-reduced-motion:reduce){ #lines span,#nav .nv > *,#bar{transition:none} }
+@media (prefers-reduced-motion:reduce){ #nav .nv > *,#bar{transition:none} }
 .mega .chr{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
 html.ready .mega .chr{transition:none}
 html.ready .mega .ln{overflow:visible}
@@ -104,14 +103,17 @@ html.ready .mega .ln{overflow:visible}
 .ix .mk{display:block;overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
 .ix .mk > span{display:block;transform:translateY(110%);will-change:transform}
 .ix-rule{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--rule);transform:scaleX(0);transform-origin:0 50%}
-.ix-h{font-size:11px;font-weight:700;padding-bottom:22px}
-.ix-head{font-size:11px;color:var(--ink-2);padding-bottom:8px}
+.ix-h{font-size:var(--t);font-weight:600;padding-bottom:var(--L)}
+.ix-head{font-size:var(--t);color:var(--ink-2);padding-bottom:4px}
 .ix-head .ix-rule{background:var(--ink)}
-.ix-row{padding:10px 0 9px}
-.ix-row .c1,.ix-row .c3{font-size:11px;font-variant-numeric:tabular-nums}
-.ix-row .c2{font-size:14px;font-weight:400}
+.ix-row{padding:var(--L) 0 4px}
+.ix-row .c1,.ix-row .c3{font-variant-numeric:tabular-nums}
+.ix-row .c2{font-weight:400}
+/* each work's cover hangs from its row's line, then folds up into it (top-left) before the row is written */
+.ix-cv{position:absolute;left:0;top:100%;width:var(--cw,25vw);height:120px;margin:0;z-index:3;transform-origin:0 0;pointer-events:none;visibility:hidden;background:var(--ph);overflow:hidden;will-change:transform,clip-path}
+.ix-cv img{display:block;width:100%;height:100%;object-fit:cover}
 .ix-row:hover .c1,.ix-row:focus-visible .c1{color:var(--accent)}
-.ix-img{grid-column:8/13;grid-row:1/2;height:58vh;margin:0;position:relative;clip-path:inset(0 0 100% 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1)}
+.ix-img{grid-column:7/13;grid-row:1/2;height:58vh;margin:0;position:relative;clip-path:inset(0 0 100% 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1)}
 .ix-img.on{clip-path:inset(0 0 0 0)}
 .ix-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top}
 @media (max-width:699px){ .ix-list{grid-column:1/13;--cols:12} .ix .c1{grid-column:1/3} .ix .c2{grid-column:3/11} .ix .c3{grid-column:11/13} .ix-img{display:none} }
@@ -136,7 +138,7 @@ html.smooth .ch-meta-in{position:relative;top:auto}
 .ch-meta dl div{display:grid;grid-template-columns:70px 1fr;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule)}
 .ch-meta dt{color:var(--ink-2)}
 .ch-meta dd{text-transform:none;letter-spacing:0}
-.lede{margin-top:18px;max-width:38ch;font-size:13px;line-height:1.55}
+.lede{margin-top:18px;max-width:38ch}
 .links{margin-top:16px;display:flex;flex-wrap:wrap;gap:14px}
 .links a{border-bottom:1px solid currentColor;padding-bottom:1px}
 .links a:hover{color:var(--accent)}
@@ -168,8 +170,8 @@ html:not(.gl) .tile-im{background:var(--ph)}
 .facts{margin-top:12vh;row-gap:36px}
 .facts div{grid-column:span 3;border-top:1px solid var(--ink);padding-top:8px}
 .facts h3{margin-bottom:12px;color:var(--ink-2);font-weight:400}
-.facts p{font-size:15px;line-height:1.4;margin-bottom:10px}
-.facts p span{display:block;color:var(--ink-2);font-size:13px}
+.facts p{margin-bottom:10px}
+.facts p span{display:block;color:var(--ink-2)}
 .facts a{border-bottom:1px solid var(--rule)}
 .facts a:hover{border-color:currentColor}
 .foot{margin-top:16vh;padding-bottom:10px}
@@ -197,7 +199,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 </style>
 </head>
 <body>
-<div id="lines" class="grid" aria-hidden="true"><span style="--c:0"></span><span style="--c:1"></span><span style="--c:2"></span><span style="--c:3"></span><span style="--c:4"></span><span style="--c:5"></span><span style="--c:6"></span><span style="--c:7"></span><span style="--c:8"></span><span style="--c:9"></span><span style="--c:10"></span><span style="--c:11"></span></div>
+<div id="lines" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 <canvas id="gl" aria-hidden="true"></canvas>
 <canvas id="intro" aria-hidden="true"></canvas>
 
@@ -296,7 +298,7 @@ DATA.forEach((p, i) => {
   total += p.i.length;
   const row = document.createElement('a');
   row.className = 'ix-row'; row.href = '#w' + no; row.dataset.i = i;
-  row.innerHTML = `<span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i>`;
+  row.innerHTML = `<span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i><figure class="ix-cv" aria-hidden="true"><img alt="" decoding="async" src="${url(p.i[0], 800)}"></figure>`;
   rowsEl.appendChild(row);
 
   const links = [p.v ? `<a href="${p.v}" target="_blank" rel="noopener">Film ↗</a>` : '']
@@ -354,6 +356,7 @@ const STRETCH = 2.6;                                      // height multiple of 
 const stageEl = $('#stage'), stageFrameEl = $('.stage-frame');
 const easeOut3 = t => 1 - Math.pow(1 - t, 3);
 let ixParts = null, SG = null, stageInk = false;
+const gridLines = [...document.querySelectorAll('#lines span')];
 const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
   // The first screen stays pinned for SD px of scroll; progress q scrubs the change, reversible and still on any frame:
@@ -364,7 +367,8 @@ function stageFrame() {
   //  pour  (.30–.38)  the lines run down to the heights of their Index rules (see drawStage);
   //  turn  (.38–.50)  each line turns left on a rounded corner and grows along its rule;
   //  dock  (.48–.60)  the lines slide into their rules, thin to 1px and take the rule colour;
-  //                   once thin (.59+) each row's words rise out of their line; rows 6–10 as their rules draw in (.70+).
+  //                   once thin, 'Index' and the labels rise (.595); then work by work (.60, every .028) a cover hangs
+  //                   from its row's line and folds up into it, and the row's words rise; the four column lines draw down.
   const q = clamp(cur / SD, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
   const y1 = navOff + vh * .11, io3 = easeInOut;
@@ -375,20 +379,29 @@ function stageFrame() {
   else { yb = lerp(y1 - 26, -vh * .45, e3); sy = 2.5 + .5 * e3; }   // far enough that the bends leave with the word
   heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
   drawStage(q, yb, sy);
-  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
+  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule'), cv: el.querySelector('.ix-cv'), cs: '' }));
+  const rise = (pt, a, st, d) => pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a - k * st) / d, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
   ixParts.forEach((pt, i) => {
-    // the words wait until the thick lines have become the thin rules (.59). Then each row's words rise out of their
-    // line, cell after cell from the left: 'Index' and the column labels first, rows 1–5 after; rows 6–10 have no
-    // line of their own, so their rule draws in left → right as their words rise.
-    const t0 = i <= 1 ? .595 : i <= 6 ? .61 + (i - 2) * .02 : .70 + (i - 7) * .02, sweep = easeInOut(clamp((q - t0) / .07, 0, 1));
-    pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - t0 - k * .02) / .12, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
-    if (pt.r) {
-      const ru = SG && i > 0 ? SG.rules[i - 1] : null;
-      if (ru && ru.driven) { pt.r.style.transformOrigin = ''; pt.r.style.transform = q >= .6 ? 'none' : 'scaleX(0)'; }   // the canvas draws it until it hands over
-      else { pt.r.style.transformOrigin = ''; pt.r.style.transform = `scaleX(${sweep.toFixed(4)})`; }                 // drawn by the same sweep as its words
+    // nothing is written until the thick lines have become the thin rules (.59). 'Index' and the column labels rise
+    // first. Then, work by work, like a finished project folding into its line of a contents list: the work's cover
+    // unrolls downward from its row's line, folds up into the line's left end, and the row's words rise out of it.
+    // Rows 6–10 have no line of their own, so theirs draws in left → right just before.
+    const ru = SG && i > 0 ? SG.rules[i - 1] : null, driven = ru && ru.driven;
+    if (i <= 1) { rise(pt, .595, .02, .10); if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - .585) / .03, 0, 1)).toFixed(4)})`; return; }
+    const t0 = .60 + (i - 2) * .028;
+    const u1 = easeInOut(clamp((q - t0) / .016, 0, 1)), u2 = easeInOut(clamp((q - t0 - .02) / .026, 0, 1));
+    const cs = u1 <= 0 || u2 >= 1 ? 'h' : `${(1 - u1).toFixed(4)}|${(1 - u2).toFixed(4)}`;
+    if (cs !== pt.cs) {
+      pt.cs = cs;
+      if (cs === 'h') pt.cv.style.visibility = '';
+      else { pt.cv.style.visibility = 'visible'; pt.cv.style.clipPath = `inset(0 0 ${((1 - u1) * 100).toFixed(2)}% 0)`; pt.cv.style.transform = `scale(${Math.max(.0001, 1 - u2).toFixed(4)})`; }
     }
+    rise(pt, t0 + .024, .01, .05);
+    if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - t0 + .014) / .02, 0, 1)).toFixed(4)})`;
   });
-  const live = q > .84; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
+  // the four column lines draw down from the top edge once the Index is forming, one column after another
+  gridLines.forEach((ln, c) => { const u = easeInOut(clamp((q - .60 - c * .03) / .14, 0, 1)); ln.style.transform = u >= 1 ? 'none' : `scaleY(${u.toFixed(4)})`; });
+  const live = q > .9; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
    keeps its bottom on the baseline (the O's overshoot is not magnified). Then the letters turn into lines: each stem's
@@ -535,7 +548,7 @@ function drawStage(q, yb, sy) {
   const growV = easeInOut(seg(.30, .38)), growH = easeInOut(seg(.38, .50)), slide = easeInOut(seg(.48, .58));
   const thin = sstep(seg(.52, .59)), pale = seg(.52, .59), ext = easeOut3(seg(.53, .595));
   const ov = clamp(2 - sy, 0, 1), H = lerp(SG.H0, .5, thin), Y0 = -4, xL = SG.rules[0].l;
-  const rc = Math.round(17 + 208 * pale), rowCol = `rgb(${rc},${rc},${rc - Math.round(pale)})`, INK = '#111111';
+  const rc = Math.round(17 + 219 * pale), rowCol = `rgb(${rc},${rc},${rc})`, INK = '#111111';   // ends at the rule colour on white (rgba(17,17,17,.08) ≈ 236)
   sx2.clearRect(0, 0, vw, vh);
   if (m2 < 1) {
     // 1 · the letters. Stretched about their own bottoms, which sit on the baseline (overshoot not magnified).
@@ -781,6 +794,14 @@ function layout() {
   html.style.setProperty('--A', A + 'px');
   SD = vh * (vw < 700 ? 1.8 : 2.2); stageEl.style.height = (vh + SD).toFixed(0) + 'px';
   fitHero(); SG = null; stageCuts.clear();
+  {                                                         // the covers: one column wide (two on phones), hanging below their row, kept on screen
+    const cw = (gridLines[0].getBoundingClientRect().width || vw / 4), gut = parseFloat(getComputedStyle(html).getPropertyValue('--gut')) || 0;
+    const W = vw < 700 ? cw * 2 + gut : cw, fTop = stageFrameEl.getBoundingClientRect().top;
+    [...rowsEl.children].forEach((row, i) => {
+      const im = DATA[i].i[0], b = row.getBoundingClientRect().bottom - fTop, cv = row.querySelector('.ix-cv');
+      cv.style.width = W.toFixed(1) + 'px'; cv.style.height = Math.max(40, Math.min(W * im[3] / im[2], vh * .46, vh - b - 16)).toFixed(1) + 'px';
+    });
+  }
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
   chapters.forEach(ch => {
