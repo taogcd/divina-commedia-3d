@@ -102,7 +102,7 @@ html.ready .mega .ln{overflow:visible}
 .ix-h,.ix-head,.ix-row{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));column-gap:var(--gut);align-items:baseline;position:relative}
 .ix .c1{grid-column:1/2} .ix .c2{grid-column:2/6} .ix .c3{grid-column:6/7}
 .ix .mk{display:block;overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
-.ix .mk > span{display:block;transform:translateY(110%);will-change:transform}
+.ix .mk > span{display:block;clip-path:inset(-20% 100% -20% 0)}
 .ix-rule{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--rule);transform:scaleX(0);transform-origin:0 50%}
 .ix-h{font-size:11px;font-weight:700;padding-bottom:22px}
 .ix-head{font-size:11px;color:var(--ink-2);padding-bottom:8px}
@@ -364,7 +364,7 @@ function stageFrame() {
   //  pour  (.30–.38)  the lines run down to the heights of their Index rules (see drawStage);
   //  turn  (.38–.50)  each line turns left on a rounded corner and grows along its rule;
   //  dock  (.48–.60)  the lines slide into their rules, thin to 1px and take the rule colour;
-  //                   each row's words rise with its own line (header .44, rows 1–5 after), rows 6–10 with their rules.
+  //                   once thin (.59+) each row is swept in left → right; rows 6–10 with their rules drawing in (.70+).
   const q = clamp(cur / SD, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
   const y1 = navOff + vh * .11, io3 = easeInOut;
@@ -375,19 +375,24 @@ function stageFrame() {
   else { yb = lerp(y1 - 26, -vh * .45, e3); sy = 2.5 + .5 * e3; }   // far enough that the bends leave with the word
   heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
   drawStage(q, yb, sy);
-  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
+  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ el, mk: [...el.querySelectorAll('.mk')], m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule'), geo: null }));
   ixParts.forEach((pt, i) => {
-    // each row's words come with its own line: 'Index' and the column labels with the header line as it runs along its
-    // rule (.44), rows 1–5 with theirs, one after another; rows 6–10 as their rules draw in (.55+)
-    const a0 = i === 0 ? .44 : i === 1 ? .45 : i <= 6 ? .465 + (i - 2) * .015 : .555 + (i - 7) * .008;
-    pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .02) / .12, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
+    // the words wait until the thick lines have become the thin rules (.59). Then each row is swept from left to right —
+    // as if its thin line drew the words out: 'Index' and the column labels first, rows 1–5 after; rows 6–10 have no
+    // line of their own, so their rule draws in left → right and the words follow its head.
+    const t0 = i <= 1 ? .595 : i <= 6 ? .61 + (i - 2) * .02 : .70 + (i - 7) * .02, sweep = easeInOut(clamp((q - t0) / .07, 0, 1));
+    if (!pt.geo) { const W = pt.el.offsetWidth || 1; pt.geo = { W, cells: pt.mk.map(e => [e.offsetLeft, e.offsetWidth || 1]) }; }
+    pt.m.forEach((m, k) => {
+      const [l, w] = pt.geo.cells[k] || [0, 1], rev = clamp((sweep * pt.geo.W - l) / w, 0, 1);
+      m.style.clipPath = rev >= 1 ? 'none' : `inset(-20% ${((1 - rev) * 100).toFixed(2)}% -20% 0)`;
+    });
     if (pt.r) {
       const ru = SG && i > 0 ? SG.rules[i - 1] : null;
       if (ru && ru.driven) { pt.r.style.transformOrigin = ''; pt.r.style.transform = q >= .6 ? 'none' : 'scaleX(0)'; }   // the canvas draws it until it hands over
-      else { pt.r.style.transformOrigin = ''; pt.r.style.transform = `scaleX(${easeOut3(clamp((q - (.55 + Math.max(0, i - 7) * .008)) / .05, 0, 1)).toFixed(4)})`; }   // the rest of the grid draws in as the lines dock
+      else { pt.r.style.transformOrigin = ''; pt.r.style.transform = `scaleX(${sweep.toFixed(4)})`; }                 // drawn by the same sweep as its words
     }
   });
-  const live = q > .74; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
+  const live = q > .84; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
    keeps its bottom on the baseline (the O's overshoot is not magnified). Then the letters turn into lines: each stem's
@@ -771,7 +776,7 @@ function fitHero() {
 }
 
 function layout() {
-  vw = layoutW(); vh = innerHeight;
+  vw = layoutW(); vh = innerHeight; if (ixParts) ixParts.forEach(pt => (pt.geo = null));
   const n = vw < 700 ? 2 : 3;
   if (n !== nCols) distribute(n);
   A = REDUCE ? 0 : (vw < 700 ? vh * .09 : vh * .22);
