@@ -102,7 +102,7 @@ html.ready .mega .ln{overflow:visible}
 .ix-h,.ix-head,.ix-row{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));column-gap:var(--gut);align-items:baseline;position:relative}
 .ix .c1{grid-column:1/2} .ix .c2{grid-column:2/6} .ix .c3{grid-column:6/7}
 .ix .mk{display:block;overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
-.ix .mk > span{display:block;transform:translateX(-105%);will-change:transform}
+.ix .mk > span{display:block;transform:translateY(110%);will-change:transform}
 .ix-rule{position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--rule);transform:scaleX(0);transform-origin:0 50%}
 .ix-h{font-size:11px;font-weight:700;padding-bottom:22px}
 .ix-head{font-size:11px;color:var(--ink-2);padding-bottom:8px}
@@ -364,7 +364,7 @@ function stageFrame() {
   //  pour  (.30–.38)  the lines run down to the heights of their Index rules (see drawStage);
   //  turn  (.38–.50)  each line turns left on a rounded corner and grows along its rule;
   //  dock  (.48–.60)  the lines slide into their rules, thin to 1px and take the rule colour;
-  //                   the rest of the rules draw in; from .63 'Index', its labels and the rows slide in from the left.
+  //                   each row's words rise with its own line (header .44, rows 1–5 after), rows 6–10 with their rules.
   const q = clamp(cur / SD, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
   const y1 = navOff + vh * .11, io3 = easeInOut;
@@ -377,17 +377,17 @@ function stageFrame() {
   drawStage(q, yb, sy);
   if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
   ixParts.forEach((pt, i) => {
-    // nothing is written until the grid is complete (the lines have become the rules, .60; the remaining rules by .63);
-    // then 'Index', the column labels and the rows slide in from the left, one after another
-    const a0 = i < 2 ? .63 + i * .02 : .67 + (i - 2) * .02;
-    pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .02) / .10, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(${(-(1 - ek) * 105).toFixed(1)}%,0,0)`; });
+    // each row's words come with its own line: 'Index' and the column labels with the header line as it runs along its
+    // rule (.44), rows 1–5 with theirs, one after another; rows 6–10 as their rules draw in (.55+)
+    const a0 = i === 0 ? .44 : i === 1 ? .45 : i <= 6 ? .465 + (i - 2) * .015 : .555 + (i - 7) * .008;
+    pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a0 - k * .02) / .12, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
     if (pt.r) {
       const ru = SG && i > 0 ? SG.rules[i - 1] : null;
       if (ru && ru.driven) { pt.r.style.transformOrigin = ''; pt.r.style.transform = q >= .6 ? 'none' : 'scaleX(0)'; }   // the canvas draws it until it hands over
       else { pt.r.style.transformOrigin = ''; pt.r.style.transform = `scaleX(${easeOut3(clamp((q - (.55 + Math.max(0, i - 7) * .008)) / .05, 0, 1)).toFixed(4)})`; }   // the rest of the grid draws in as the lines dock
     }
   });
-  const live = q > .8; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
+  const live = q > .74; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
    keeps its bottom on the baseline (the O's overshoot is not magnified). Then the letters turn into lines: each stem's
