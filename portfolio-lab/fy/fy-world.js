@@ -185,7 +185,8 @@ window.FYStage = function (frame, opts) {
     if (k0 === key) return dk;
     key = k0;
     const bg = Math.round(lerp(255, 2, dk));
-    if (!R) { cv.style.background = `rgb(${bg},${bg},${bg})`; return dk; }
+    frame.style.background = `rgb(${bg},${bg},${bg})`;       // the whole frame, also below the drawing on a phone
+    if (!R) return dk;
     R.setClearColor(new T.Color(bg / 255, bg / 255, bg / 255), 1);
     const time = (u * 7.3) % 50;
 

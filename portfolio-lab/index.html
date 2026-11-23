@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TAO. Portfolio Lab</title>
+<meta name="theme-color" content="#ffffff">
 <link rel="preconnect" href="https://use.typekit.net" crossorigin>
-<link rel="stylesheet" href="https://use.typekit.net/fuc7uis.css">
 <meta name="robots" content="noindex">
+<link rel="stylesheet" href="https://use.typekit.net/fuc7uis.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Noto+Serif+SC:wght@400&display=swap">
@@ -70,11 +71,13 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 /* hero */
 /* stage: the first screen is pinned while scroll scrubs TAO. turning into the index (stop on any frame, click) */
 #stage{position:relative}
-.stage-frame{position:relative;height:100vh;height:100svh;overflow:hidden}
+/* the pinned frames fill the large viewport, so nothing shows under them when a phone's toolbars slide away; what is
+   drawn in them keeps the visible height, --vhp (innerHeight, set by layout) */
+.stage-frame{position:relative;height:100vh;height:100lvh;overflow:hidden}
 html:not(.smooth) .stage-frame{position:sticky;top:0}
 html.smooth .stage-frame{will-change:transform}
-#hero{position:absolute;inset:0}
-.stage-cv{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+#hero{position:absolute;left:0;top:0;right:0;height:var(--vhp,100vh)}
+.stage-cv{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%);pointer-events:none}
 .mega{font-family:var(--display);font-weight:900;line-height:.74;letter-spacing:-.01em;white-space:nowrap;font-size:30vw}
 #hero .mega{position:absolute;left:0;right:0;top:0;margin:0;padding:0;letter-spacing:0;font-family:var(--acu);will-change:transform}
 .mega .ln{display:block}
@@ -125,17 +128,17 @@ html.ready .mega .ln{overflow:visible}
 /* the Commedia: after its title is written in the Index, the page darkens in place and Mappa della Commedia (the
    poem as a world of its own letters) comes up in the same pinned frame; no words are laid over it */
 .dc-dark{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
-.dc-layer{position:absolute;inset:0;opacity:0;pointer-events:none;visibility:hidden}
+.dc-layer{position:absolute;left:0;top:0;right:0;height:var(--vhp,100%);opacity:0;pointer-events:none;visibility:hidden}
 .dc-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .dc-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0}
 /* the work stages (Compressed Modernity, Fourteen Years): at the head of the chapter, a frame pinned for a stretch of
    scroll like the opening; the work's title is written on its line, as in the Index (cm/cm-stage.js, fy/fy-stage.js) */
 .ws{position:relative}
-.ws-frame{position:relative;height:100vh;height:100svh;overflow:hidden}
+.ws-frame{position:relative;height:100vh;height:100lvh;overflow:hidden}
 html:not(.smooth) .ws-frame{position:sticky;top:0}
 html.smooth .ws-frame{will-change:transform}
-.ws-cv{position:absolute;left:0;top:0;width:100%;height:100%}
-.ws-photo{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;object-fit:cover}
+.ws-cv{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%)}
+.ws-photo{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%);opacity:0;pointer-events:none;object-fit:cover}
 .fy .ws-photo{object-fit:contain}
 .ws .ws-head{z-index:3}
 .ws .ws-head .ix-rule{transform-origin:0 50%}
@@ -325,8 +328,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 </div>
 
 <script src="data.js"></script>
-<script src="cm/cm-world.js?v=60"></script>
-<script src="fy/fy-world.js?v=60"></script>
+<script src="cm/cm-world.js?v=63"></script>
+<script src="fy/fy-world.js?v=63"></script>
 <script>
 (() => {
 'use strict';
@@ -355,7 +358,7 @@ let total = 0;
 /* ---------- build ---------- */
 const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
-const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '60';
+const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '63';
 DATA.forEach((p, i) => {
   const no = pad(i + 1);
   total += p.i.length;
@@ -879,12 +882,14 @@ function layout() {
   fitHero(); SG = null; stageCuts.clear();
   DCU = vw < 700 ? 7 : 8.5; UEND = DCT.in1 + DCU;
   SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; SD = SA + SB;   // TAO → lines; then the first title, the dark, the Commedia
-  stageEl.style.height = (vh + SD).toFixed(0) + 'px';
+  html.style.setProperty('--vhp', vh + 'px');
+  const FH = stageFrameEl.offsetHeight || vh;               // the frame's own height (the large viewport on a phone)
+  stageEl.style.height = (FH + SD).toFixed(0) + 'px';
   if (dc) dcFit();
   const wg = wsGeom();
   wsList.forEach(ch => {
     const w = ch.ws; w.L = vh * (w.st ? w.st.END : 3);
-    w.el.style.height = (vh + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
+    w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
     if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: w.row.offsetTop + w.row.offsetHeight }, wg));
   });
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
@@ -933,10 +938,19 @@ function dcFit() {                                          // the book's front 
   dc.fitTo({ x: ox + 794 * s, y: oy + 424 * s, w: 1254 * s, h: 1348 * s }, vw, vh);
 }
 const smt = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+let dcDk = 0, chromeDark = null;
+const themeMeta = $('meta[name="theme-color"]');
+function setChrome(d) {                                     // the page behind and the browser's bars follow a dark stage
+  if (d === chromeDark) return; chromeDark = d;
+  const c = d ? '#000000' : '#ffffff';
+  if (themeMeta) themeMeta.setAttribute('content', c);
+  html.style.background = d ? c : ''; document.body.style.background = d ? c : '';
+}
 function dcStep(u) {
   const dk = easeInOut(clamp((u - DCT.dark0) / (DCT.dark1 - DCT.dark0), 0, 1)),
         out = easeInOut(clamp((u - DCT.out0) / (DCT.out1 - DCT.out0), 0, 1)),
         vin = easeInOut(clamp((u - DCT.in0) / (DCT.in1 - DCT.in0), 0, 1));
+  dcDk = dk;
   const st = `${dk.toFixed(3)}|${out.toFixed(3)}|${vin.toFixed(3)}`;
   if (st !== dcSt) {
     dcSt = st;
@@ -1016,6 +1030,7 @@ function wsFrame(w) {
   if (y < -vh * 1.05) return;
   if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const u = y / vh, dk = w.st ? w.st.step(u) || 0 : 0;
+  w.dark = w.k === 'fy' && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
   // the title is written on its line as the frame comes up, as in the Index
   const hk = `${u.toFixed(3)}|${dk.toFixed(3)}`;
   if (hk === w.hk) return; w.hk = hk;
@@ -1243,7 +1258,8 @@ function frame(now) {
   // hero letters stretch as they leave
   if (!introDone) introFrame(now);
   else if (cur < SD + vh * 1.5) stageFrame();
-  if (introDone) for (const ch of wsList) wsFrame(ch.ws);
+  if (introDone) for (const ch of wsList) { ch.ws.dark = false; wsFrame(ch.ws); }
+  setChrome(introDone && ((dcDk > .5 && cur < SD + vh * .5) || wsList.some(ch => ch.ws.dark)));
   // chapters: column parallax, pinned meta, marquee
   for (const ch of chapters) {
     if (cur + vh < ch.elTop - 100 || cur > ch.top + ch.h + 100) continue;
