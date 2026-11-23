@@ -61,6 +61,8 @@ function splitW(lines,ws){ // split lines by weights
 /* ---------------- emission ---------------- */
 const MAXG=1100000;
 const AO=new Float32Array(MAXG*3),AT=new Float32Array(MAXG*3),AU=new Float32Array(MAXG*3),AC=new Float32Array(MAXG);
+// portfolio: which ring of verse a glyph belongs to (0: none), so that scrolling can turn the rings like gears
+const AR=new Float32Array(MAXG); let SPIN=0, RINGN=0;
 let NG=0;
 const BB=[]; for(let i=0;i<100;i++)BB.push([1e9,1e9,1e9,-1e9,-1e9,-1e9]);
 const SAMP=[]; for(let i=0;i<100;i++)SAMP.push([]);
@@ -70,7 +72,7 @@ function emit(px,py,pz,tx,ty,tz,ux,uy,uz,s,g,c,b){
   AO[i]=px;AO[i+1]=py;AO[i+2]=pz;
   AT[i]=tx*s;AT[i+1]=ty*s;AT[i+2]=tz*s;
   AU[i]=ux*s;AU[i+1]=uy*s;AU[i+2]=uz*s;
-  AC[NG]=c*128+g+Math.min(b,1)*0.94; NG++;
+  AC[NG]=c*128+g+Math.min(b,1)*0.94; AR[NG]=SPIN; NG++;
   const B=BB[c]; if(px<B[0])B[0]=px; if(py<B[1])B[1]=py; if(pz<B[2])B[2]=pz; if(px>B[3])B[3]=px; if(py>B[4])B[4]=py; if(pz>B[5])B[5]=pz;
   if((CNT[c]++)%29===0) SAMP[c].push(px,py,pz);
 }
@@ -147,7 +149,11 @@ function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
 function add(a,b,s){s=s==null?1:s;return [a[0]+b[0]*s,a[1]+b[1]*s,a[2]+b[2]*s];}
 
 /* loft: fill a ruled surface between two polylines with rows of verse */
-function loft(tk,o){
+// a band or a line of verse that runs right round the axis counts as a ring
+function ringOf(p,closed){ if(closed===false||!p||p.length<9)return 0; let x=0,z=0,n=p.length/3; for(let i=0;i<p.length;i+=3){x+=p[i];z+=p[i+2];}
+  x/=n;z/=n; let r=0; for(let i=0;i<p.length;i+=3)r+=Math.hypot(p[i],p[i+2]); r/=n; return (Math.hypot(x,z)<Math.max(6,r*.08))?++RINGN:0; }
+function loft(tk,o){ const prev=SPIN; SPIN=ringOf(o.top,o.closed===undefined?true:o.closed); loft0(tk,o); SPIN=prev; }
+function loft0(tk,o){
   if(!tk.length)return;
   const top=o.top,bot=o.bot,n=top.length/3,closed=!!o.closed,lh=o.lh||1.42;
   const ups=new Float32Array(n*3);let P=0;
@@ -173,7 +179,9 @@ function loft(tk,o){
   flow(tk,tracks,size); return size;
 }
 /* curves: verse runs along parametric lines, glyph size fitted to length */
-function curves(tk,list){
+function curves(tk,list){ const prev=SPIN; let p=null; if(list.length===1){const c=list[0],n=48;p=new Float32Array((n+1)*3);for(let i=0;i<=n;i++){const q=c.f(i/n);p[i*3]=q[0];p[i*3+1]=q[1];p[i*3+2]=q[2];}}
+  SPIN=p?ringOf(p,true):0; curves0(tk,list); SPIN=prev; }
+function curves0(tk,list){
   if(!tk.length)return;
   const tracks=list.map(c=>{const n=c.n||600,p=new Float32Array((n+1)*3);for(let i=0;i<=n;i++){const q=c.f(i/n);p[i*3]=q[0];p[i*3+1]=q[1];p[i*3+2]=q[2];}return new Track(p,null,c.up);});
   let size=tracks.reduce((a,t)=>a+t.len,0)/(tAdv(tk)*1.03);
@@ -479,10 +487,10 @@ const EMB = [[.085, .558, .07, .17], [.06, .36, .58, .67]];  // the embossed tit
 const bx = u => BC.x - BW / 2 + u * BW, by = v => BC.y + BH / 2 - v * BH;
 const U = { uAtlas: { value: null }, uGW: { value: GW }, uPix: { value: 800 }, uFog: { value: 3000 }, uClip: { value: 0 }, uClipN: { value: new THREE.Vector2(0, 1) },
   uSel: { value: -1 }, uSelAmt: { value: 0 }, uCam: { value: new THREE.Vector3() }, uCol: { value: new THREE.Color(0xf6f4ee) },
-  uGather: { value: 0 }, uAbsorb: { value: 0 }, uBS: { value: 8.5 * .19 }, uBX: { value: new THREE.Vector3(-1, 0, 0) }, uBY: { value: new THREE.Vector3(0, 0, 1) }, uArc: { value: new THREE.Vector3(0, 1, 0) }, uMouse: { value: new THREE.Vector2(9, 9) }, uTorch: { value: 0 }, uAsp: { value: W0 / H0 }, uLineA: { value: 1 } };
+  uGather: { value: 0 }, uAbsorb: { value: 0 }, uBS: { value: 8.5 * .19 }, uBX: { value: new THREE.Vector3(-1, 0, 0) }, uBY: { value: new THREE.Vector3(0, 0, 1) }, uArc: { value: new THREE.Vector3(0, 1, 0) }, uSpin: { value: 0 }, uMouse: { value: new THREE.Vector2(9, 9) }, uTorch: { value: 0 }, uAsp: { value: W0 / H0 }, uLineA: { value: 1 } };
 
 const VS = `
-attribute vec2 corner;attribute vec3 iO;attribute vec3 iT;attribute vec3 iU;attribute vec3 iB;attribute float iC;
+attribute vec2 corner;attribute vec3 iO;attribute vec3 iT;attribute vec3 iU;attribute vec3 iB;attribute float iC;attribute float iR;uniform float uSpin;
 uniform float uGW[90];uniform float uPix;uniform float uFog;uniform float uClip;uniform vec2 uClipN;uniform float uSel;uniform float uSelAmt;uniform vec3 uCam;
 uniform float uGather;uniform float uAbsorb;uniform float uBS;uniform vec3 uBX;uniform vec3 uBY;uniform vec3 uArc;uniform vec2 uMouse;uniform float uTorch;uniform float uAsp;
 varying vec2 vUv;varying float vA;
@@ -494,11 +502,16 @@ void main(){
   // gathering: each glyph leaves at its own moment and flies, turning, to its place on (or in) the book
   float h=fract(sin(dot(iO.xz,vec2(12.9898,78.233))+iO.y*0.0173)*43758.5453);
   float gg=clamp((uGather-h*0.45)/0.55,0.0,1.0);float e=gg*gg*(3.0-2.0*gg);
-  vec3 O=mix(iO,iB,e);
-  float e2=e*e,fl=1.0+1.1*sin(e*3.14159);vec3 Tt=mix(iT,uBX*uBS,e2)*fl;vec3 Uu=mix(iU,uBY*uBS,e2)*fl;   // letters swell in flight
+  // rings turn as the page scrolls (uSpin follows the scroll, so they stop when it stops): each ring the other way from
+  // the one before it, and slower the wider it is, as gears in mesh do
+  vec3 O0=iO,T0=iT,U0=iU;
+  if(iR>0.5){float rr=length(iO.xz);float th=(mod(iR,2.0)<1.0?1.0:-1.0)*uSpin*260.0/max(rr,60.0);float cs=cos(th),sn=sin(th);
+    mat2 Rm=mat2(cs,sn,-sn,cs);O0.xz=Rm*iO.xz;T0.xz=Rm*iT.xz;U0.xz=Rm*iU.xz;}
+  vec3 O=mix(O0,iB,e);
+  float e2=e*e,fl=1.0+1.1*sin(e*3.14159);vec3 Tt=mix(T0,uBX*uBS,e2)*fl;vec3 Uu=mix(U0,uBY*uBS,e2)*fl;   // letters swell in flight
   O+=uArc*sin(e*3.14159)*length(iB-iO)*0.18;   // a soft arc toward the viewer on the way
   bool inEarth=(iO.y>-60.0&&iO.y<960.0&&length(iO.xz)<1150.0);
-  if(e<0.001&&uClip>0.5&&inEarth&&dot(iO.xz,uClipN)>0.0){gl_Position=vec4(2.0,2.0,2.0,1.0);vA=0.0;vUv=vec2(0.0);return;}
+  if(e<0.001&&uClip>0.5&&inEarth&&dot(O0.xz,uClipN)>0.0){gl_Position=vec4(2.0,2.0,2.0,1.0);vA=0.0;vUv=vec2(0.0);return;}
   vec3 p=O+Tt*lx+Uu*ly;
   vec4 mv=modelViewMatrix*vec4(p,1.0);float dep=-mv.z;
   gl_Position=projectionMatrix*mv;
@@ -565,6 +578,7 @@ g.setAttribute('iT', new THREE.InstancedBufferAttribute(AT.slice(0, NG * 3), 3))
 g.setAttribute('iU', new THREE.InstancedBufferAttribute(AU.slice(0, NG * 3), 3));
 g.setAttribute('iB', new THREE.InstancedBufferAttribute(AB, 3));
 g.setAttribute('iC', new THREE.InstancedBufferAttribute(AC.slice(0, NG), 1));
+g.setAttribute('iR', new THREE.InstancedBufferAttribute(AR.slice(0, NG), 1));
 g.instanceCount = NG;
 const m = new THREE.ShaderMaterial({ uniforms: U, vertexShader: VS, fragmentShader: FSH, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending });
 const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 1; scene.add(mesh);
@@ -646,6 +660,7 @@ function render(p, mx, my, dt) {
   // the timings of the chapter's 'book' part (p): the text flies in .68–.86 while the camera comes round to the book;
   // its hairline drawing shows .76–.84; then the paper (.84–.91) and the solid volumes (.85–.91) arrive
   const gat = sm(.42, .8, p), abs = sm(.85, .92, p), solid = sm(.84, .9, p);
+  U.uSpin.value = p * 5;                                   // the rings' turn, tied to the scroll
   U.uGather.value = gat; U.uAbsorb.value = abs; U.uLineA.value = 1 - sm(.42, .54, p);
   edgeMat.opacity = sm(.72, .82, p) * (1 - sm(.88, .91, p)) * .55;
   bookMat.forEach(mt => { mt.opacity = solid; mt.visible = solid > .002; });
