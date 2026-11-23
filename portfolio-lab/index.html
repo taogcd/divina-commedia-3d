@@ -63,7 +63,6 @@ html.smooth #main{position:fixed;top:0;left:0;width:100%;will-change:transform}
 #nav .n4{grid-column:10/12}
 #nav .n5{grid-column:12/13;justify-self:end}
 #nav a:hover,#nav button:hover{text-decoration:underline;text-underline-offset:3px}
-#bar{position:fixed;top:var(--navh);left:0;right:0;height:2px;z-index:6;background:var(--accent);transform-origin:0 50%;transform:scaleX(0)}
 @media (max-width:699px){
   #nav .n1{grid-column:1/5} #nav .n2{grid-column:5/8} #nav .n3{grid-column:8/11} #nav .n4{display:none} #nav .n5{grid-column:11/13}
 }
@@ -93,9 +92,7 @@ html.intro-gone #intro{display:none}
 #nav .lt i{display:inline-block;font-style:normal;transform:translate3d(0,110%,0);transition:transform .85s cubic-bezier(.16,1,.3,1);transition-delay:calc(var(--d) * 1s)}
 html.ready #nav .lt i{transform:none}
 #nav a:hover .lt i,#nav button:hover .lt i{text-decoration:underline;text-underline-offset:3px}
-html:not(.ready) #bar{opacity:0}
-#bar{transition:opacity .6s ease .9s}
-@media (prefers-reduced-motion:reduce){ #nav .lt i,#bar{transition:none} }
+@media (prefers-reduced-motion:reduce){ #nav .lt i,#tl{transition:none} }
 .mega .chr{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}
 html.ready .mega .chr{transition:none}
 html.ready .mega .ln{overflow:visible}
@@ -130,49 +127,36 @@ html.ready .mega .ln{overflow:visible}
    still and the pointer rests on it (WebGL tiles: uSat in the shader; covers: a filter set per frame) */
 @media (max-width:699px){ .ix-list{grid-column:1/13;--cols:12} .ix .c1{grid-column:1/3} .ix .c2{grid-column:3/11} .ix .c3{grid-column:11/13} .ix-img{display:none} }
 
-/* the Commedia: Mappa della Commedia (the poem as a world of its own letters), gathered into the book */
-.dc-stage{position:relative;overflow:hidden;overflow:clip;background:#000}
-.dc-frame{position:relative;height:100vh;height:100svh;overflow:hidden;background:#000}
-html:not(.smooth) .dc-frame{position:sticky;top:0}
-html.smooth .dc-frame{will-change:transform}
+/* the Commedia: after its title is written in the Index, the page darkens in place and Mappa della Commedia (the
+   poem as a world of its own letters) comes up in the same pinned frame; no words are laid over it */
+.dc-dark{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+.dc-layer{position:absolute;inset:0;opacity:0;pointer-events:none;visibility:hidden}
 .dc-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
-.dc-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;pointer-events:none}
-.dc-ui{position:absolute;inset:0;pointer-events:none;color:#f6f4ee;font-family:"Cormorant Garamond",Georgia,serif}
-.dc-ui > *{position:absolute;opacity:0;transition:opacity .5s}
-.dc-ui .on{opacity:1}
-.dc-title{left:var(--m);top:calc(var(--navh) + 9vh)}
-.dc-title b{display:block;font-weight:500;font-size:clamp(44px,6.2vw,104px);line-height:.92;letter-spacing:-.005em}
-.dc-title span{display:block;margin-top:14px;font-style:italic;font-size:clamp(16px,1.35vw,22px)}
-.dc-title small{display:block;margin-top:6px;font-family:"Noto Serif SC",serif;font-size:12px;letter-spacing:.18em;opacity:.7}
-.dc-loc{left:var(--m);bottom:64px}
-.dc-loc b{font-weight:500;font-size:clamp(26px,2.6vw,44px);line-height:1}
-.dc-loc small{font-family:"Noto Serif SC",serif;font-size:12px;letter-spacing:.2em;margin-left:.7em;opacity:.8}
-.dc-loc em{display:block;margin-top:6px;font-size:16px;opacity:.72}
-.dc-hint{right:var(--m);bottom:64px;font-style:italic;font-size:15px;opacity:0;text-align:right}
-.dc-hint.on{opacity:.7}
-.dc-hint small{display:block;font-family:"Noto Serif SC",serif;font-style:normal;font-size:11px;letter-spacing:.16em;margin-top:3px}
-.dc-load{left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;font-style:italic;font-size:18px}
-.dc-load small{display:block;font-family:"Noto Serif SC",serif;font-style:normal;font-size:12px;letter-spacing:.2em;margin-top:6px;opacity:.7}
-.dc-cap{left:var(--m);bottom:64px;color:var(--ink);font-family:var(--acu)}
-.dc-cap b{display:block;font-weight:600}
-.dc-cap span{color:var(--ink-2)}
-@media (hover:none),(pointer:coarse){ .dc-hint{display:none} }
-/* the works timeline: one tick per work along the bottom; the line fills through the work being looked at */
-#tl{position:fixed;left:0;right:0;bottom:0;z-index:6;color:#fff;mix-blend-mode:difference;pointer-events:none;opacity:0;transition:opacity .5s;
-  font-family:var(--acu);font-size:var(--t);line-height:var(--tl);letter-spacing:var(--tr);font-variant-numeric:tabular-nums;align-items:end;padding-bottom:14px}
-#tl.on{opacity:1}
-#tl .tl-now{grid-column:1/4;white-space:nowrap;overflow:hidden}
-#tl .tl-now > span{display:inline-block}
-#tl .tl-now.sw > span{animation:tlIn .7s cubic-bezier(.16,1,.3,1)}
-@keyframes tlIn{from{transform:translateY(110%)}to{transform:none}}
-#tl .tl-now i{font-style:normal;opacity:.55;margin-left:.9em}
-#tl .tl-bar{grid-column:4/13;position:relative;height:22px}
-#tl .tl-bar::before{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:currentColor;opacity:.3}
-#tl .tl-fill{position:absolute;left:0;right:0;bottom:0;height:1px;background:currentColor;transform-origin:0 50%;transform:scaleX(0)}
-#tl .tl-k{position:absolute;bottom:0;width:1px;height:7px;background:currentColor;opacity:.45}
-#tl .tl-k span{position:absolute;left:5px;bottom:4px;font-size:10px;line-height:1}
-#tl .tl-k.cur{opacity:1}
-@media (max-width:699px){ #tl .tl-now{grid-column:1/13;margin-bottom:6px} #tl{grid-template-rows:auto auto} #tl .tl-bar{grid-column:1/13} #tl .tl-k span{display:none} }
+.dc-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0}
+/* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
+   toward the next one (how far there is still to go); the works already passed stay drawn */
+#tl{position:fixed;left:0;right:0;top:var(--navh);height:24px;z-index:6;pointer-events:none}
+#tl .tl-k{position:absolute;top:0;left:0;right:0;height:24px;color:#fff;mix-blend-mode:difference;font-family:var(--acu);font-size:10px;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums}
+#tl .tl-track{position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;opacity:.25}
+#tl .tl-done{position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;transform-origin:0 50%;transform:scaleX(0)}
+#tl .tl-t{position:absolute;top:0;width:1px;height:6px;background:currentColor;opacity:.5}
+#tl .tl-t span{position:absolute;left:4px;top:5px;white-space:nowrap;opacity:.8}
+#tl .tl-t b{font-weight:400;margin-left:.6em;display:none}
+#tl .tl-t.cur{opacity:1}
+#tl .tl-t.cur b{display:inline}
+#tl .tl-fill{position:absolute;left:0;top:0;height:2px;width:1px;background:var(--accent);transform-origin:0 50%}
+html:not(.ready) #tl{opacity:0}
+#tl{transition:opacity .6s ease .9s}
+@media (max-width:699px){ #tl .tl-t span{display:none} #tl .tl-t.cur span{display:block} }
+/* the full Index, opened from the nav */
+#ixo{position:fixed;inset:0;z-index:5;background:var(--paper);display:none;padding:calc(var(--navh) + 16vh) var(--m) 0;overflow:auto}
+#ixo.open{display:block}
+#ixo .ixo-list{width:calc(50% - var(--gut) / 2)}
+#ixo a{display:grid;grid-template-columns:1fr 4fr 1fr;column-gap:var(--gut);padding:var(--L) 0 4px;border-bottom:1px solid var(--rule)}
+#ixo a:hover{color:var(--accent)}
+#ixo .ixo-head{display:grid;grid-template-columns:1fr 4fr 1fr;column-gap:var(--gut);color:var(--ink-2);padding:var(--L) 0 4px;border-bottom:1px solid var(--ink)}
+#ixo h2{font:inherit;font-weight:600}
+@media (max-width:699px){ #ixo .ixo-list{width:100%} }
 
 /* chapters */
 .ch{position:relative}
@@ -268,8 +252,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
   <span class="nv n4" style="--c:9"><span class="clock">London --:--:--</span></span>
   <span class="nv n5" style="--c:11"><button class="pct" type="button" aria-label="Back to top">000% ↑</button></span>
 </nav>
-<div id="bar" aria-hidden="true"></div>
-<div id="tl" class="grid" aria-hidden="true"><span class="tl-now"><span></span></span><span class="tl-bar"><i class="tl-fill"></i></span></div>
+<div id="tl" aria-hidden="true"><div class="tl-k"><i class="tl-track"></i><i class="tl-done"></i></div><i class="tl-fill"></i></div>
+<div id="ixo" role="dialog" aria-modal="true" aria-label="Index"><div class="ixo-list"><h2>Index</h2><div class="ixo-head"><span>No.</span><span>Title</span><span>Year</span></div></div></div>
 
 <main id="main">
   <section id="stage">
@@ -278,6 +262,7 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
         <h1 class="mega" aria-label="TAO."><span class="ln"><span class="chr">T</span><span class="chr">A</span><span class="chr">O</span><span class="chr">.</span></span></h1>
       </section>
       <canvas class="stage-cv" aria-hidden="true"></canvas>
+      <div class="dc-dark" aria-hidden="true"></div>
       <section id="index" class="ix" aria-labelledby="index-h">
         <div class="ix-list">
           <h2 class="ix-h" id="index-h"><span class="c1 mk"><span>Index</span></span></h2>
@@ -287,24 +272,11 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
         <figure class="ix-img" aria-hidden="true"><img alt=""></figure>
         <div class="ix-covers" aria-hidden="true"></div>
       </section>
+      <div class="dc-layer" aria-hidden="true"><canvas class="dc-cv"></canvas><img class="dc-photo" src="dc/dc-01.jpg" alt="" decoding="async"></div>
     </div>
   </section>
 
-  <section id="works" aria-label="Works">
-    <section class="dc-stage" id="dc" aria-label="La Divina Commedia: Mappa della Commedia, the poem as a world built of its own lines">
-      <div class="dc-frame">
-        <canvas class="dc-cv" aria-hidden="true"></canvas>
-        <img class="dc-photo" src="dc/dc-01.jpg" alt="La Divina Commedia, the two volumes" decoding="async">
-        <div class="dc-ui">
-          <p class="dc-title"><b>La Divina Commedia</b><span>Mappa della Commedia — every line of the poem, set as a world</span><small>《神曲》三维文字宇宙 · 100 歌 · 14,233 行</small></p>
-          <p class="dc-loc"><b></b><small></small><em></em></p>
-          <p class="dc-hint">Move the pointer to light the verses<small>移动鼠标 · 点亮诗行</small></p>
-          <p class="dc-load">Componendo i versi…<small>正在以诗行构筑世界</small></p>
-          <p class="dc-cap"><b>La Divina Commedia, 2024</b><span>The book · two volumes</span></p>
-        </div>
-      </div>
-    </section>
-  </section>
+  <section id="works" aria-label="Works"></section>
 
   <section id="info" aria-labelledby="info-h">
     <h2 id="info-h" class="grid mono" style="margin-bottom:18px"><span style="grid-column:1/13">Information</span></h2>
@@ -430,7 +402,7 @@ const layoutW = () => document.getElementById('lines').getBoundingClientRect().w
 let vw = layoutW(), vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
 /* colour on rest: the page counts as still once the scroll has settled for a moment; the pointer is the mouse (on
    touch screens, with no hover, the middle of the screen stands in for it) */
-let mx = -1, my = -1, STILL = false, stillFor = 0, FK = 1;
+let mx = -1, my = -1, STILL = false, stillFor = 0, FK = 1, DT = 16;
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } }, { passive: true });
 document.documentElement.addEventListener('mouseleave', () => { mx = my = -1; });
 const pointer = () => !STILL ? null : TOUCH ? [vw / 2, vh / 2] : mx >= 0 ? [mx, my] : null;
@@ -481,6 +453,10 @@ function stageFrame() {
     const ru = SG && i > 0 ? SG.rules[i - 1] : null, driven = ru && ru.driven;
     if (i <= 1) { rise(pt, q, .595, .02, .10); if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - .585) / .03, 0, 1)).toFixed(4)})`; return; }
     const k = i - 2, g = COV[k]; if (!g) return;
+    if (k > 0) {                                           // the other works are not written here: they come in their turn
+      if (pt.cs !== 'h') { pt.cs = 'h'; pt.cv.style.visibility = ''; pt.m.forEach(m => (m.style.transform = '')); }
+      if (pt.r) pt.r.style.transform = driven && q >= .6 ? 'none' : 'scaleX(0)'; return;
+    }
     const n = g.rects.length, vis0 = k === 0 ? 0 : COV[k - 1].c;          // uncovered when the one above starts to leave
     if (!pt.ld && u > vis0 - .8) { pt.ld = true; pt.im.forEach(im => { if (!im.src && im.dataset.src) im.src = im.dataset.src; }); }
     const m1 = easeInOut(clamp((u - g.c) / CV.COL, 0, 1)), m2 = easeInOut(clamp((u - g.c - CV.COL + .01) / CV.LN, 0, 1));
@@ -516,7 +492,8 @@ function stageFrame() {
   });
   // the four column lines draw down from the top edge once the Index is forming, one column after another
   gridLines.forEach((ln, c) => { const v = q > .6 ? easeInOut(clamp((u - c * .06) / .45, 0, 1)) : 0; ln.style.transform = v >= 1 ? 'none' : `scaleY(${v.toFixed(4)})`; });
-  const live = COV.length && u > COV[COV.length - 1].c + CV.COL + .05; ixEl.classList.toggle('live', !!live); if (!live) ixImg.classList.remove('on');
+  const live = COV.length && u > COV[0].c + CV.COL + .05 && u < DCT.dark0; ixEl.classList.toggle('live', !!live); if (!live) ixImg.classList.remove('on');
+  dcStep(u);
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
    keeps its bottom on the baseline (the O's overshoot is not magnified). Then the letters turn into lines: each stem's
@@ -926,12 +903,12 @@ function layout() {
     COV.forEach((g, k) => {                                 // a work's pictures turn once the one above has gone; then it folds
       g.s = k ? COV[k - 1].c + CV.COL + CV.LN * .5 : s0; g.c = g.s + (g.rects.length - 1) * CV.SW + .05;
     });
-    UEND = COV[COV.length - 1].c + CV.COL + CV.LN + .3;
     ixParts && ixParts.forEach(pt => (pt.cs = ''));
   }
-  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; SD = SA + SB;   // TAO → lines keeps its old length; the Index runs as long as its pictures
+  DCU = vw < 700 ? 7 : 8.5; UEND = DCT.in1 + DCU;
+  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; SD = SA + SB;   // TAO → lines; then the first title, the dark, the Commedia
   stageEl.style.height = (vh + SD).toFixed(0) + 'px';
-  DCS = vh * (vw < 700 ? 7 : 8.5); dcStage.style.height = (vh + DCS).toFixed(0) + 'px'; if (dc) dcFit();
+  if (dc) dcFit();
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
   chapters.forEach(ch => {
@@ -947,19 +924,20 @@ function layout() {
   secTops.hero = 0;
   docH = main.offsetHeight;
   if (SMOOTH) document.body.style.height = docH + 'px';
-  dcTop = dcStage.getBoundingClientRect().top + sp;
-  TLS = [dcTop - vh * .5].concat(chapters.slice(1).map(ch => ch.elTop - vh * .5), [secTops.info - vh * .6]);
+  TLS = [0, SA].concat(chapters.slice(1).map(ch => ch.elTop - vh * .5), [secTops.info - vh * .5]);   // where each work begins (scroll px)
   resizeGL();
 }
 const secTops = {};
 
-/* ---------- the Commedia: Mappa della Commedia, gathered into the book ---------- */
-// p 0–1 over DCS px: the camera goes down through the Inferno, turns over at the centre of the earth, climbs the
-// mountain, rises through the heavens, draws back; then every letter flies into the two volumes (dc/dc3d.js) and the
-// model gives way to the photograph of the book
-const dcStage = $('#dc'), dcFrame = $('.dc-frame', dcStage), dcCv = $('.dc-cv', dcStage), dcPhoto = $('.dc-photo', dcStage);
-const dcUI = { title: $('.dc-title', dcStage), loc: $('.dc-loc', dcStage), hint: $('.dc-hint', dcStage), load: $('.dc-load', dcStage), cap: $('.dc-cap', dcStage) };
-let dc = null, dcState = 0, dcTop = 1e9, DCS = 1, dcIdle = 0, dcLocK = '', TLS = [], dcKey = '', dcMoving = false;
+/* ---------- the Commedia: Mappa della Commedia, in the same pinned frame, after its title ---------- */
+// u (screen heights of scroll after the opening): the first work's covers turn and fold into its row, which is then
+// written (u ≈ 1, see stageFrame). From DCT.dark0 the page darkens in place; the Index, turning light with it, lets go
+// as the text world comes up (DCT.in0–in1); then p 0–1 over DCU screen heights: down through the Inferno, over at the
+// centre of the earth, up the mountain and the heavens, back out; every letter flies into the two volumes
+// (dc/dc3d.js), and the model gives way to the photograph of the book
+const dcDark = $('.dc-dark'), dcLayer = $('.dc-layer'), dcCv = $('.dc-cv'), dcPhoto = $('.dc-photo');
+const DCT = { dark0: 1.15, dark1: 1.6, out0: 1.5, out1: 1.9, in0: 1.5, in1: 1.95 };
+let dc = null, dcState = 0, dcIdle = 0, DCU = 8.5, TLS = [], dcKey = '', dcMoving = false, dcSt = '';
 function dcLoad() {
   dcState = 1;
   const js = src => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
@@ -975,42 +953,47 @@ function dcFit() {                                          // the book's front 
   dc.fitTo({ x: ox + 794 * s, y: oy + 424 * s, w: 1254 * s, h: 1348 * s }, vw, vh);
 }
 const smt = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-const DC_LOC = [[.02, .34, 'Inferno', '地狱', 'La voragine · the funnel of nine circles'], [.34, .42, 'Il centro', '地心', 'Turning over at the centre of the earth'],
-  [.42, .59, 'Purgatorio', '炼狱', 'Il monte · the mountain of seven terraces'], [.59, .69, 'Paradiso', '天堂', 'I nove cieli · the nine heavens'],
-  [.69, .87, 'Il libro', '书', 'Every line gathered into two volumes']];
-function dcFrameF(dt) {
-  const rel = cur - dcTop, p = clamp(rel / DCS, 0, 1);
-  if (SMOOTH) dcFrame.style.transform = `translate3d(0,${clamp(rel, -vh, DCS).toFixed(2)}px,0)`;
-  if (dc) {                                                  // draw only when something changed: the page, the pointer, the size
+function dcStep(u) {
+  const dk = easeInOut(clamp((u - DCT.dark0) / (DCT.dark1 - DCT.dark0), 0, 1)),
+        out = easeInOut(clamp((u - DCT.out0) / (DCT.out1 - DCT.out0), 0, 1)),
+        vin = easeInOut(clamp((u - DCT.in0) / (DCT.in1 - DCT.in0), 0, 1));
+  const st = `${dk.toFixed(3)}|${out.toFixed(3)}|${vin.toFixed(3)}`;
+  if (st !== dcSt) {
+    dcSt = st;
+    dcDark.style.opacity = dk.toFixed(3);
+    const iv = smt(.38, .62, dk); ixEl.style.filter = iv > 0 ? `invert(${iv.toFixed(3)})` : '';   // the ink flips to light as the paper passes mid-grey
+    ixEl.style.opacity = out > 0 ? (1 - out).toFixed(3) : '';
+    ixEl.style.transform = out > 0 ? `translate3d(0,${(-16 * out).toFixed(1)}px,0)` : '';
+    dcLayer.style.opacity = vin.toFixed(3); dcLayer.style.visibility = vin > 0 ? 'visible' : '';
+  }
+  if (vin <= 0) return;
+  const p = clamp((u - DCT.in1) / DCU, 0, 1);
+  if (dc) {                                                // draw only when something changed: the page, the pointer, the size
     const key = `${p.toFixed(5)}|${mx}|${my}`;
-    if (key !== dcKey || dcMoving || dc.dirty) { dcKey = key; dcMoving = dc.render(p, mx >= 0 ? mx / vw * 2 - 1 : null, my >= 0 ? my / vh * 2 - 1 : null, dt / 1000); }
+    if (key !== dcKey || dcMoving || dc.dirty) { dcKey = key; dcMoving = dc.render(p, mx >= 0 ? mx / vw * 2 - 1 : null, my >= 0 ? my / vh * 2 - 1 : null, DT / 1000); }
   }
   dcPhoto.style.opacity = smt(.9, .95, p).toFixed(3);
-  dcUI.load.classList.toggle('on', dcState === 1 && rel > -vh * .6);
-  dcUI.title.classList.toggle('on', dcState >= 1 && p < .07);
-  dcUI.hint.classList.toggle('on', dcState === 2 && p > .02 && p < .6);
-  dcUI.cap.classList.toggle('on', p > .94);
-  const L = DC_LOC.find(l => p >= l[0] && p < l[1]);
-  if (!L) dcUI.loc.classList.remove('on');
-  else { if (dcLocK !== L[2]) { dcLocK = L[2]; dcUI.loc.children[0].textContent = L[2]; dcUI.loc.children[1].textContent = L[3]; dcUI.loc.children[2].textContent = L[4]; } dcUI.loc.classList.toggle('on', p > .08 || L[0] > .1); }
 }
-/* the works timeline (see CSS) */
-const tlEl = $('#tl'), tlNow = $('.tl-now', tlEl), tlFill = $('.tl-fill', tlEl), tlBar = $('.tl-bar', tlEl);
-const tlTicks = DATA.map((p, i) => { const k = document.createElement('i'); k.className = 'tl-k'; k.style.left = (i * 10) + '%'; k.innerHTML = `<span>${pad(i + 1)}</span>`; tlBar.appendChild(k); return k; });
-let tlK = -1;
+/* the works timeline (see CSS): segment 0 is the opening, then one per work */
+const tlEl = $('#tl'), tlK = $('.tl-k', tlEl), tlDone = $('.tl-done', tlEl), tlFillEl = $('.tl-fill', tlEl), NS = DATA.length + 1;
+const tlTicks = DATA.map((p, i) => { const t = document.createElement('i'); t.className = 'tl-t'; t.style.left = ((i + 1) / NS * 100).toFixed(3) + '%'; t.innerHTML = `<span>${pad(i + 1)}<b>${p.t}</b></span>`; tlK.appendChild(t); return t; });
+let tlCur = -1, tlSt = '';
 function tlFrame() {
-  const x = cur + vh * .5, n = TLS.length - 1;
-  const on = n > 0 && x >= TLS[0] && x < TLS[n];
-  tlEl.classList.toggle('on', on); if (!on) return;
-  let k = 0; while (k < n - 1 && x >= TLS[k + 1]) k++;
-  const f = (k + clamp((x - TLS[k]) / Math.max(1, TLS[k + 1] - TLS[k]), 0, 1)) / DATA.length;
-  tlFill.style.transform = `scaleX(${f.toFixed(4)})`;
-  if (k !== tlK) {
-    if (tlK >= 0) tlTicks[tlK].classList.remove('cur'); tlTicks[k].classList.add('cur'); tlK = k;
-    tlNow.innerHTML = `<span>${pad(k + 1)} / ${pad(DATA.length)}&nbsp;&nbsp;${DATA[k].t}<i>${DATA[k].y}</i></span>`;
-    tlNow.classList.remove('sw'); void tlNow.offsetWidth; tlNow.classList.add('sw');
-  }
+  const n = TLS.length - 1; if (n < 1) return;
+  let sg = 0; while (sg < n - 1 && cur >= TLS[sg + 1]) sg++;
+  const f = clamp((cur - TLS[sg]) / Math.max(1, TLS[sg + 1] - TLS[sg]), 0, 1), x0 = sg / NS;
+  const st = `${sg}|${f.toFixed(4)}|${vw}`; if (st === tlSt) return; tlSt = st;
+  tlDone.style.transform = `scaleX(${x0.toFixed(4)})`;
+  tlFillEl.style.transform = `translate3d(${(x0 * vw).toFixed(1)}px,0,0) scaleX(${Math.max(.01, f * vw / NS).toFixed(2)})`;
+  if (sg !== tlCur) { tlTicks.forEach((t, i) => t.classList.toggle('cur', i === sg - 1)); tlCur = sg; }
 }
+/* the full Index, from the nav */
+const ixo = $('#ixo'), ixoList = $('.ixo-list', ixo);
+DATA.forEach((p, i) => { const a = document.createElement('a'); a.href = '#'; a.dataset.wk = i; a.innerHTML = `<span>${pad(i + 1)}</span><span>${p.t}</span><span>${p.y}</span>`; ixoList.appendChild(a); });
+const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].elTop - topClear;
+function ixoOpen(on) { ixo.classList.toggle('open', on); html.classList.toggle('lock', on || !!vt); }
+ixo.addEventListener('click', e => { const a = e.target.closest('a[data-wk]'); if (!a) return; e.preventDefault(); ixoOpen(false); goTo(workStart(+a.dataset.wk)); });
+addEventListener('keydown', e => { if (e.key === 'Escape' && ixo.classList.contains('open')) ixoOpen(false); });
 
 /* ---------- scroll helpers ---------- */
 function goTo(y) {
@@ -1020,9 +1003,9 @@ function goTo(y) {
 const navOffset = () => parseFloat(getComputedStyle(html).getPropertyValue('--navh')) + 6;
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-go]');
-  if (a) { e.preventDefault(); const k = a.dataset.go; goTo(k === 'hero' ? 0 : k === 'index' ? SD - 2 : secTops[k] - topClear); return; }
+  if (a) { e.preventDefault(); const k = a.dataset.go; if (k === 'index') { ixoOpen(!ixo.classList.contains('open')); return; } ixoOpen(false); goTo(k === 'hero' ? 0 : secTops[k] - topClear); return; }
   const r = e.target.closest('.ix-row');
-  if (r) { e.preventDefault(); goTo(chapters[+r.dataset.i].elTop - topClear); }
+  if (r) { e.preventDefault(); goTo(workStart(+r.dataset.i)); }
 });
 $('#nav .pct').addEventListener('click', () => goTo(0));
 
@@ -1207,7 +1190,7 @@ function drawGL(now) {
 }
 
 /* ---------- frame ---------- */
-const bar = $('#bar'), pct = $('#nav .pct');
+const pct = $('#nav .pct');
 let tagKey = '', frameN = 0, prev0 = 0;
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1216,11 +1199,10 @@ function frame(now) {
   if (SMOOTH) { cur = lerp(cur, tgt, 1 - Math.pow(1 - .085, k)); if (Math.abs(tgt - cur) < .1) cur = tgt; main.style.transform = `translate3d(0,${(-cur).toFixed(2)}px,0)`; }
   else cur = tgt;
   vel = REDUCE ? 0 : lerp(vel, clamp((cur - prev) / k, -60, 60), .18); prev = cur;
-  FK = k; stillFor = Math.abs(cur - prev0) > .4 || Math.abs(tgt - cur) > .8 ? 0 : stillFor + dt; prev0 = cur; STILL = stillFor > 160;
+  FK = k; DT = dt; stillFor = Math.abs(cur - prev0) > .4 || Math.abs(tgt - cur) > .8 ? 0 : stillFor + dt; prev0 = cur; STILL = stillFor > 160;
   ixImg.classList.toggle('col', STILL && ixImg.classList.contains('on'));
 
   if (!dcState && introDone && (cur > 40 || now - (dcIdle || (dcIdle = now)) > 2600)) dcLoad();   // build the 3D world while the first screen rests
-  if (cur > dcTop - vh * 1.3 && cur < dcTop + DCS + vh) dcFrameF(dt);
   tlFrame();
   // hero letters stretch as they leave
   if (!introDone) introFrame(now);
@@ -1240,7 +1222,6 @@ function frame(now) {
   }
   // nav progress + chapter tag
   const prog = clamp(cur / Math.max(1, docH - vh), 0, 1);
-  bar.style.transform = `scaleX(${prog.toFixed(4)})`;
   setChars(pctChars, String(Math.round(prog * 100)).padStart(3, '0') + '% ↑');
   if (gl) { if (glWarm && frameN++ % 8 === 0) manage(); drawGL(now); }   // no texture uploads until the intro has handed over
 }
