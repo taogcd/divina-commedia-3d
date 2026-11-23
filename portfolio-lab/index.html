@@ -142,8 +142,11 @@ html.smooth .ws-frame{will-change:transform}
 @media (max-width:699px){ .cm .ws-photo{object-fit:contain} }
 /* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
    toward the next one (how far there is still to go); the works already passed stay drawn */
-#tl{position:fixed;left:0;right:0;top:var(--navh);height:24px;z-index:6;pointer-events:none}
-#tl .tl-k{position:absolute;top:0;left:0;right:0;height:24px;color:#fff;mix-blend-mode:difference;font-family:var(--acu);font-size:10px;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums}
+/* the blend sits on #tl itself (a child's blend would only meet #tl's own empty backdrop and vanish on white); the
+   red line is its own layer, #tlf, so it stays red */
+#tl{position:fixed;left:0;right:0;top:var(--navh);height:24px;z-index:6;pointer-events:none;mix-blend-mode:difference}
+#tlf{position:fixed;left:0;right:0;top:var(--navh);height:2px;z-index:6;pointer-events:none}
+#tl .tl-k{position:absolute;top:0;left:0;right:0;height:24px;color:#fff;font-family:var(--acu);font-size:10px;line-height:1;letter-spacing:0;font-variant-numeric:tabular-nums}
 #tl .tl-track{position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;opacity:.25}
 #tl .tl-done{position:absolute;left:0;right:0;top:0;height:1px;background:currentColor;transform-origin:0 50%;transform:scaleX(0)}
 #tl .tl-t{position:absolute;top:0;width:1px;height:6px;background:currentColor;opacity:.5}
@@ -153,12 +156,12 @@ html.smooth .ws-frame{will-change:transform}
 #tl .tl-t.open b{display:inline}
 #tl .tl-t.open span{opacity:1}
 #tl .tl-t.hid span{visibility:hidden}
-#tl.tl-wait{opacity:0}
-#tl.tl-in{transition:none}
+#tl.tl-wait,#tl.tl-wait + #tlf{opacity:0}
+#tl.tl-in,#tl.tl-in + #tlf{transition:none}
 #index{display:none}
-#tl .tl-fill{position:absolute;left:0;top:0;height:2px;width:1px;background:var(--accent);transform-origin:0 50%}
-html:not(.ready) #tl{opacity:0}
-#tl{transition:opacity .6s ease .9s}
+#tlf .tl-fill{position:absolute;left:0;top:0;height:2px;width:1px;background:var(--accent);transform-origin:0 50%}
+html:not(.ready) #tl,html:not(.ready) #tlf{opacity:0}
+#tl,#tlf{transition:opacity .6s ease .9s}
 @media (max-width:699px){ #tl .tl-t span{display:none} #tl .tl-t.cur span{display:block} }
 /* the full Index, opened from the nav */
 #ixo{position:fixed;inset:0;z-index:5;background:var(--paper);display:none;padding:calc(var(--navh) + 16vh) var(--m) 0;overflow:auto}
@@ -264,7 +267,7 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
   <span class="nv n4" style="--c:9"><span class="clock">London --:--:--</span></span>
   <span class="nv n5" style="--c:11"><button class="pct" type="button" aria-label="Back to top">000% ↑</button></span>
 </nav>
-<div id="tl" aria-hidden="true"><div class="tl-k"><i class="tl-track"></i><i class="tl-done"></i></div><i class="tl-fill"></i></div>
+<div id="tl" aria-hidden="true"><div class="tl-k"><i class="tl-track"></i><i class="tl-done"></i></div></div><div id="tlf" aria-hidden="true"><i class="tl-fill"></i></div>
 <div id="ixo" role="dialog" aria-modal="true" aria-label="Index"><div class="ixo-list"><h2>Index</h2><div class="ixo-head"><span>No.</span><span>Title</span><span>Year</span></div></div></div>
 
 <main id="main">
@@ -952,7 +955,7 @@ function dcStep(u) {
   dcPhoto.style.opacity = smt(.91, .95, p).toFixed(3);
 }
 /* the works timeline (see CSS): segment 0 is the opening, then one per work */
-const tlEl = $('#tl'), tlK = $('.tl-k', tlEl), tlDone = $('.tl-done', tlEl), tlFillEl = $('.tl-fill', tlEl), NS = DATA.length + 1;
+const tlEl = $('#tl'), tlK = $('.tl-k', tlEl), tlDone = $('.tl-done', tlEl), tlFillEl = $('#tlf .tl-fill'), NS = DATA.length + 1;
 const tlTicks = DATA.map((p, i) => { const t = document.createElement('i'); t.className = 'tl-t'; t.style.left = ((i + 1) / NS * 100).toFixed(3) + '%'; t.innerHTML = `<span>${pad(i + 1)}<b>${p.t}</b></span>`; tlK.appendChild(t); return t; });
 let tlCur = -1, tlSt = '';
 function tlFrame() {
