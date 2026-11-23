@@ -375,11 +375,10 @@ function build(){
   loft(T(C(I,31,1,70)),Object.assign(band(97,330,88,105),{face:'in'}));
   splitW(C(I,31,71),[1,1,1,1,1]).forEach((ls,g)=>{const th=0.4+g*TAU/5,pos=[84*Math.cos(th),105,84*Math.sin(th)],tg=[-Math.sin(th),0,Math.cos(th)],rd=[Math.cos(th),0,Math.sin(th)];
     const [a,b]=splitW(ls,[1,1]);
-    shape(T(a),{W:300,H:900,k:1/6,origin:[pos[0]-tg[0]*25,255,pos[2]-tg[2]*25],ex:tg,ey:DY,draw:giantDraw});
-    shape(T(b),{W:300,H:900,k:1/6,origin:[pos[0]-rd[0]*25,255,pos[2]-rd[2]*25],ex:rd,ey:DY,draw:giantDraw});});
+    /* portfolio: the giants' figures are left out */});
   [[C(I,32,1,69),88,66],[C(I,32,70).concat(C(I,33,1,90)),66,47],[C(I,33,91),47,30],[C(I,34,1,15),30,14]].forEach(([ls,a,b])=>{loft(T(ls),Object.assign(band(a,100,b,100),{face:'up'}));hlRing(a,100,0.25);});
   splitW(C(I,34,16,126),[1,1,1]).forEach((ls,j)=>{const a=j*Math.PI/3+0.3,ex=[Math.cos(a),0,Math.sin(a)];
-    shape(T(ls),{W:600,H:1288,k:170/600,origin:[-ex[0]*85,250,-ex[2]*85],ex,ey:DY,draw:luciferDraw});});
+    /* portfolio: Lucifer's figure is left out */});
   curves(T(C(I,34,127)),[{n:2400,f:t=>{const th=t*TAU*7,r=14+6*t;return [r*Math.cos(th),-100-762*t,r*Math.sin(th)];},up:rib(DY)}]);
 
   /* -------- PURGATORIO: the mountain at the antipodes -------- */
@@ -434,12 +433,7 @@ function build(){
   });
   { const tk=T(C(D,10)),turns=Math.max(1,Math.round(tAdv(tk)*3/(TAU*170)));curves(tk,[{n:turns*500,f:t=>{const th=t*TAU*turns;return [170*Math.cos(th),-3196-16*t,170*Math.sin(th)];},up:rib(DY)}]); }
   { const tk=T(C(D,12)),turns=Math.max(1,Math.round(tAdv(tk)*3/(TAU*230)));curves(tk,[{n:turns*600,f:t=>{const th=-t*TAU*turns;return [230*Math.cos(th),-3196-18*t,230*Math.sin(th)];},up:rib(DY)}]); }
-  shape(T(C(D,14)),{W:800,H:800,k:0.8,origin:[320,-3650,320],ex:[-1,0,0],ey:[0,0,-1],draw:crossDraw});
-  shape(T(C(D,18)),{W:1800,H:560,k:1500/1800,origin:[750,-4060,233],ex:[-1,0,0],ey:[0,0,-1],draw:lettersDraw});
-  shape(T(C(D,19)),{W:900,H:700,k:1,origin:[450,-4150,350],ex:[-1,0,0],ey:[0,0,-1],draw:eagleDraw});
-  { const [a,b]=splitW(C(D,21),[1,1]);
-    shape(T(a),{W:240,H:1600,k:0.375,origin:[-45,-5200,0],ex:[1,0,0],ey:UY,draw:ladderDraw});
-    shape(T(b),{W:240,H:1600,k:0.375,origin:[0,-5200,-45],ex:[0,0,1],ey:UY,draw:ladderDraw}); }
+  /* portfolio: the emblems of the heavens (cross, letters, eagle, ladder) are left out: they read as symbols */
   { const ws=[],bs=[];for(let j=0;j<9;j++){const ri=26+36*j,ro=ri+22;bs.push([ro,ri]);ws.push(ro*ro-ri*ri);}
     splitW(C(D,28),ws).forEach((ls,j)=>{loft(T(ls),Object.assign(band(bs[j][0],-6500,bs[j][1],-6500),{face:'up'}));hlRing(bs[j][0],-6500,0.18);});
     loft(T(C(D,29)),Object.assign(band(420,-6500,368,-6500),{face:'up'}));
@@ -456,7 +450,7 @@ function build(){
     for(let i=0;i<N;i++){const t=i/N*TAU,co=Math.cos(t),si=Math.sin(t);for(let q=0;q<3;q++){top[i*3+q]=c[q]+(a[q]*co+b[q]*si)*78;bot[i*3+q]=c[q]+(a[q]*co+b[q]*si)*64;}}
     loft(T(ls),{top,bot,closed:true,face:nv});});
   loft(T(C(D,33,143)),Object.assign(band(16,-7110,5,-7110),{face:'up'}));
-  hl([0,860,0],[0,-7320,0],0.035);
+  /* portfolio: no axis hairline (the camera travels on it) */
 }
 
 
@@ -473,7 +467,11 @@ const scene = new THREE.Scene();
 const cam = new THREE.PerspectiveCamera(50, W0 / H0, 0.3, 90000);
 const V3 = THREE.Vector3;
 // the book: two volumes stacked, measured off the photograph (u across, v down, 0–1 of the book's front)
-const BW = 2000, BH = 2150, BD = 1500, BC = new V3(0, -700, 0), ZF = BC.z + BD / 2;
+// the book is built in its own frame (x across, y up the spines, z out of the front) and set across the axis below
+// the spiral of the first heaven, its front facing back up the axis, so the dive ends square to it
+const BS = .19, BW = 2000 * BS, BH = 2150 * BS, BD = 1500 * BS, BC = new V3(0, 0, 0), ZF = BD / 2;
+const BEX = new V3(-1, 0, 0), BEY = new V3(0, 0, 1), BEZ = new V3(0, 1, 0), BFRONT = -1100, BPOS = new V3(0, BFRONT - ZF, 0);
+const toW = (x, y, z) => BPOS.clone().addScaledVector(BEX, x).addScaledVector(BEY, y).addScaledVector(BEZ, z);
 const PARTS = [   // [u0, u1, v0, v1, z inset, kind]  kind: 0 cloth spine, 1 page block, 2 board edge
   [.011, .997, 0, .239, 0, 0], [.011, .997, .239, .254, 6, 2], [.030, .990, .254, .469, 14, 1], [.011, .997, .469, .488, 6, 2],
   [0, .990, .499, .751, 0, 0], [.011, .990, .757, .976, 14, 1], [0, 1, .976, 1, 6, 2]];
@@ -481,12 +479,12 @@ const EMB = [[.085, .558, .07, .17], [.06, .36, .58, .67]];  // the embossed tit
 const bx = u => BC.x - BW / 2 + u * BW, by = v => BC.y + BH / 2 - v * BH;
 const U = { uAtlas: { value: null }, uGW: { value: GW }, uPix: { value: 800 }, uFog: { value: 3000 }, uClip: { value: 0 }, uClipN: { value: new THREE.Vector2(0, 1) },
   uSel: { value: -1 }, uSelAmt: { value: 0 }, uCam: { value: new THREE.Vector3() }, uCol: { value: new THREE.Color(0xf6f4ee) },
-  uGather: { value: 0 }, uAbsorb: { value: 0 }, uBS: { value: 8.5 }, uMouse: { value: new THREE.Vector2(9, 9) }, uTorch: { value: 0 }, uAsp: { value: W0 / H0 }, uLineA: { value: 1 } };
+  uGather: { value: 0 }, uAbsorb: { value: 0 }, uBS: { value: 8.5 * .19 }, uBX: { value: new THREE.Vector3(-1, 0, 0) }, uBY: { value: new THREE.Vector3(0, 0, 1) }, uArc: { value: new THREE.Vector3(0, 1, 0) }, uMouse: { value: new THREE.Vector2(9, 9) }, uTorch: { value: 0 }, uAsp: { value: W0 / H0 }, uLineA: { value: 1 } };
 
 const VS = `
 attribute vec2 corner;attribute vec3 iO;attribute vec3 iT;attribute vec3 iU;attribute vec3 iB;attribute float iC;
 uniform float uGW[90];uniform float uPix;uniform float uFog;uniform float uClip;uniform vec2 uClipN;uniform float uSel;uniform float uSelAmt;uniform vec3 uCam;
-uniform float uGather;uniform float uAbsorb;uniform float uBS;uniform vec2 uMouse;uniform float uTorch;uniform float uAsp;
+uniform float uGather;uniform float uAbsorb;uniform float uBS;uniform vec3 uBX;uniform vec3 uBY;uniform vec3 uArc;uniform vec2 uMouse;uniform float uTorch;uniform float uAsp;
 varying vec2 vUv;varying float vA;
 void main(){
   float code=floor(iC);float b=iC-code;float c=floor(code/128.0+0.0001);float g=code-c*128.0;
@@ -497,8 +495,8 @@ void main(){
   float h=fract(sin(dot(iO.xz,vec2(12.9898,78.233))+iO.y*0.0173)*43758.5453);
   float gg=clamp((uGather-h*0.45)/0.55,0.0,1.0);float e=gg*gg*(3.0-2.0*gg);
   vec3 O=mix(iO,iB,e);
-  float e2=e*e,fl=1.0+2.6*sin(e*3.14159);vec3 Tt=mix(iT,vec3(uBS,0.0,0.0),e2)*fl;vec3 Uu=mix(iU,vec3(0.0,uBS,0.0),e2)*fl;   // letters swell in flight
-  O+=vec3(0.0,0.0,1.0)*sin(e*3.14159)*length(iB-iO)*0.18;   // a soft arc toward the viewer on the way
+  float e2=e*e,fl=1.0+1.1*sin(e*3.14159);vec3 Tt=mix(iT,uBX*uBS,e2)*fl;vec3 Uu=mix(iU,uBY*uBS,e2)*fl;   // letters swell in flight
+  O+=uArc*sin(e*3.14159)*length(iB-iO)*0.18;   // a soft arc toward the viewer on the way
   bool inEarth=(iO.y>-60.0&&iO.y<960.0&&length(iO.xz)<1150.0);
   if(e<0.001&&uClip>0.5&&inEarth&&dot(iO.xz,uClipN)>0.0){gl_Position=vec4(2.0,2.0,2.0,1.0);vA=0.0;vUv=vec2(0.0);return;}
   vec3 p=O+Tt*lx+Uu*ly;
@@ -508,7 +506,7 @@ void main(){
   vUv=vec2((col*${CW}.0+${PADX}.0+lx*${FS}.0)/${ATS}.0,1.0-(row*${CH}.0+${BASE}.0-ly*${FS}.0)/${ATS}.0);
   float sz=length(Uu);float px=sz*uPix/max(dep,0.01);
   float a=b*1.18;
-  a*=dot(cross(Tt,Uu),uCam-O)>0.0?1.0:0.3;
+  a*=dot(cross(Tt,Uu),uCam-O)>0.0?1.0:0.72;   // portfolio: the far side of a band of verse stays legible as a texture (the dive sees much of it from behind)
   a*=0.34+0.66*smoothstep(0.8,4.0,px);
   a*=exp(-dep/uFog);
   a*=smoothstep(0.5,2.6,dep/max(sz,0.001));
@@ -517,7 +515,7 @@ void main(){
   // the pointer is a lamp: verses near it brighten
   vec2 sp=gl_Position.xy/gl_Position.w;vec2 dm=(sp-uMouse)*vec2(uAsp,1.0);
   a*=1.0+uTorch*1.6*exp(-dot(dm,dm)*9.0);
-  a*=1.0+1.2*sin(e*3.14159)+0.6*e;          // bright in flight, a little brighter once landed
+  a*=1.0+0.5*sin(e*3.14159)+0.6*e;          // bright in flight, a little brighter once landed
   a*=mix(1.0,1.0-uAbsorb,e);
   vA=a;
 }`;
@@ -548,15 +546,15 @@ const AB = new Float32Array(NG * 3);
     let x, y, z; const k = r();
     if (k < .16) {                                          // the embossed titles
       const E = EMB[r() < .62 ? 0 : 1], u = E[0] + (E[1] - E[0]) * r(), v = E[2] + (E[3] - E[2]) * Math.floor(r() * 9) / 8;
-      x = bx(u); y = by(v) + (r() - .5) * 4; z = ZF + 1.5;
+      x = bx(u); y = by(v) + (r() - .5) * 4 * BS; z = ZF + 1.5 * BS;
     } else {
       let t = r() * tot, j = 0; while (j < PARTS.length - 1 && t > area[j]) { t -= area[j]; j++; }
       const P = PARTS[j], u = P[0] + (P[1] - P[0]) * r(), v = P[2] + (P[3] - P[2]) * r();
       x = bx(u); y = by(v);
-      if (k < .42) { z = ZF - P[4] + 1.5; if (P[5] === 1) y = by(P[2]) - (Math.floor((by(P[2]) - y) / 9) + .5) * 9; }   // page edges: rows
-      else z = ZF - P[4] - 8 - r() * (BD - 40);
+      if (k < .42) { z = ZF - P[4] * BS + 1.5 * BS; if (P[5] === 1) y = by(P[2]) - (Math.floor((by(P[2]) - y) / (9 * BS)) + .5) * 9 * BS; }   // page edges: rows
+      else z = ZF - (P[4] + 8) * BS - r() * (BD - 40 * BS);
     }
-    AB[i * 3] = x; AB[i * 3 + 1] = y; AB[i * 3 + 2] = z;
+    const wv = toW(x, y, z); AB[i * 3] = wv.x; AB[i * 3 + 1] = wv.y; AB[i * 3 + 2] = wv.z;
   }
 }
 const g = new THREE.InstancedBufferGeometry();
@@ -575,42 +573,40 @@ const lm = new THREE.ShaderMaterial({ uniforms: U, vertexShader: LVS, fragmentSh
 const lines = new THREE.LineSegments(lg, lm); lines.frustumCulled = false; lines.renderOrder = 0; scene.add(lines);
 
 // the solid book (fades in as the glyphs land) and its hairline drawing (drawn first, while the text is still flying)
-const book = new THREE.Group(); scene.add(book);
+const book = new THREE.Group(); book.matrixAutoUpdate = false; book.matrix.makeBasis(BEX, BEY, BEZ).setPosition(BPOS); scene.add(book);
 const bookMat = [], edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthTest: false });
 PARTS.forEach(P => {
-  const w = (P[1] - P[0]) * BW, h = (P[3] - P[2]) * BH, d = BD - P[4] * 2;
+  const w = (P[1] - P[0]) * BW, h = (P[3] - P[2]) * BH, d = BD - P[4] * 2 * BS;
   const geo = new THREE.BoxGeometry(w, h, d);
   const tone = P[5] === 0 ? 0xf3f3f1 : P[5] === 1 ? 0xfbfbfa : 0xeeeeec;
   const mt = new THREE.MeshLambertMaterial({ color: tone, transparent: true, opacity: 0, depthWrite: true });
   bookMat.push(mt);
-  const bx3 = new THREE.Mesh(geo, mt); bx3.position.set(bx((P[0] + P[1]) / 2), by((P[2] + P[3]) / 2), BC.z - P[4]); bx3.renderOrder = 3; book.add(bx3);
+  const bx3 = new THREE.Mesh(geo, mt); bx3.position.set(bx((P[0] + P[1]) / 2), by((P[2] + P[3]) / 2), BC.z - P[4] * BS); bx3.renderOrder = 3; book.add(bx3);
   const ed = new THREE.LineSegments(new THREE.EdgesGeometry(geo), edgeMat); ed.position.copy(bx3.position); ed.renderOrder = 2; book.add(ed);
 });
 scene.add(new THREE.HemisphereLight(0xffffff, 0xc8c8c8, .78));
-const sun = new THREE.DirectionalLight(0xffffff, .42); sun.position.set(-.5, .8, 1); scene.add(sun);
+const sun = new THREE.DirectionalLight(0xffffff, .42); sun.position.copy(BEX.clone().multiplyScalar(-.5).addScaledVector(BEY, .8).addScaledVector(BEZ, 1)); scene.add(sun);
 
 /* ---------------- camera along the page ---------------- */
-// It opens on the middle of the poem: the terraces of the mountain of Purgatory, low and near, so they read as steps
-// with walls of verse. It circles them as it climbs to the summit, looks down on it, then rises up the axis of the
-// heavens to the cross of Mars and the eagle of Jupiter (the original tour's views of them), and turns the world over
-// as it draws back to see the whole; then the book.
-// key views: [p, target, offset, roll]; between them the view direction is slerped, the distance log-lerped, the
-// roll eased (1: the antipodes, where 'up' is −y)
+// It opens on the funnel of the Inferno, near (its rings of verse fill the screen), rises over the rim to look straight
+// down its axis and then dives through the circles like a tunnel, through the ice at the centre where the world turns
+// over, and on, as every letter streams past into the book lying across the axis beyond, until it rests square to it.
+// key views: [p, target, offset, roll, up]; between them the view direction is slerped, the distance log-lerped, the
+// roll eased (1: turned over), the up vector slerped
+const DN = [0, 0, -1];                                        // 'up' on the screen while looking down the axis
 const K = [
-  [0.00, [0, -1250, 0], [629, 78, 747], 1],
-  [0.10, [0, -1360, 0], [801, -147, 97], 1],
-  [0.20, [0, -1500, 0], [581, -310, -380], 1],
-  [0.30, [0, -1660, 0], [159, -521, -337], 1],
-  [0.42, [-80, -3650, -80], [573, 719, 1185], 1],
-  [0.53, [0, -4120, 0], [0, 1160, 1630], 1],
-  [0.64, [0, -1800, 0], [-2200, 1900, 11600], 0],
-  [0.72, [0, -1800, 0], [0, 1900, 11800], 0],
-  [0.90, null, null, 0]];                                  // the book, square to the screen (set from the photograph)
+  [0.00, [0, 470, 0], [0, 640, 1060], 0],
+  [0.11, [0, 390, 0], [0, 840, 520], 0],
+  [0.21, [0, 320, 0], [0, 720, 2], 0, DN],
+  [0.36, [0, 60, 0], [0, 320, .5], 0, DN],
+  [0.48, [0, -200, 0], [0, 300, .5], .5, DN],
+  [0.58, [0, -500, 0], [0, 330, .5], 1, DN],
+  [0.86, null, null, 1, DN]];                                 // the book, square to the screen (set from the photograph)
 let finalView = null;
 const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 function slerp(a, b, e) { const d = Math.min(1, Math.max(-1, a.dot(b))), om = Math.acos(d); if (om < 1e-4) return a.clone(); const so = Math.sin(om); return a.clone().multiplyScalar(Math.sin((1 - e) * om) / so).add(b.clone().multiplyScalar(Math.sin(e * om) / so)); }
 function view(p) {
-  const KK = K.map(k => k[1] ? k : [k[0], finalView ? finalView.t : [BC.x, BC.y, ZF], finalView ? finalView.o : [0, 0, 3600], k[3]]);
+  const KK = K.map(k => k[1] ? k : [k[0], finalView ? finalView.t : [0, BFRONT, 0], finalView ? finalView.o : [0, 700, 0], k[3], k[4]]);
   const upOf = k => new V3(...(k[4] || [0, 1, 0])).normalize();
   if (p <= KK[0][0]) return { t: new V3(...KK[0][1]), o: new V3(...KK[0][2]), roll: KK[0][3], up: upOf(KK[0]) };
   for (let i = 0; i < KK.length - 1; i++) {
@@ -628,7 +624,7 @@ const BG0 = new THREE.Color(0x000000), BG1 = new THREE.Color(0xdadada), bg = new
 const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 function render(p, mx, my, dt) {
   // pointer: a slight turn of the view, and a lamp on the verses (both let go as the book forms)
-  const free = 1 - sm(.74, .82, p);
+  const free = 1 - sm(.6, .72, p);
   mxS += ((mx || 0) - mxS) * Math.min(1, dt * 3); myS += ((my || 0) - myS) * Math.min(1, dt * 3);
   const v = view(p), up0 = v.up;
   const fwd0 = v.o.clone().negate().normalize();
@@ -639,7 +635,7 @@ function render(p, mx, my, dt) {
   const up = up0.clone().addScaledVector(fwd, -up0.dot(fwd)).normalize().applyAxisAngle(fwd, v.roll * Math.PI);
   cam.up.copy(up); cam.lookAt(v.t);
   const dist = cam.position.distanceTo(v.t);
-  U.uFog.value = Math.max(220, dist * 3.4) * (1 + 6 * sm(.7, .8, p));   // close up, the far side of the world falls away
+  U.uFog.value = Math.max(220, dist * 3.4) * (1 + 6 * sm(.5, .64, p));   // close up, the far side of the world falls away
   { const rx = cam.position.x, rz = cam.position.z, rl = Math.hypot(rx, rz), fx = cam.position.x - v.t.x, fz = cam.position.z - v.t.z, fl = Math.hypot(fx, fz);
     const w = Math.min(1, Math.max(0, (fl / Math.max(dist, 1e-3) - .05) / .2));
     let nx = (rl > 1 ? rx / rl : 0) * (1 - w) + (fl > 1e-6 ? fx / fl : 0) * w, nz = (rl > 1 ? rz / rl : 0) * (1 - w) + (fl > 1e-6 ? fz / fl : 0) * w;
@@ -649,12 +645,12 @@ function render(p, mx, my, dt) {
   // the gathering
   // the timings of the chapter's 'book' part (p): the text flies in .68–.86 while the camera comes round to the book;
   // its hairline drawing shows .76–.84; then the paper (.84–.91) and the solid volumes (.85–.91) arrive
-  const gat = sm(.71, .88, p), abs = sm(.88, .94, p), solid = sm(.87, .92, p);
-  U.uGather.value = gat; U.uAbsorb.value = abs; U.uLineA.value = 1 - sm(.71, .79, p);
-  edgeMat.opacity = sm(.78, .86, p) * (1 - sm(.90, .93, p)) * .55;
+  const gat = sm(.42, .8, p), abs = sm(.85, .92, p), solid = sm(.84, .9, p);
+  U.uGather.value = gat; U.uAbsorb.value = abs; U.uLineA.value = 1 - sm(.42, .54, p);
+  edgeMat.opacity = sm(.72, .82, p) * (1 - sm(.88, .91, p)) * .55;
   bookMat.forEach(mt => { mt.opacity = solid; mt.visible = solid > .002; });
-  bg.copy(BG0).lerp(BG1, sm(.86, .92, p)); renderer.setClearColor(bg, 1);
-  U.uCol.value.setRGB(.965, .957, .933).lerp(new THREE.Color(1, 1, 1), sm(.86, .91, p));
+  bg.copy(BG0).lerp(BG1, sm(.83, .9, p)); renderer.setClearColor(bg, 1);
+  U.uCol.value.setRGB(.965, .957, .933).lerp(new THREE.Color(1, 1, 1), sm(.83, .89, p));
   renderer.render(scene, cam);
   return Math.abs((mx || 0) - mxS) + Math.abs((my || 0) - myS) > 1e-3;   // still easing toward the pointer
 }
@@ -667,8 +663,8 @@ function fitTo(rect, w, h) {
   dirty = true;
   const tn = Math.tan(cam.fov * Math.PI / 360), d = BH * h / (2 * rect.h * tn), wpp = 2 * d * tn / h;
   const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
-  const X = BC.x - (cx - w / 2) * wpp, Y = BC.y + (cy - h / 2) * wpp;
-  finalView = { t: [X, Y, ZF], o: [0, 0, d] };
+  const X = BC.x - (cx - w / 2) * wpp, Y = BC.y + (cy - h / 2) * wpp, T = toW(X, Y, ZF);
+  finalView = { t: [T.x, T.y, T.z], o: [BEZ.x * d, BEZ.y * d, BEZ.z * d] };
 }
 resize(W0, H0);
 return { render, resize, fitTo, glyphs: NG, get dirty() { const d = dirty; dirty = false; return d; } };

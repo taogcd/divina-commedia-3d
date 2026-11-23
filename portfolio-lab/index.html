@@ -900,7 +900,7 @@ function dcStep(u) {
     const key = `${p.toFixed(5)}|${mx}|${my}`;
     if (key !== dcKey || dcMoving || dc.dirty) { dcKey = key; dcMoving = dc.render(p, mx >= 0 ? mx / vw * 2 - 1 : null, my >= 0 ? my / vh * 2 - 1 : null, DT / 1000); }
   }
-  dcPhoto.style.opacity = smt(.92, .96, p).toFixed(3);
+  dcPhoto.style.opacity = smt(.91, .95, p).toFixed(3);
 }
 /* the works timeline (see CSS): segment 0 is the opening, then one per work */
 const tlEl = $('#tl'), tlK = $('.tl-k', tlEl), tlDone = $('.tl-done', tlEl), tlFillEl = $('.tl-fill', tlEl), NS = DATA.length + 1;
