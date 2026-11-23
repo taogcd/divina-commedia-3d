@@ -595,7 +595,7 @@ const sun = new THREE.DirectionalLight(0xffffff, .42); sun.position.copy(BEX.clo
 // roll eased (1: turned over), the up vector slerped
 const DN = [0, 0, -1];                                        // 'up' on the screen while looking down the axis
 const K = [
-  [0.00, [0, 470, 0], [0, 640, 1060], 0],
+  [0.00, [0, 430, 0], [0, 750, 777], 0],                    // opens with the funnel filling the screen
   [0.11, [0, 390, 0], [0, 840, 520], 0],
   [0.21, [0, 320, 0], [0, 720, 2], 0, DN],
   [0.36, [0, 60, 0], [0, 320, .5], 0, DN],
