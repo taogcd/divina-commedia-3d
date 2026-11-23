@@ -590,41 +590,22 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0xc8c8c8, .78));
 const sun = new THREE.DirectionalLight(0xffffff, .42); sun.position.set(-.5, .8, 1); scene.add(sun);
 
 /* ---------------- camera along the page ---------------- */
-// It begins at the gate of Hell (Inferno III, 'Per me si va ne la città dolente…'), close enough to read its letters,
-// and from there only draws back: along the first line, the whole gate, the funnel, the Inferno, and out to the
-// whole world of the poem, slowly turning; then the book.
-// key views: [p, target, offset, roll, up]; between them the view direction is slerped, the distance log-lerped
-let G0 = null;
-{
-  let n = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, first = -1, sz = 0;
-  for (let i = 0; i < NG; i++) {
-    if (Math.floor(AC[i] / 128 + 1e-4) !== 2 || Math.abs(AO[i * 3 + 2] - 655) > 3) continue;
-    if (first < 0) first = i;
-    const x = AO[i * 3], y = AO[i * 3 + 1]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-    sz += Math.hypot(AU[i * 3], AU[i * 3 + 1], AU[i * 3 + 2]); n++;
-  }
-  if (n > 40) {
-    const o = new V3(AO[first * 3], AO[first * 3 + 1], AO[first * 3 + 2]), t = new V3(AT[first * 3], AT[first * 3 + 1], AT[first * 3 + 2]).normalize(),
-      up = new V3(AU[first * 3], AU[first * 3 + 1], AU[first * 3 + 2]).normalize(), nr = new V3().crossVectors(t, up).normalize();
-    G0 = { o, t, up, nr, sz: sz / n, c: new V3((x0 + x1) / 2, (y0 + y1) / 2, o.z), h: Math.max(y1 - y0, (x1 - x0) * .7) };
-  }
-}
-const A3 = v => [v.x, v.y, v.z];
-const K = G0 ? [
-  [0.00, A3(G0.o.clone().addScaledVector(G0.t, G0.sz * 6)), A3(G0.nr.clone().multiplyScalar(G0.sz * 10)), 0, A3(G0.up)],
-  [0.10, A3(G0.o.clone().addScaledVector(G0.t, G0.sz * 7).addScaledVector(G0.up, -G0.sz * 8)), A3(G0.nr.clone().multiplyScalar(G0.sz * 13)), 0, A3(G0.up)],   // reading on, down the gate
-  [0.21, A3(G0.c), A3(G0.nr.clone().multiplyScalar(G0.h * 1.45)), 0, A3(G0.up)],
-  [0.33, [0, 640, 0], [0, 620, 1900], 0],
-  [0.45, [0, -100, 0], [700, 1100, 3400], 0],
-  [0.57, [0, -600, 0], [1200, 900, 4300], 0],
-  [0.65, [0, -650, 0], [-1000, 700, 4300], 0],
-  [0.72, [0, -1500, 0], [0, 1500, 9800], 0],
-  [0.88, null, null, 0]] : [
-  [0.00, [0, 420, 0], [0, 1820, 3068], 0],
-  [0.40, [0, -150, 0], [900, 1500, 4800], 0],
-  [0.60, [0, -2200, 0], [2600, 2400, 13500], 0],
-  [0.72, [0, -1500, 0], [0, 1500, 9800], 0],
-  [0.88, null, null, 0]];                                  // the book, square to the screen (set from the photograph)
+// It opens on the middle of the poem: the terraces of the mountain of Purgatory, low and near, so they read as steps
+// with walls of verse. It circles them as it climbs to the summit, looks down on it, then rises up the axis of the
+// heavens to the cross of Mars and the eagle of Jupiter (the original tour's views of them), and turns the world over
+// as it draws back to see the whole; then the book.
+// key views: [p, target, offset, roll]; between them the view direction is slerped, the distance log-lerped, the
+// roll eased (1: the antipodes, where 'up' is −y)
+const K = [
+  [0.00, [0, -1250, 0], [629, 78, 747], 1],
+  [0.10, [0, -1360, 0], [801, -147, 97], 1],
+  [0.20, [0, -1500, 0], [581, -310, -380], 1],
+  [0.30, [0, -1660, 0], [159, -521, -337], 1],
+  [0.42, [-80, -3650, -80], [573, 719, 1185], 1],
+  [0.53, [0, -4120, 0], [0, 1160, 1630], 1],
+  [0.64, [0, -1800, 0], [-2200, 1900, 11600], 0],
+  [0.72, [0, -1800, 0], [0, 1900, 11800], 0],
+  [0.90, null, null, 0]];                                  // the book, square to the screen (set from the photograph)
 let finalView = null;
 const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 function slerp(a, b, e) { const d = Math.min(1, Math.max(-1, a.dot(b))), om = Math.acos(d); if (om < 1e-4) return a.clone(); const so = Math.sin(om); return a.clone().multiplyScalar(Math.sin((1 - e) * om) / so).add(b.clone().multiplyScalar(Math.sin(e * om) / so)); }
@@ -647,7 +628,7 @@ const BG0 = new THREE.Color(0x000000), BG1 = new THREE.Color(0xdadada), bg = new
 const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 function render(p, mx, my, dt) {
   // pointer: a slight turn of the view, and a lamp on the verses (both let go as the book forms)
-  const free = 1 - sm(.72, .80, p);
+  const free = 1 - sm(.74, .82, p);
   mxS += ((mx || 0) - mxS) * Math.min(1, dt * 3); myS += ((my || 0) - myS) * Math.min(1, dt * 3);
   const v = view(p), up0 = v.up;
   const fwd0 = v.o.clone().negate().normalize();
@@ -658,7 +639,7 @@ function render(p, mx, my, dt) {
   const up = up0.clone().addScaledVector(fwd, -up0.dot(fwd)).normalize().applyAxisAngle(fwd, v.roll * Math.PI);
   cam.up.copy(up); cam.lookAt(v.t);
   const dist = cam.position.distanceTo(v.t);
-  U.uFog.value = Math.max(160, dist * 3.4) * (1 + 6 * sm(.68, .78, p));   // close up, the far side of the world falls away
+  U.uFog.value = Math.max(220, dist * 3.4) * (1 + 6 * sm(.7, .8, p));   // close up, the far side of the world falls away
   { const rx = cam.position.x, rz = cam.position.z, rl = Math.hypot(rx, rz), fx = cam.position.x - v.t.x, fz = cam.position.z - v.t.z, fl = Math.hypot(fx, fz);
     const w = Math.min(1, Math.max(0, (fl / Math.max(dist, 1e-3) - .05) / .2));
     let nx = (rl > 1 ? rx / rl : 0) * (1 - w) + (fl > 1e-6 ? fx / fl : 0) * w, nz = (rl > 1 ? rz / rl : 0) * (1 - w) + (fl > 1e-6 ? fz / fl : 0) * w;
@@ -668,12 +649,12 @@ function render(p, mx, my, dt) {
   // the gathering
   // the timings of the chapter's 'book' part (p): the text flies in .68–.86 while the camera comes round to the book;
   // its hairline drawing shows .76–.84; then the paper (.84–.91) and the solid volumes (.85–.91) arrive
-  const gat = sm(.68, .86, p), abs = sm(.86, .93, p), solid = sm(.85, .91, p);
-  U.uGather.value = gat; U.uAbsorb.value = abs; U.uLineA.value = 1 - sm(.68, .76, p);
-  edgeMat.opacity = sm(.76, .84, p) * (1 - sm(.88, .92, p)) * .55;
+  const gat = sm(.71, .88, p), abs = sm(.88, .94, p), solid = sm(.87, .92, p);
+  U.uGather.value = gat; U.uAbsorb.value = abs; U.uLineA.value = 1 - sm(.71, .79, p);
+  edgeMat.opacity = sm(.78, .86, p) * (1 - sm(.90, .93, p)) * .55;
   bookMat.forEach(mt => { mt.opacity = solid; mt.visible = solid > .002; });
-  bg.copy(BG0).lerp(BG1, sm(.84, .91, p)); renderer.setClearColor(bg, 1);
-  U.uCol.value.setRGB(.965, .957, .933).lerp(new THREE.Color(1, 1, 1), sm(.84, .9, p));
+  bg.copy(BG0).lerp(BG1, sm(.86, .92, p)); renderer.setClearColor(bg, 1);
+  U.uCol.value.setRGB(.965, .957, .933).lerp(new THREE.Color(1, 1, 1), sm(.86, .91, p));
   renderer.render(scene, cam);
   return Math.abs((mx || 0) - mxS) + Math.abs((my || 0) - myS) > 1e-3;   // still easing toward the pointer
 }
