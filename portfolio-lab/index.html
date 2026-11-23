@@ -113,9 +113,10 @@ html.ready .mega .ln{overflow:visible}
 .ix-row{padding:var(--L) 0 4px}
 .ix-row .c1,.ix-row .c3{font-variant-numeric:tabular-nums}
 .ix-row .c2{font-weight:400}
-/* each work's cover hangs from its row's line, then folds up into it (top-left) before the row is written */
-.ix-cv{position:absolute;left:0;top:100%;width:var(--cw,25vw);height:120px;margin:0;z-index:3;transform-origin:0 0;pointer-events:none;visibility:hidden;background:var(--ph);overflow:hidden;will-change:transform,clip-path}
-.ix-cv img{display:block;width:100%;height:100%;object-fit:cover}
+/* the covers: a stack, three columns wide on the right; the top one folds into its row's line, uncovering the next */
+.ix-covers{position:absolute;inset:0;z-index:3;pointer-events:none}
+.ix-cv{position:absolute;left:0;top:0;width:10px;height:10px;margin:0;visibility:hidden;overflow:hidden;background:var(--ph)}
+.ix-cv img{display:block;width:100%;height:100%;object-fit:cover;will-change:transform}
 .ix-row:hover .c1,.ix-row:focus-visible .c1{color:var(--accent)}
 .ix-img{grid-column:7/13;grid-row:1/2;height:58vh;margin:0;position:relative;clip-path:inset(0 0 100% 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1)}
 .ix-img.on{clip-path:inset(0 0 0 0)}
@@ -230,6 +231,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
           <div id="index-rows"></div>
         </div>
         <figure class="ix-img" aria-hidden="true"><img alt=""></figure>
+        <div class="ix-covers" aria-hidden="true"></div>
       </section>
     </div>
   </section>
@@ -302,7 +304,9 @@ DATA.forEach((p, i) => {
   total += p.i.length;
   const row = document.createElement('a');
   row.className = 'ix-row'; row.href = '#w' + no; row.dataset.i = i;
-  row.innerHTML = `<span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i><figure class="ix-cv" aria-hidden="true"><img alt="" decoding="async" src="${url(p.i[0], 800)}"></figure>`;
+  row.innerHTML = `<span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i>`;
+  const cv = document.createElement('figure'); cv.className = 'ix-cv'; cv.style.zIndex = 20 - i;
+  cv.innerHTML = `<img alt="" decoding="async" fetchpriority="low" src="${url(p.i[0], 1600)}">`; $('.ix-covers').appendChild(cv);
   rowsEl.appendChild(row);
 
   const links = [p.v ? `<a href="${p.v}" target="_blank" rel="noopener">Film ↗</a>` : '']
@@ -355,11 +359,12 @@ const layoutW = () => document.getElementById('lines').getBoundingClientRect().w
 let vw = layoutW(), vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
 const F3 = [0, 1, -.55], F2 = [0, .85];
 const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')], heroH1 = $('#hero .mega');
-let heroH = 1, navOff = 50, topClear = 60, stretch = 1, SD = 1, BASE = 0;
+let heroH = 1, navOff = 50, topClear = 60, stretch = 1, SD = 1, SA = 1, SB = 1, BASE = 0;
 const STRETCH = 2.6;                                      // height multiple of TAO. as it is pulled out of the frame
 const stageEl = $('#stage'), stageFrameEl = $('.stage-frame');
 const easeOut3 = t => 1 - Math.pow(1 - t, 3);
-let ixParts = null, SG = null, stageInk = false;
+let ixParts = null, SG = null, stageInk = false, COV = [];
+const coverEls = [...document.querySelectorAll('.ix-cv')];
 const gridLines = [...document.querySelectorAll('#lines span')];
 const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
@@ -371,9 +376,10 @@ function stageFrame() {
   //  pour  (.30–.38)  the lines run down to the heights of their Index rules (see drawStage);
   //  turn  (.38–.50)  each line turns left on a rounded corner and grows along its rule;
   //  dock  (.48–.60)  the lines slide into their rules, thin to 1px and take the rule colour;
-  //                   once thin, 'Index' and the labels rise (.595); then work by work (.60, every .028) a cover hangs
-  //                   from its row's line and folds up into it, and the row's words rise; the four column lines draw down.
-  const q = clamp(cur / SD, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
+  //                   once thin, 'Index' and the labels rise (.595);
+  //  index (.60–1)    a longer stretch of scroll (SB): the works' covers, a stack on the right, fold one by one into
+  //                   their rows' lines and each row is written; the four column lines draw down.
+  const q = cur < SA ? .6 * clamp(cur / SA, 0, 1) : .6 + .4 * clamp((cur - SA) / SB, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
   if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
   const y1 = navOff + vh * .11, io3 = easeInOut;
   const e1 = io3(seg(0, .22)), e2 = seg(.22, .44), e3 = Math.pow(seg(.44, .58), 1.8);
@@ -383,29 +389,39 @@ function stageFrame() {
   else { yb = lerp(y1 - 26, -vh * .45, e3); sy = 2.5 + .5 * e3; }   // far enough that the bends leave with the word
   heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
   drawStage(q, yb, sy);
-  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule'), cv: el.querySelector('.ix-cv'), cs: '' }));
-  const rise = (pt, a, st, d) => pt.m.forEach((m, k) => { const ek = easeOut3(clamp((q - a - k * st) / d, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
+  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map((el, i) => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule'), cv: i > 1 ? coverEls[i - 2] : null, img: i > 1 ? coverEls[i - 2].firstElementChild : null, cs: '' }));
+  const rise = (pt, x, a, st, d) => pt.m.forEach((m, k) => { const ek = easeOut3(clamp((x - a - k * st) / d, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
+  // r: progress through the Index part. The covers are a stack on the right (three columns wide). From r .10, every
+  // .085, the top cover folds into its row: its frame slides and narrows onto the row's box (the picture re-cropped,
+  // never squashed), thins into the row's line, and the row's words rise out of it; the next cover, uncovered, settles.
+  const r = clamp((q - .6) / .4, 0, 1), C0 = .10, CS = .085;
   ixParts.forEach((pt, i) => {
-    // nothing is written until the thick lines have become the thin rules (.59). 'Index' and the column labels rise
-    // first. Then, work by work, like a finished project folding into its line of a contents list: the work's cover
-    // unrolls downward from its row's line, folds up into the line's left end, and the row's words rise out of it.
-    // Rows 6–10 have no line of their own, so theirs draws in left → right just before.
     const ru = SG && i > 0 ? SG.rules[i - 1] : null, driven = ru && ru.driven;
-    if (i <= 1) { rise(pt, .595, .02, .10); if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - .585) / .03, 0, 1)).toFixed(4)})`; return; }
-    const t0 = .60 + (i - 2) * .028;
-    const u1 = easeInOut(clamp((q - t0) / .016, 0, 1)), u2 = easeInOut(clamp((q - t0 - .02) / .026, 0, 1));
-    const cs = u1 <= 0 || u2 >= 1 ? 'h' : `${(1 - u1).toFixed(4)}|${(1 - u2).toFixed(4)}`;
-    if (cs !== pt.cs) {
-      pt.cs = cs;
-      if (cs === 'h') pt.cv.style.visibility = '';
-      else { pt.cv.style.visibility = 'visible'; pt.cv.style.clipPath = `inset(0 0 ${((1 - u1) * 100).toFixed(2)}% 0)`; pt.cv.style.transform = `scale(${Math.max(.0001, 1 - u2).toFixed(4)})`; }
+    if (i <= 1) { rise(pt, q, .595, .02, .10); if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - .585) / .03, 0, 1)).toFixed(4)})`; return; }
+    const k = i - 2, c = C0 + k * CS, g = COV[k];
+    const vis0 = k === 0 ? 0 : C0 + (k - 1) * CS;                       // uncovered when the one above starts to leave
+    const m1 = easeInOut(clamp((r - c) / .065, 0, 1)), m2 = easeInOut(clamp((r - c - .056) / .022, 0, 1));
+    const on = g && q > .6 && r >= vis0 && m2 < 1;
+    if (!on) { if (pt.cs !== 'h') { pt.cs = 'h'; pt.cv.style.visibility = ''; } }
+    else {
+      const B = g.big, R = g.row, x = lerp(B.x, R.x, m1), w = lerp(B.w, R.w, m1);
+      let y = lerp(B.y, R.y, m1), h = lerp(B.h, R.h, m1);
+      if (m2 > 0) { const h2 = lerp(R.h, 0, m2); y = R.y + R.h - h2; h = h2; }
+      const rev = k === 0 ? easeOut3(clamp(r / .07, 0, 1)) : 1, settle = easeOut3(clamp((r - vis0) / (k === 0 ? .09 : .07), 0, 1));
+      const cs = `${x.toFixed(1)}|${y.toFixed(1)}|${w.toFixed(1)}|${h.toFixed(1)}|${rev.toFixed(3)}|${settle.toFixed(3)}`;
+      if (cs !== pt.cs) {
+        pt.cs = cs; const st = pt.cv.style;
+        st.visibility = 'visible'; st.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`; st.width = w.toFixed(1) + 'px'; st.height = Math.max(0, h).toFixed(1) + 'px';
+        st.clipPath = rev >= 1 ? '' : `inset(${((1 - rev) * 100).toFixed(2)}% 0 0 0)`;
+        pt.img.style.transform = settle >= 1 ? '' : `scale(${(1 + .08 * (1 - settle)).toFixed(4)})`;
+      }
     }
-    rise(pt, t0 + .024, .01, .05);
-    if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - t0 + .014) / .02, 0, 1)).toFixed(4)})`;
+    rise(pt, r, c + .045, .012, .06);
+    if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((r - c + .04) / .045, 0, 1)).toFixed(4)})`;
   });
   // the four column lines draw down from the top edge once the Index is forming, one column after another
-  gridLines.forEach((ln, c) => { const u = easeInOut(clamp((q - .60 - c * .03) / .14, 0, 1)); ln.style.transform = u >= 1 ? 'none' : `scaleY(${u.toFixed(4)})`; });
-  const live = q > .9; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
+  gridLines.forEach((ln, c) => { const u = easeInOut(clamp((r - c * .04) / .2, 0, 1)) * (q > .6 ? 1 : 0); ln.style.transform = u >= 1 ? 'none' : `scaleY(${u.toFixed(4)})`; });
+  const live = r > C0 + 9 * CS + .06; ixEl.classList.toggle('live', live); if (!live) ixImg.classList.remove('on');
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
    keeps its bottom on the baseline (the O's overshoot is not magnified). Then the letters turn into lines: each stem's
@@ -796,15 +812,21 @@ function layout() {
   Z = REDUCE ? 0 : (vw < 700 ? vh * .17 : vh * .25);
   PIN = SMOOTH && vw >= 1100;
   html.style.setProperty('--A', A + 'px');
-  SD = vh * (vw < 700 ? 1.8 : 2.2); stageEl.style.height = (vh + SD).toFixed(0) + 'px';
+  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * (vw < 700 ? 2.2 : 2.6); SD = SA + SB;   // TAO → lines keeps its old length; the Index gets more room
+  stageEl.style.height = (vh + SD).toFixed(0) + 'px';
   fitHero(); SG = null; stageCuts.clear();
-  {                                                         // the covers: one column wide (two on phones), hanging below their row, kept on screen
-    const cw = (gridLines[0].getBoundingClientRect().width || vw / 4), gut = parseFloat(getComputedStyle(html).getPropertyValue('--gut')) || 0;
-    const W = vw < 700 ? cw * 2 + gut : cw, fTop = stageFrameEl.getBoundingClientRect().top;
-    [...rowsEl.children].forEach((row, i) => {
-      const im = DATA[i].i[0], b = row.getBoundingClientRect().bottom - fTop, cv = row.querySelector('.ix-cv');
-      cv.style.width = W.toFixed(1) + 'px'; cv.style.height = Math.max(40, Math.min(W * im[3] / im[2], vh * .46, vh - b - 16)).toFixed(1) + 'px';
+  {                                                         // the covers: three columns wide, right-aligned, centred in the band under the nav (full width on phones)
+    const ir = ixEl.getBoundingClientRect(), g0 = gridLines[0].getBoundingClientRect(), g3 = gridLines[3].getBoundingClientRect();
+    const gut = parseFloat(getComputedStyle(html).getPropertyValue('--gut')) || 0, m = parseFloat(getComputedStyle(html).getPropertyValue('--m')) || 0;
+    const nav = parseFloat(getComputedStyle(html).getPropertyValue('--navh')) || 44, top = nav + 16, bot = vh - 20;
+    COV = [...rowsEl.children].map((row, i) => {
+      const im = DATA[i].i[0], ar = im[2] / im[3], rr = row.getBoundingClientRect();
+      let w, h, x, y;
+      if (vw < 700) { w = vw - 2 * m; h = Math.min(w / ar, vh * .5); y = (vh - h) / 2; x = m; }
+      else { w = g0.width * 3 + gut * 2; h = w / ar; if (h > bot - top) { h = bot - top; w = h * ar; } x = g3.right - ir.left - w; y = top + (bot - top - h) / 2; }
+      return { big: { x, y, w, h }, row: { x: rr.left - ir.left, y: rr.top - ir.top, w: rr.width, h: rr.height } };
     });
+    ixParts && ixParts.forEach(pt => (pt.cs = ''));
   }
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
@@ -833,7 +855,7 @@ function goTo(y) {
 const navOffset = () => parseFloat(getComputedStyle(html).getPropertyValue('--navh')) + 6;
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-go]');
-  if (a) { e.preventDefault(); const k = a.dataset.go; goTo(k === 'hero' ? 0 : k === 'index' ? SD * .96 : secTops[k] - topClear); return; }
+  if (a) { e.preventDefault(); const k = a.dataset.go; goTo(k === 'hero' ? 0 : k === 'index' ? SD - 2 : secTops[k] - topClear); return; }
   const r = e.target.closest('.ix-row');
   if (r) { e.preventDefault(); goTo(chapters[+r.dataset.i].elTop - topClear); }
 });
