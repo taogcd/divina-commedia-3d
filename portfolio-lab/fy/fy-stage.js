@@ -85,7 +85,7 @@ window.FYStage = function (frame, opts) {
     const k0 = `${u.toFixed(4)}|${!!G}|${vw}|${vh}`;
     if (k0 === key) return dk;
     key = k0;
-    const bg = Math.round(lerp(255, 11, dk));
+    const bg = Math.round(lerp(255, 2, dk));                 // the photograph's own black
     x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
     x.fillStyle = `rgb(${bg},${bg},${bg})`; x.fillRect(0, 0, cv.width, cv.height);
     if (!G || u < SET[0] - .05) return dk;
