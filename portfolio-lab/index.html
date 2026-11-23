@@ -115,13 +115,16 @@ html.ready .mega .ln{overflow:visible}
 .ix-row .c2{font-weight:400}
 /* the covers: a stack, three columns wide on the right; the top one folds into its row's line, uncovering the next */
 .ix-covers{position:absolute;inset:0;z-index:3;pointer-events:none}
-.ix-cv{position:absolute;left:0;top:0;width:10px;height:10px;margin:0;visibility:hidden;overflow:hidden;background:var(--ph)}
+.ix-cv{position:absolute;left:0;top:0;width:10px;height:10px;margin:0;visibility:hidden;overflow:hidden;background:var(--ph);filter:grayscale(1) contrast(1.08)}
 .ix-cv img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;will-change:transform}
 .ix-cv img + img{visibility:hidden}
 .ix-row:hover .c1,.ix-row:focus-visible .c1{color:var(--accent)}
 .ix-img{grid-column:7/13;grid-row:1/2;height:58vh;margin:0;position:relative;clip-path:inset(0 0 100% 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1)}
 .ix-img.on{clip-path:inset(0 0 0 0)}
-.ix-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top}
+.ix-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top;filter:grayscale(1) contrast(1.08);transition:filter .25s}
+.ix-img.col img{filter:none;transition:filter .6s}
+/* one black-and-white treatment for every picture while browsing; a picture turns to colour only when the page is
+   still and the pointer rests on it (WebGL tiles: uSat in the shader; covers: a filter set per frame) */
 @media (max-width:699px){ .ix-list{grid-column:1/13;--cols:12} .ix .c1{grid-column:1/3} .ix .c2{grid-column:3/11} .ix .c3{grid-column:11/13} .ix-img{display:none} }
 
 /* chapters */
@@ -156,6 +159,8 @@ html.smooth .ch-meta-in{position:relative;top:auto}
 .tile-im img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 html.gl .tile-im img{visibility:hidden}
 html:not(.gl) .tile-im{background:var(--ph)}
+html:not(.gl) .tile-im img{filter:grayscale(1) contrast(1.08);transition:filter .25s}
+html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 .tile-hit{position:absolute;inset:0;cursor:zoom-in}
 .tile figcaption{display:flex;justify-content:space-between;margin-top:7px;color:var(--ink-2)}
 @media (max-width:1099px){
@@ -360,6 +365,14 @@ function distribute(n) {
 /* ---------- state ---------- */
 const layoutW = () => document.getElementById('lines').getBoundingClientRect().width || document.documentElement.clientWidth;  // width of the fixed layers = the page's real layout width, scrollbar excluded
 let vw = layoutW(), vh = innerHeight, cur = scrollY, prev = cur, vel = 0, A = 200, Z = 0, PIN = false, docH = 1, last = 0;
+/* colour on rest: the page counts as still once the scroll has settled for a moment; the pointer is the mouse (on
+   touch screens, with no hover, the middle of the screen stands in for it) */
+let mx = -1, my = -1, STILL = false, stillFor = 0, FK = 1;
+addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } }, { passive: true });
+document.documentElement.addEventListener('mouseleave', () => { mx = my = -1; });
+const pointer = () => !STILL ? null : TOUCH ? [vw / 2, vh / 2] : mx >= 0 ? [mx, my] : null;
+const toward = (v, t) => v + (t - v) * (1 - Math.pow(1 - (t > v ? .06 : .2), FK));   // slow into colour, quick back to grey
+const inside = (P, x, y, w, h) => P && P[0] >= x && P[0] <= x + w && P[1] >= y && P[1] <= y + h;
 const F3 = [0, 1, -.55], F2 = [0, .85];
 const hero = $('#hero'), chrs = [...document.querySelectorAll('#hero .chr')], heroH1 = $('#hero .mega');
 let heroH = 1, navOff = 50, topClear = 60, stretch = 1, SD = 1, SA = 1, SB = 1, BASE = 0;
@@ -400,7 +413,7 @@ function stageFrame() {
   // last while the frame eases to its proportions. Then it folds into its row: the frame slides and narrows onto the
   // row's box (the picture re-cropped, never squashed), thins into the row's line, and the row's words rise out of it;
   // the next work, uncovered, settles.
-  const u = q > .6 ? clamp((cur - SA) / vh, 0, UEND) : -1;
+  const u = q > .6 ? clamp((cur - SA) / vh, 0, UEND) : -1, P = pointer(); let hovTaken = false;
   ixParts.forEach((pt, i) => {
     const ru = SG && i > 0 ? SG.rules[i - 1] : null, driven = ru && ru.driven;
     if (i <= 1) { rise(pt, q, .595, .02, .10); if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - .585) / .03, 0, 1)).toFixed(4)})`; return; }
@@ -409,7 +422,7 @@ function stageFrame() {
     if (!pt.ld && u > vis0 - .8) { pt.ld = true; pt.im.forEach(im => { if (!im.src && im.dataset.src) im.src = im.dataset.src; }); }
     const m1 = easeInOut(clamp((u - g.c) / CV.COL, 0, 1)), m2 = easeInOut(clamp((u - g.c - CV.COL + .01) / CV.LN, 0, 1));
     const on = u >= 0 && u >= vis0 && m2 < 1;
-    if (!on) { if (pt.cs !== 'h') { pt.cs = 'h'; pt.cv.style.visibility = ''; } }
+    if (!on) { if (pt.cs !== 'h') { pt.cs = 'h'; pt.cv.style.visibility = ''; pt.sat = 0; pt.fs = ''; pt.cv.style.filter = ''; } }
     else {
       let j = 0, e = 0;                                                     // picture j is down; j + 1 is wiping in (e)
       if (u > g.s) { const t = (u - g.s) / CV.SW; j = Math.min(n - 1, Math.floor(t)); e = j >= n - 1 ? 0 : easeInOut(clamp((t - j) / .8, 0, 1)); }
@@ -418,6 +431,10 @@ function stageFrame() {
       if (m1 > 0) F = { x: lerp(F.x, R.x, m1), y: lerp(F.y, R.y, m1), w: lerp(F.w, R.w, m1), h: lerp(F.h, R.h, m1) };
       if (m2 > 0) { const h2 = lerp(R.h, 0, m2); F = { x: F.x, y: R.y + R.h - h2, w: F.w, h: h2 }; }
       const rev = k === 0 ? easeOut3(clamp(u / CV.R0, 0, 1)) : 1, settle = easeOut3(clamp((u - vis0) / (k === 0 ? CV.R0 * 1.3 : CV.COL), 0, 1));
+      const hit = !hovTaken && inside(P, F.x, F.y, F.w, F.h); if (hit) hovTaken = true;   // the top cover under the pointer
+      pt.sat = toward(pt.sat || 0, hit ? 1 : 0);
+      const fs = pt.sat < .002 ? '' : `grayscale(${(1 - pt.sat).toFixed(3)}) contrast(${(1 + .08 * (1 - pt.sat)).toFixed(3)})`;
+      if (fs !== pt.fs) { pt.fs = fs; pt.cv.style.filter = fs; }
       const cs = `${F.x.toFixed(1)}|${F.y.toFixed(1)}|${F.w.toFixed(1)}|${F.h.toFixed(1)}|${rev.toFixed(3)}|${settle.toFixed(3)}|${j}|${e.toFixed(3)}`;
       if (cs !== pt.cs) {
         pt.cs = cs; const st = pt.cv.style;
@@ -941,7 +958,7 @@ const FS = `
 precision highp float;
 uniform sampler2D uTex;
 uniform vec4 uRect; uniform vec3 uPh;
-uniform float uReveal, uZone, uTop, uVel, uTime, uSeed, uLoaded;
+uniform float uReveal, uZone, uTop, uVel, uTime, uSeed, uLoaded, uSat;
 varying vec2 vUv; varying vec2 vS;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -964,6 +981,8 @@ void main(){
   vec4 c = texture2D(uTex, tuv);
   vec3 col = vec3(texture2D(uTex, tuv + vec2(0.0, sh)).r, c.g, texture2D(uTex, tuv - vec2(0.0, sh)).b);
   col = mix(uPh, col, uLoaded);
+  float lum = clamp((dot(col, vec3(0.299, 0.587, 0.114)) - 0.5) * 1.08 + 0.5, 0.0, 1.0);   // one black-and-white for all
+  col = mix(vec3(lum), col, uSat);
   float n = vn(vec2(x, s) * 0.05 + uSeed * 13.0);
   float a = 1.0 - smoothstep(0.42, 0.98, d + (n - 0.5) * 0.5);
   float edge = uReveal * 1.16 + 0.07 * sin(vUv.x * 9.0 + uSeed * 20.0) * (1.0 - uReveal);
@@ -987,7 +1006,7 @@ function initGL() {
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pos), gl.STATIC_DRAW);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(ind), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(prog, 'aP'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    ['uRect', 'uView', 'uVel', 'uReveal', 'uZone', 'uTop', 'uTime', 'uSeed', 'uLoaded', 'uPh', 'uTex'].forEach(k => U[k] = gl.getUniformLocation(prog, k));
+    ['uRect', 'uView', 'uVel', 'uReveal', 'uZone', 'uTop', 'uTime', 'uSeed', 'uLoaded', 'uSat', 'uPh', 'uTex'].forEach(k => U[k] = gl.getUniformLocation(prog, k));
     phTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, phTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([226, 226, 226, 255]));
     gl.uniform3f(U.uPh, 226 / 255, 226 / 255, 226 / 255);
@@ -1041,9 +1060,11 @@ function drawGL(now) {
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.uniform2f(U.uView, vw, vh); gl.uniform1f(U.uZone, Z); gl.uniform1f(U.uTop, 0); gl.uniform1f(U.uTime, now / 1000); gl.uniform1f(U.uVel, vel);
   for (let n = 0; n < 2 && uploads.length; n++) { const [t, img] = uploads.shift(); upload(t, img); }
+  const P = pointer();
   for (const t of tiles) {
     if (t.hide) continue;
     const top = screenTop(t);
+    t.sat = toward(t.sat || 0, inside(P, t.x, top, t.w, t.h) ? 1 : 0);
     if (top > vh + 80 || top + t.h < -80) continue;
     if (t.r0 < 0) {
       if (!t.seen) t.seen = now;
@@ -1055,14 +1076,14 @@ function drawGL(now) {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t.tex || phTex);
     gl.uniform4f(U.uRect, t.x, top, t.w, t.h);
     gl.uniform1f(U.uReveal, rp); gl.uniform1f(U.uSeed, t.seed);
-    gl.uniform1f(U.uLoaded, t.tex ? clamp((now - t.loadedAt) / 600, 0, 1) : 0);
+    gl.uniform1f(U.uLoaded, t.tex ? clamp((now - t.loadedAt) / 600, 0, 1) : 0); gl.uniform1f(U.uSat, t.sat < .002 ? 0 : t.sat);
     gl.drawElements(gl.TRIANGLES, idxCount, gl.UNSIGNED_SHORT, 0);
   }
 }
 
 /* ---------- frame ---------- */
 const bar = $('#bar'), pct = $('#nav .pct');
-let tagKey = '', frameN = 0;
+let tagKey = '', frameN = 0, prev0 = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(64, now - (last || now)); last = now; const k = Math.max(dt / 16.667, 0.25);
@@ -1070,6 +1091,8 @@ function frame(now) {
   if (SMOOTH) { cur = lerp(cur, tgt, 1 - Math.pow(1 - .085, k)); if (Math.abs(tgt - cur) < .1) cur = tgt; main.style.transform = `translate3d(0,${(-cur).toFixed(2)}px,0)`; }
   else cur = tgt;
   vel = REDUCE ? 0 : lerp(vel, clamp((cur - prev) / k, -60, 60), .18); prev = cur;
+  FK = k; stillFor = Math.abs(cur - prev0) > .4 || Math.abs(tgt - cur) > .8 ? 0 : stillFor + dt; prev0 = cur; STILL = stillFor > 160;
+  ixImg.classList.toggle('col', STILL && ixImg.classList.contains('on'));
 
   // hero letters stretch as they leave
   if (!introDone) introFrame(now);
