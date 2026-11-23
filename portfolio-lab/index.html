@@ -864,12 +864,13 @@ const secTops = {};
 // centre of the earth, up the mountain and the heavens, back out; every letter flies into the two volumes
 // (dc/dc3d.js), and the model gives way to the photograph of the book
 const dcDark = $('.dc-dark'), dcLayer = $('.dc-layer'), dcCv = $('.dc-cv'), dcPhoto = $('.dc-photo');
+const DCV = '56';                                         // bump with every change to dc/dc3d.js (the browser keeps it otherwise)
 const DCT = { dark0: .4, dark1: .85, out0: .75, out1: 1.15, in0: .75, in1: 1.2 };
 let dc = null, dcState = 0, dcIdle = 0, DCU = 8.5, TLS = [], dcKey = '', dcMoving = false, dcSt = '';
 function dcLoad() {
   dcState = 1;
   const js = src => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); });
-  Promise.all([window.THREE ? 0 : js('../three.min.js'), window.DC_TEXT ? 0 : js('dc/dc-text.js'), window.DC3D ? 0 : js('dc/dc3d.js')])
+  Promise.all([window.THREE ? 0 : js('../three.min.js'), window.DC_TEXT ? 0 : js('dc/dc-text.js'), window.DC3D ? 0 : js('dc/dc3d.js?v=' + DCV)])
     .then(() => Promise.race([Promise.all([document.fonts.load('500 72px "Cormorant Garamond"'), document.fonts.load('700 72px "Cormorant Garamond"')]), new Promise(r => setTimeout(r, 3500))]))
     .then(() => new Promise(r => (window.requestIdleCallback || setTimeout)(r, { timeout: 1500 })))
     .then(() => { dc = DC3D(dcCv, window.DC_TEXT, THREE, { width: vw, height: vh }); dcFit(); dcState = 2; })
