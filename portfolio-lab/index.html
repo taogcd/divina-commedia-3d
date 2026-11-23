@@ -139,12 +139,7 @@ html.smooth .ws-frame{will-change:transform}
 .fy .ws-photo{object-fit:contain}
 .ws .ws-head{z-index:3}
 .ws .ws-head .ix-rule{transform-origin:0 50%}
-.cm-sheet{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
-.cm-sheet.on-photo{mix-blend-mode:multiply}
-.cm-cap{position:absolute;left:0;top:0;display:flex;justify-content:space-between;gap:8px;color:var(--ink-2);white-space:nowrap}
-.cm-cap .mk{display:block;overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
-.cm-cap .mk > span{display:block;transform:translateY(110%)}
-@media (max-width:699px){ .cm .ws-photo{object-fit:contain} .cm-cap .mk:last-child{display:none} }
+@media (max-width:699px){ .cm .ws-photo{object-fit:contain} }
 /* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
    toward the next one (how far there is still to go); the works already passed stay drawn */
 #tl{position:fixed;left:0;right:0;top:var(--navh);height:24px;z-index:6;pointer-events:none}
@@ -322,8 +317,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 </div>
 
 <script src="data.js"></script>
-<script src="cm/cm-stage.js?v=59"></script>
-<script src="fy/fy-stage.js?v=59"></script>
+<script src="cm/cm-world.js?v=60"></script>
+<script src="fy/fy-world.js?v=60"></script>
 <script>
 (() => {
 'use strict';
@@ -352,7 +347,7 @@ let total = 0;
 /* ---------- build ---------- */
 const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
-const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '59';
+const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '60';
 DATA.forEach((p, i) => {
   const no = pad(i + 1);
   total += p.i.length;
@@ -409,10 +404,9 @@ wsList.forEach(ch => {
   const w = ch.ws, im = ch.p.i[WS_PHOTO[w.k]];
   try {
     if (w.k === 'cm' && window.CMStage) w.st = window.CMStage(w.frame, {
-      photo: url(im, 2400), photoW: im[2], photoH: im[3], strip: [[0, .8644], [1, .78], [1, .84], [0, .94]],
-      sheets: [['IMG_20240828_0002', 1], ['IMG_20240828_0019', 2], ['IMG_20240828_0021', 3], ['IMG_20240829_0008', 4]]
-        .map(([n, k]) => ({ name: n + '.jpg', w: 2480, h: 3507, src: `cm/cm-${k}.jpg`, srcS: `cm/cm-${k}-s.jpg` })) });
-    if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, {
+      photo: url(im, 2400), photoW: im[2], photoH: im[3], strip: [[0, .8644], [1, .78], [1, .84], [0, .94]], three: '../three.min.js',
+      sheets: [1, 2, 3, 4].map(k => ({ src: `cm/cm-${k}.jpg` })) });   // IMG_20240828_0002, _0019, _0021, IMG_20240829_0008
+    if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, { three: '../three.min.js',
       photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
   } catch (e) { console.warn('stage off:', e); w.st = null; }
 });
