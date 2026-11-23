@@ -113,13 +113,8 @@ html.ready .mega .ln{overflow:visible}
 .ix-row{padding:var(--L) 0 4px}
 .ix-row .c1,.ix-row .c3{font-variant-numeric:tabular-nums}
 .ix-row .c2{font-weight:400}
-/* the covers: a stack, three columns wide on the right; the top one folds into its row's line, uncovering the next */
-.ix-covers{position:absolute;inset:0;z-index:3;pointer-events:none}
-.ix-cv{position:absolute;left:0;top:0;width:10px;height:10px;margin:0;visibility:hidden;overflow:hidden;background:var(--ph);filter:grayscale(1) contrast(1.08)}
-.ix-cv img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;will-change:transform}
-.ix-cv img + img{visibility:hidden}
 .ix-row:hover .c1,.ix-row:focus-visible .c1{color:var(--accent)}
-.ix-img{grid-column:7/13;grid-row:1/2;height:58vh;margin:0;position:relative;clip-path:inset(0 0 100% 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1)}
+.ix-img{display:none;grid-column:7/13;grid-row:1/2;height:58vh;margin:0;position:relative;clip-path:inset(0 0 100% 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1)}
 .ix-img.on{clip-path:inset(0 0 0 0)}
 .ix-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:left top;filter:grayscale(1) contrast(1.08);transition:filter .25s}
 .ix-img.col img{filter:none;transition:filter .6s}
@@ -270,7 +265,6 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
           <div id="index-rows"></div>
         </div>
         <figure class="ix-img" aria-hidden="true"><img alt=""></figure>
-        <div class="ix-covers" aria-hidden="true"></div>
       </section>
       <div class="dc-layer" aria-hidden="true"><canvas class="dc-cv"></canvas><img class="dc-photo" src="dc/dc-01.jpg" alt="" decoding="async"></div>
     </div>
@@ -345,11 +339,7 @@ DATA.forEach((p, i) => {
   const row = document.createElement('a');
   row.className = 'ix-row'; row.href = '#w' + no; row.dataset.i = i;
   row.innerHTML = `<span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i>`;
-  const cv = document.createElement('figure'); cv.className = 'ix-cv'; cv.style.zIndex = 20 - i;
-  const NI = p.i.length, pick = [...new Set([0, Math.round(NI / 4), Math.round(NI / 2), Math.round(NI * 3 / 4)])].filter(j => j < NI);   // a few pictures from across the work
-  cv.dataset.pick = pick.join(',');
-  cv.innerHTML = pick.map((j, n) => `<img alt="" decoding="async" ${n ? 'data-src' : 'src'}="${url(p.i[j], 1600)}">`).join(''); $('.ix-covers').appendChild(cv);
-  rowsEl.appendChild(row);
+  if (i === 0) rowsEl.appendChild(row);                    // the opening writes only the first work's title; the rest come in their turn
 
   const links = [p.v ? `<a href="${p.v}" target="_blank" rel="noopener">Film ↗</a>` : '']
     .concat((p.x || []).map(([k, u]) => `<a href="${u}" target="_blank" rel="noopener">${k} ↗</a>`)).join('');
@@ -414,9 +404,7 @@ let heroH = 1, navOff = 50, topClear = 60, stretch = 1, SD = 1, SA = 1, SB = 1, 
 const STRETCH = 2.6;                                      // height multiple of TAO. as it is pulled out of the frame
 const stageEl = $('#stage'), stageFrameEl = $('.stage-frame');
 const easeOut3 = t => 1 - Math.pow(1 - t, 3);
-let ixParts = null, SG = null, stageInk = false, COV = [], UEND = 1;
-const CV = { R0: .2, SW: .16, COL: .17, LN: .05 };   // in screen heights of scroll: first reveal, one picture, fold, thin
-const coverEls = [...document.querySelectorAll('.ix-cv')];
+let ixParts = null, SG = null, stageInk = false, UEND = 1;
 const gridLines = [...document.querySelectorAll('#lines span')];
 const stageCv = $('.stage-cv'), sx2 = stageCv.getContext('2d');
 function stageFrame() {
@@ -441,58 +429,18 @@ function stageFrame() {
   else { yb = lerp(y1 - 26, -vh * .45, e3); sy = 2.5 + .5 * e3; }   // far enough that the bends leave with the word
   heroH1.style.transform = `translate3d(0,${(yb - BASE).toFixed(2)}px,0) scaleY(${sy.toFixed(4)})`;
   drawStage(q, yb, sy);
-  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map((el, i) => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule'), cv: i > 1 ? coverEls[i - 2] : null, im: i > 1 ? [...coverEls[i - 2].children] : null, cs: '', ld: false }));
+  if (!ixParts) ixParts = [ixEl.querySelector('.ix-h'), ixEl.querySelector('.ix-head'), ...rowsEl.children].map(el => ({ m: [...el.querySelectorAll('.mk > span')], r: el.querySelector('.ix-rule') }));
   const rise = (pt, x, a, st, d) => pt.m.forEach((m, k) => { const ek = easeOut3(clamp((x - a - k * st) / d, 0, 1)); m.style.transform = ek >= 1 ? 'none' : `translate3d(0,${((1 - ek) * 110).toFixed(1)}%,0)`; });
-  // u: scroll through the Index part, in screen heights. The covers are a stack on the right (three columns wide).
-  // While a work is on top, scrolling turns through a few of its pictures: each one wipes up from the bottom over the
-  // last while the frame eases to its proportions. Then it folds into its row: the frame slides and narrows onto the
-  // row's box (the picture re-cropped, never squashed), thins into the row's line, and the row's words rise out of it;
-  // the next work, uncovered, settles.
-  const u = q > .6 ? clamp((cur - SA) / vh, 0, UEND) : -1, P = pointer(); let hovTaken = false;
+  // u: screen heights of scroll after the opening. 'Index' and its labels rise as the lines thin (q .595), then the
+  // first work's title is written on its line (u .02); the rest of the works are not listed here: they come in turn
+  const u = q > .6 ? clamp((cur - SA) / vh, 0, UEND) : -1;
   ixParts.forEach((pt, i) => {
-    const ru = SG && i > 0 ? SG.rules[i - 1] : null, driven = ru && ru.driven;
-    if (i <= 1) { rise(pt, q, .595, .02, .10); if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((q - .585) / .03, 0, 1)).toFixed(4)})`; return; }
-    const k = i - 2, g = COV[k]; if (!g) return;
-    if (k > 0) {                                           // the other works are not written here: they come in their turn
-      if (pt.cs !== 'h') { pt.cs = 'h'; pt.cv.style.visibility = ''; pt.m.forEach(m => (m.style.transform = '')); }
-      if (pt.r) pt.r.style.transform = driven && q >= .6 ? 'none' : 'scaleX(0)'; return;
-    }
-    const n = g.rects.length, vis0 = k === 0 ? 0 : COV[k - 1].c;          // uncovered when the one above starts to leave
-    if (!pt.ld && u > vis0 - .8) { pt.ld = true; pt.im.forEach(im => { if (!im.src && im.dataset.src) im.src = im.dataset.src; }); }
-    const m1 = easeInOut(clamp((u - g.c) / CV.COL, 0, 1)), m2 = easeInOut(clamp((u - g.c - CV.COL + .01) / CV.LN, 0, 1));
-    const on = u >= 0 && u >= vis0 && m2 < 1;
-    if (!on) { if (pt.cs !== 'h') { pt.cs = 'h'; pt.cv.style.visibility = ''; pt.sat = 0; pt.fs = ''; pt.cv.style.filter = ''; } }
-    else {
-      let j = 0, e = 0;                                                     // picture j is down; j + 1 is wiping in (e)
-      if (u > g.s) { const t = (u - g.s) / CV.SW; j = Math.min(n - 1, Math.floor(t)); e = j >= n - 1 ? 0 : easeInOut(clamp((t - j) / .8, 0, 1)); }
-      const A = g.rects[j], Bn = g.rects[Math.min(n - 1, j + 1)], R = g.row;
-      let F = e > 0 ? { x: lerp(A.x, Bn.x, e), y: lerp(A.y, Bn.y, e), w: lerp(A.w, Bn.w, e), h: lerp(A.h, Bn.h, e) } : A;
-      if (m1 > 0) F = { x: lerp(F.x, R.x, m1), y: lerp(F.y, R.y, m1), w: lerp(F.w, R.w, m1), h: lerp(F.h, R.h, m1) };
-      if (m2 > 0) { const h2 = lerp(R.h, 0, m2); F = { x: F.x, y: R.y + R.h - h2, w: F.w, h: h2 }; }
-      const rev = k === 0 ? easeOut3(clamp(u / CV.R0, 0, 1)) : 1, settle = easeOut3(clamp((u - vis0) / (k === 0 ? CV.R0 * 1.3 : CV.COL), 0, 1));
-      const hit = !hovTaken && inside(P, F.x, F.y, F.w, F.h); if (hit) hovTaken = true;   // the top cover under the pointer
-      pt.sat = toward(pt.sat || 0, hit ? 1 : 0);
-      const fs = pt.sat < .002 ? '' : `grayscale(${(1 - pt.sat).toFixed(3)}) contrast(${(1 + .08 * (1 - pt.sat)).toFixed(3)})`;
-      if (fs !== pt.fs) { pt.fs = fs; pt.cv.style.filter = fs; }
-      const cs = `${F.x.toFixed(1)}|${F.y.toFixed(1)}|${F.w.toFixed(1)}|${F.h.toFixed(1)}|${rev.toFixed(3)}|${settle.toFixed(3)}|${j}|${e.toFixed(3)}`;
-      if (cs !== pt.cs) {
-        pt.cs = cs; const st = pt.cv.style;
-        st.visibility = 'visible'; st.transform = `translate3d(${F.x.toFixed(1)}px,${F.y.toFixed(1)}px,0)`; st.width = F.w.toFixed(1) + 'px'; st.height = Math.max(0, F.h).toFixed(1) + 'px';
-        st.clipPath = rev >= 1 ? '' : `inset(${((1 - rev) * 100).toFixed(2)}% 0 0 0)`;
-        pt.im.forEach((im, jj) => {
-          const S = im.style;
-          if (jj === j) { S.visibility = 'inherit'; S.clipPath = ''; S.transform = j === 0 && settle < 1 ? `scale(${(1 + .08 * (1 - settle)).toFixed(4)})` : ''; }
-          else if (jj === j + 1 && e > 0) { S.visibility = 'inherit'; S.clipPath = `inset(${((1 - e) * 100).toFixed(2)}% 0 0 0)`; S.transform = `scale(${(1 + .1 * (1 - e)).toFixed(4)})`; }
-          else S.visibility = 'hidden';
-        });
-      }
-    }
-    rise(pt, u, g.c + CV.COL * .75, .02, .12);
-    if (pt.r) pt.r.style.transform = driven ? (q >= .6 ? 'none' : 'scaleX(0)') : `scaleX(${easeInOut(clamp((u - g.c + .12) / .1, 0, 1)).toFixed(4)})`;
+    if (i <= 1) rise(pt, q, .595, .02, .10); else rise(pt, u, .02, .025, .14);
+    if (pt.r) pt.r.style.transform = q >= .6 ? 'none' : 'scaleX(0)';      // the canvas draws the rules until it hands them over
   });
   // the four column lines draw down from the top edge once the Index is forming, one column after another
-  gridLines.forEach((ln, c) => { const v = q > .6 ? easeInOut(clamp((u - c * .06) / .45, 0, 1)) : 0; ln.style.transform = v >= 1 ? 'none' : `scaleY(${v.toFixed(4)})`; });
-  const live = COV.length && u > COV[0].c + CV.COL + .05 && u < DCT.dark0; ixEl.classList.toggle('live', !!live); if (!live) ixImg.classList.remove('on');
+  gridLines.forEach((ln, c) => { const v = q > .6 ? easeInOut(clamp((u - c * .03) / .25, 0, 1)) : 0; ln.style.transform = v >= 1 ? 'none' : `scaleY(${v.toFixed(4)})`; });
+  const live = u > .15 && u < DCT.dark0; ixEl.classList.toggle('live', live); ixImg.classList.remove('on');
   dcStep(u);
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
@@ -553,7 +501,7 @@ function stageGeom() {
     }
     return { i, cx, stems, bounds, bowl };
   });
-  all.sort((u, v) => u.c - v.c).forEach((st, k) => { st.rk = Math.min(k, rules.length - 1); rules[st.rk].driven = true; });
+  all.sort((u, v) => u.c - v.c).forEach((st, k, A) => { st.rk = Math.min(rules.length - 1, Math.floor(k * rules.length / A.length)); rules[st.rk].driven = true; });   // the six lines share the rules there are
   // one line weight for all: the median ExtraLight stem, but never more than ~2/5 of the row pitch so stacked arms stay apart
   hs.sort((u, v) => u - v);
   const n5 = Math.max(1, Math.min(5, rules.length - 1)), pitch = (rules[n5].y - rules[0].y) / n5;
@@ -885,26 +833,6 @@ function layout() {
   PIN = SMOOTH && vw >= 1100;
   html.style.setProperty('--A', A + 'px');
   fitHero(); SG = null; stageCuts.clear();
-  {                                                         // the covers: three columns wide, right-aligned, centred in the band under the nav (full width on phones)
-    const ir = ixEl.getBoundingClientRect(), g0 = gridLines[0].getBoundingClientRect(), g3 = gridLines[3].getBoundingClientRect();
-    const gut = parseFloat(getComputedStyle(html).getPropertyValue('--gut')) || 0, m = parseFloat(getComputedStyle(html).getPropertyValue('--m')) || 0;
-    const nav = parseFloat(getComputedStyle(html).getPropertyValue('--navh')) || 44, top = nav + 16, bot = vh - 20;
-    const box = im => {
-      const ar = im[2] / im[3]; let w, h, x, y;
-      if (vw < 700) { w = vw - 2 * m; h = Math.min(w / ar, vh * .5); y = (vh - h) / 2; x = m; }
-      else { w = g0.width * 3 + gut * 2; h = w / ar; if (h > bot - top) { h = bot - top; w = h * ar; } x = g3.right - ir.left - w; y = top + (bot - top - h) / 2; }
-      return { x, y, w, h };
-    };
-    let s0 = CV.R0;
-    COV = [...rowsEl.children].map((row, i) => {
-      const rr = row.getBoundingClientRect(), pick = coverEls[i].dataset.pick.split(',').map(Number);
-      return { rects: pick.map(j => box(DATA[i].i[j])), row: { x: rr.left - ir.left, y: rr.top - ir.top, w: rr.width, h: rr.height } };
-    });
-    COV.forEach((g, k) => {                                 // a work's pictures turn once the one above has gone; then it folds
-      g.s = k ? COV[k - 1].c + CV.COL + CV.LN * .5 : s0; g.c = g.s + (g.rects.length - 1) * CV.SW + .05;
-    });
-    ixParts && ixParts.forEach(pt => (pt.cs = ''));
-  }
   DCU = vw < 700 ? 7 : 8.5; UEND = DCT.in1 + DCU;
   SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; SD = SA + SB;   // TAO → lines; then the first title, the dark, the Commedia
   stageEl.style.height = (vh + SD).toFixed(0) + 'px';
@@ -930,13 +858,13 @@ function layout() {
 const secTops = {};
 
 /* ---------- the Commedia: Mappa della Commedia, in the same pinned frame, after its title ---------- */
-// u (screen heights of scroll after the opening): the first work's covers turn and fold into its row, which is then
-// written (u ≈ 1, see stageFrame). From DCT.dark0 the page darkens in place; the Index, turning light with it, lets go
+// u (screen heights of scroll after the opening): the first work's title is written on its line (u ≈ .2, see
+// stageFrame). From DCT.dark0 the page darkens in place; the Index, turning light with it, lets go
 // as the text world comes up (DCT.in0–in1); then p 0–1 over DCU screen heights: down through the Inferno, over at the
 // centre of the earth, up the mountain and the heavens, back out; every letter flies into the two volumes
 // (dc/dc3d.js), and the model gives way to the photograph of the book
 const dcDark = $('.dc-dark'), dcLayer = $('.dc-layer'), dcCv = $('.dc-cv'), dcPhoto = $('.dc-photo');
-const DCT = { dark0: 1.15, dark1: 1.6, out0: 1.5, out1: 1.9, in0: 1.5, in1: 1.95 };
+const DCT = { dark0: .4, dark1: .85, out0: .75, out1: 1.15, in0: .75, in1: 1.2 };
 let dc = null, dcState = 0, dcIdle = 0, DCU = 8.5, TLS = [], dcKey = '', dcMoving = false, dcSt = '';
 function dcLoad() {
   dcState = 1;

@@ -479,7 +479,7 @@ const PARTS = [   // [u0, u1, v0, v1, z inset, kind]  kind: 0 cloth spine, 1 pag
   [0, .990, .499, .751, 0, 0], [.011, .990, .757, .976, 14, 1], [0, 1, .976, 1, 6, 2]];
 const EMB = [[.085, .558, .07, .17], [.06, .36, .58, .67]];  // the embossed title blocks on the two spines
 const bx = u => BC.x - BW / 2 + u * BW, by = v => BC.y + BH / 2 - v * BH;
-const U = { uAtlas: { value: null }, uGW: { value: GW }, uPix: { value: 800 }, uFog: { value: 3000 }, uClip: { value: 1 }, uClipN: { value: new THREE.Vector2(0, 1) },
+const U = { uAtlas: { value: null }, uGW: { value: GW }, uPix: { value: 800 }, uFog: { value: 3000 }, uClip: { value: 0 }, uClipN: { value: new THREE.Vector2(0, 1) },
   uSel: { value: -1 }, uSelAmt: { value: 0 }, uCam: { value: new THREE.Vector3() }, uCol: { value: new THREE.Color(0xf6f4ee) },
   uGather: { value: 0 }, uAbsorb: { value: 0 }, uBS: { value: 8.5 }, uMouse: { value: new THREE.Vector2(9, 9) }, uTorch: { value: 0 }, uAsp: { value: W0 / H0 }, uLineA: { value: 1 } };
 
@@ -590,16 +590,39 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0xc8c8c8, .78));
 const sun = new THREE.DirectionalLight(0xffffff, .42); sun.position.set(-.5, .8, 1); scene.add(sun);
 
 /* ---------------- camera along the page ---------------- */
-// key views: [p, target, offset, roll]; between them the view direction is slerped, the distance log-lerped, the
-// roll (Dante turns over at the centre of the earth) eased
-const K = [
+// It begins at the gate of Hell (Inferno III, 'Per me si va ne la città dolente…'), close enough to read its letters,
+// and from there only draws back: along the first line, the whole gate, the funnel, the Inferno, and out to the
+// whole world of the poem, slowly turning; then the book.
+// key views: [p, target, offset, roll, up]; between them the view direction is slerped, the distance log-lerped
+let G0 = null;
+{
+  let n = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, first = -1, sz = 0;
+  for (let i = 0; i < NG; i++) {
+    if (Math.floor(AC[i] / 128 + 1e-4) !== 2 || Math.abs(AO[i * 3 + 2] - 655) > 3) continue;
+    if (first < 0) first = i;
+    const x = AO[i * 3], y = AO[i * 3 + 1]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    sz += Math.hypot(AU[i * 3], AU[i * 3 + 1], AU[i * 3 + 2]); n++;
+  }
+  if (n > 40) {
+    const o = new V3(AO[first * 3], AO[first * 3 + 1], AO[first * 3 + 2]), t = new V3(AT[first * 3], AT[first * 3 + 1], AT[first * 3 + 2]).normalize(),
+      up = new V3(AU[first * 3], AU[first * 3 + 1], AU[first * 3 + 2]).normalize(), nr = new V3().crossVectors(t, up).normalize();
+    G0 = { o, t, up, nr, sz: sz / n, c: new V3((x0 + x1) / 2, (y0 + y1) / 2, o.z), h: Math.max(y1 - y0, (x1 - x0) * .7) };
+  }
+}
+const A3 = v => [v.x, v.y, v.z];
+const K = G0 ? [
+  [0.00, A3(G0.o.clone().addScaledVector(G0.t, G0.sz * 6)), A3(G0.nr.clone().multiplyScalar(G0.sz * 10)), 0, A3(G0.up)],
+  [0.10, A3(G0.o.clone().addScaledVector(G0.t, G0.sz * 7).addScaledVector(G0.up, -G0.sz * 8)), A3(G0.nr.clone().multiplyScalar(G0.sz * 13)), 0, A3(G0.up)],   // reading on, down the gate
+  [0.21, A3(G0.c), A3(G0.nr.clone().multiplyScalar(G0.h * 1.45)), 0, A3(G0.up)],
+  [0.33, [0, 640, 0], [0, 620, 1900], 0],
+  [0.45, [0, -100, 0], [700, 1100, 3400], 0],
+  [0.57, [0, -600, 0], [1200, 900, 4300], 0],
+  [0.65, [0, -650, 0], [-1000, 700, 4300], 0],
+  [0.72, [0, -1500, 0], [0, 1500, 9800], 0],
+  [0.88, null, null, 0]] : [
   [0.00, [0, 420, 0], [0, 1820, 3068], 0],
-  [0.12, [0, 420, 0], [0, 700, 1180], 0],
-  [0.25, [0, 230, 0], [600, 250, 470], 0],
-  [0.36, [0, -420, 0], [80, -120, 1320], 0.5],
-  [0.46, [0, -1290, 0], [0, -620, 1500], 1],
-  [0.55, [0, -1560, 0], [820, -330, 760], 1],
-  [0.64, [0, -3600, 0], [0, -2600, 7600], 1],
+  [0.40, [0, -150, 0], [900, 1500, 4800], 0],
+  [0.60, [0, -2200, 0], [2600, 2400, 13500], 0],
   [0.72, [0, -1500, 0], [0, 1500, 9800], 0],
   [0.88, null, null, 0]];                                  // the book, square to the screen (set from the photograph)
 let finalView = null;
@@ -607,16 +630,17 @@ const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 function slerp(a, b, e) { const d = Math.min(1, Math.max(-1, a.dot(b))), om = Math.acos(d); if (om < 1e-4) return a.clone(); const so = Math.sin(om); return a.clone().multiplyScalar(Math.sin((1 - e) * om) / so).add(b.clone().multiplyScalar(Math.sin(e * om) / so)); }
 function view(p) {
   const KK = K.map(k => k[1] ? k : [k[0], finalView ? finalView.t : [BC.x, BC.y, ZF], finalView ? finalView.o : [0, 0, 3600], k[3]]);
-  if (p <= KK[0][0]) return { t: new V3(...KK[0][1]), o: new V3(...KK[0][2]), roll: KK[0][3] };
+  const upOf = k => new V3(...(k[4] || [0, 1, 0])).normalize();
+  if (p <= KK[0][0]) return { t: new V3(...KK[0][1]), o: new V3(...KK[0][2]), roll: KK[0][3], up: upOf(KK[0]) };
   for (let i = 0; i < KK.length - 1; i++) {
     const A = KK[i], B = KK[i + 1];
     if (p <= B[0]) {
       const e = ease((p - A[0]) / (B[0] - A[0])), oa = new V3(...A[2]), ob = new V3(...B[2]);
       const la = oa.length(), lb = ob.length(), dir = slerp(oa.normalize(), ob.normalize(), e);
-      return { t: new V3(...A[1]).lerp(new V3(...B[1]), e), o: dir.multiplyScalar(Math.exp(Math.log(la) * (1 - e) + Math.log(lb) * e)), roll: A[3] + (B[3] - A[3]) * e };
+      return { t: new V3(...A[1]).lerp(new V3(...B[1]), e), o: dir.multiplyScalar(Math.exp(Math.log(la) * (1 - e) + Math.log(lb) * e)), roll: A[3] + (B[3] - A[3]) * e, up: slerp(upOf(A), upOf(B), e) };
     }
   }
-  const L = KK[KK.length - 1]; return { t: new V3(...L[1]), o: new V3(...L[2]), roll: L[3] };
+  const L = KK[KK.length - 1]; return { t: new V3(...L[1]), o: new V3(...L[2]), roll: L[3], up: upOf(L) };
 }
 let mxS = 0, myS = 0, dirty = true;
 const BG0 = new THREE.Color(0x000000), BG1 = new THREE.Color(0xdadada), bg = new THREE.Color();
@@ -625,7 +649,7 @@ function render(p, mx, my, dt) {
   // pointer: a slight turn of the view, and a lamp on the verses (both let go as the book forms)
   const free = 1 - sm(.72, .80, p);
   mxS += ((mx || 0) - mxS) * Math.min(1, dt * 3); myS += ((my || 0) - myS) * Math.min(1, dt * 3);
-  const v = view(p), up0 = new V3(0, 1, 0);
+  const v = view(p), up0 = v.up;
   const fwd0 = v.o.clone().negate().normalize();
   const side = new V3().crossVectors(fwd0, up0); if (side.lengthSq() < 1e-6) side.set(1, 0, 0); side.normalize();
   v.o.applyAxisAngle(up0, -mxS * .16 * free).applyAxisAngle(side, myS * .08 * free);
@@ -634,7 +658,7 @@ function render(p, mx, my, dt) {
   const up = up0.clone().addScaledVector(fwd, -up0.dot(fwd)).normalize().applyAxisAngle(fwd, v.roll * Math.PI);
   cam.up.copy(up); cam.lookAt(v.t);
   const dist = cam.position.distanceTo(v.t);
-  U.uFog.value = Math.max(700, dist * 3.4) * (1 + 6 * sm(.68, .78, p));
+  U.uFog.value = Math.max(160, dist * 3.4) * (1 + 6 * sm(.68, .78, p));   // close up, the far side of the world falls away
   { const rx = cam.position.x, rz = cam.position.z, rl = Math.hypot(rx, rz), fx = cam.position.x - v.t.x, fz = cam.position.z - v.t.z, fl = Math.hypot(fx, fz);
     const w = Math.min(1, Math.max(0, (fl / Math.max(dist, 1e-3) - .05) / .2));
     let nx = (rl > 1 ? rx / rl : 0) * (1 - w) + (fl > 1e-6 ? fx / fl : 0) * w, nz = (rl > 1 ? rz / rl : 0) * (1 - w) + (fl > 1e-6 ? fz / fl : 0) * w;
