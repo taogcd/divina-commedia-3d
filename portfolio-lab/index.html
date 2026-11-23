@@ -128,6 +128,23 @@ html.ready .mega .ln{overflow:visible}
 .dc-layer{position:absolute;inset:0;opacity:0;pointer-events:none;visibility:hidden}
 .dc-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .dc-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0}
+/* the work stages (Compressed Modernity, Fourteen Years): at the head of the chapter, a frame pinned for a stretch of
+   scroll like the opening; the work's title is written on its line, as in the Index (cm/cm-stage.js, fy/fy-stage.js) */
+.ws{position:relative}
+.ws-frame{position:relative;height:100vh;height:100svh;overflow:hidden}
+html:not(.smooth) .ws-frame{position:sticky;top:0}
+html.smooth .ws-frame{will-change:transform}
+.ws-cv{position:absolute;left:0;top:0;width:100%;height:100%}
+.ws-photo{position:absolute;inset:0;width:100%;height:100%;opacity:0;pointer-events:none;object-fit:cover}
+.fy .ws-photo{object-fit:contain}
+.ws .ws-head{z-index:3}
+.ws .ws-head .ix-rule{transform-origin:0 50%}
+.cm-sheet{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.cm-sheet.on-photo{mix-blend-mode:multiply}
+.cm-cap{position:absolute;left:0;top:0;display:flex;justify-content:space-between;gap:8px;color:var(--ink-2);white-space:nowrap}
+.cm-cap .mk{display:block;overflow:hidden;padding-bottom:.12em;margin-bottom:-.12em}
+.cm-cap .mk > span{display:block;transform:translateY(110%)}
+@media (max-width:699px){ .cm .ws-photo{object-fit:contain} .cm-cap .mk:last-child{display:none} }
 /* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
    toward the next one (how far there is still to go); the works already passed stay drawn */
 #tl{position:fixed;left:0;right:0;top:var(--navh);height:24px;z-index:6;pointer-events:none}
@@ -305,6 +322,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 </div>
 
 <script src="data.js"></script>
+<script src="cm/cm-stage.js?v=58"></script>
+<script src="fy/fy-stage.js?v=58"></script>
 <script>
 (() => {
 'use strict';
@@ -333,6 +352,7 @@ let total = 0;
 /* ---------- build ---------- */
 const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
+const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '58';
 DATA.forEach((p, i) => {
   const no = pad(i + 1);
   total += p.i.length;
@@ -355,9 +375,19 @@ DATA.forEach((p, i) => {
     </div></aside><div class="ms"></div></div>`;
   works.appendChild(el);
   const ch = { i, p, el, body: $('.ch-body', el), ms: $('.ms', el), metaIn: $('.ch-meta-in', el), track: $('.mq-track', el),
-    cols: [], off: [0, 0, 0], tiles: [], mx: Math.random() * 400, dir: i % 2 ? -1 : 1, top: 0, h: 0, elTop: 0, metaH: 0, uw: 1 };
+    cols: [], off: [0, 0, 0], tiles: [], mx: Math.random() * 400, dir: i % 2 ? -1 : 1, top: 0, h: 0, elTop: 0, metaH: 0, uw: 1, ws: null };
+  const wk = WS[p.t];
+  if (wk) {                                                 // a pinned stage opens the chapter
+    const sec = document.createElement('section');
+    sec.className = 'ws ws-' + wk; sec.setAttribute('aria-label', p.t);
+    sec.innerHTML = `<div class="ws-frame"><div class="ix ws-head" aria-hidden="true"><div class="ix-list"><div class="ix-row"><span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i></div></div></div></div>`;
+    el.prepend(sec);
+    const frame = $('.ws-frame', sec), row = $('.ix-row', sec);
+    ch.ws = { k: wk, el: sec, frame, row, m: [...row.querySelectorAll('.mk > span')], rule: $('.ix-rule', row), top: 0, L: 1, st: null, pin: '', hk: '' };
+  }
   p.i.forEach((im, j) => {
     if (i === 0 && j === 0) return;                         // the Commedia's first picture closes its 3D stage instead
+    if (wk && j === WS_PHOTO[wk]) return;                   // so does each stage's photograph
     const ar = im[2] / im[3];
     const v = ar >= 1.95 ? 1 : VAR[(j * 4 + i * 3) % VAR.length];
     const fig = document.createElement('figure');
@@ -370,6 +400,21 @@ DATA.forEach((p, i) => {
     ch.tiles.push(t); tiles.push(t);
   });
   chapters.push(ch);
+});
+/* the stages: Compressed Modernity's four rubbings (scans from the work's own folder of traced black-and-white
+   sheets) and its cover photograph, where the paper lies on the ground: the strip measured on the picture (TL TR BR BL);
+   Fourteen Years' fourteen typefaces and the J as printed in the book (measured against the photograph, 1600 × 711) */
+const wsList = chapters.filter(ch => ch.ws);
+wsList.forEach(ch => {
+  const w = ch.ws, im = ch.p.i[WS_PHOTO[w.k]];
+  try {
+    if (w.k === 'cm' && window.CMStage) w.st = window.CMStage(w.frame, {
+      photo: url(im, 2400), photoW: im[2], photoH: im[3], strip: [[0, .8644], [1, .78], [1, .84], [0, .94]],
+      sheets: [['IMG_20240828_0002', 1], ['IMG_20240828_0019', 2], ['IMG_20240828_0021', 3], ['IMG_20240829_0008', 4]]
+        .map(([n, k]) => ({ name: n + '.jpg', w: 2480, h: 3507, src: `cm/cm-${k}.jpg`, srcS: `cm/cm-${k}-s.jpg` })) });
+    if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, {
+      photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
+  } catch (e) { console.warn('stage off:', e); w.st = null; }
 });
 
 let nCols = 0;
@@ -837,8 +882,15 @@ function layout() {
   SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; SD = SA + SB;   // TAO → lines; then the first title, the dark, the Commedia
   stageEl.style.height = (vh + SD).toFixed(0) + 'px';
   if (dc) dcFit();
+  const wg = wsGeom();
+  wsList.forEach(ch => {
+    const w = ch.ws; w.L = vh * (w.st ? w.st.END : 3);
+    w.el.style.height = (vh + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
+    if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: w.row.offsetTop + w.row.offsetHeight }, wg));
+  });
   chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
   const sp = SMOOTH ? cur : scrollY;
+  wsList.forEach(ch => { ch.ws.top = ch.ws.el.getBoundingClientRect().top + sp; });
   chapters.forEach(ch => {
     const r = ch.body.getBoundingClientRect(); ch.top = r.top + sp; ch.h = r.height;
     ch.elTop = ch.el.getBoundingClientRect().top + sp; ch.metaH = ch.metaIn.offsetHeight; ch.metaTop = ch.metaIn.getBoundingClientRect().top + sp;
@@ -919,7 +971,31 @@ function tlFrame() {
 /* the full Index, from the nav */
 const ixo = $('#ixo'), ixoList = $('.ixo-list', ixo);
 DATA.forEach((p, i) => { const a = document.createElement('a'); a.href = '#'; a.dataset.wk = i; a.innerHTML = `<span>${pad(i + 1)}</span><span>${p.t}</span><span>${p.y}</span>`; ixoList.appendChild(a); });
-const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].elTop - topClear;
+const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].ws ? chapters[i].ws.top : chapters[i].elTop - topClear;
+/* the work stages, pinned in place for w.L px of scroll (see .ws in the CSS); u: screen heights since the pin */
+function wsGeom() {
+  const cs = getComputedStyle(html), t = parseFloat(getComputedStyle(document.body).fontSize) || 12;
+  return { m: parseFloat(cs.getPropertyValue('--m')) || 20, gut: parseFloat(cs.getPropertyValue('--gut')) || 20, t, L: t * 1.1667,
+    font: '"tao-acumin","acumin-variable","Helvetica Neue",Helvetica,Arial,sans-serif' };
+}
+function wsFrame(w) {
+  const y = cur - w.top;
+  if (y < -vh * 3.5 || y > w.L + vh * 1.2) return;
+  if (w.st) w.st.load();                                    // fetch ahead, a few screens before the stage
+  if (y < -vh * 1.05) return;
+  if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
+  const u = y / vh, dk = w.st ? w.st.step(u) || 0 : 0;
+  // the title is written on its line as the frame comes up, as in the Index
+  const hk = `${u.toFixed(3)}|${dk.toFixed(3)}`;
+  if (hk === w.hk) return; w.hk = hk;
+  w.m.forEach((m, k) => { const e = easeOut3(clamp((u + .42 - k * .025) / .16, 0, 1)); m.style.transform = e >= 1 ? 'none' : `translate3d(0,${((1 - e) * 110).toFixed(1)}%,0)`; });
+  const rl = easeInOut(clamp((u + .5) / .45, 0, 1)); w.rule.style.transform = rl >= 1 ? 'none' : `scaleX(${rl.toFixed(4)})`;
+  if (w.k === 'fy') {                                       // the ink turns light with the paper
+    const iv = smt(.35, .65, dk), c = Math.round(lerp(17, 236, iv));
+    w.row.style.color = iv > 0 ? `rgb(${c},${c},${c})` : '';
+    w.rule.style.background = iv > 0 ? `rgba(${c},${c},${c},${lerp(.08, .26, iv).toFixed(3)})` : '';
+  }
+}
 function ixoOpen(on) { ixo.classList.toggle('open', on); html.classList.toggle('lock', on || !!vt); }
 ixo.addEventListener('click', e => { const a = e.target.closest('a[data-wk]'); if (!a) return; e.preventDefault(); ixoOpen(false); goTo(workStart(+a.dataset.wk)); });
 addEventListener('keydown', e => { if (e.key === 'Escape' && ixo.classList.contains('open')) ixoOpen(false); });
@@ -1136,6 +1212,7 @@ function frame(now) {
   // hero letters stretch as they leave
   if (!introDone) introFrame(now);
   else if (cur < SD + vh * 1.5) stageFrame();
+  if (introDone) for (const ch of wsList) wsFrame(ch.ws);
   // chapters: column parallax, pinned meta, marquee
   for (const ch of chapters) {
     if (cur + vh < ch.elTop - 100 || cur > ch.top + ch.h + 100) continue;
