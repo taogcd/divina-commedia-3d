@@ -1,7 +1,6 @@
 /* Compressed Modernity: a world made from the work's own rubbings. Six of the traced black-and-white sheets are laid
    end to end as one long scroll on the ground (six is what the paper in the photograph holds); each starts rolled up
-   and unrolls in its turn, each from its own side (top → bottom, left → right, right → left, bottom → top, and again,
-   as first seen from above). The paper's ink stands as high
+   and unrolls in its turn, along the scroll, ahead of the eye that reads it. The paper's ink stands as high
    as it is dark, so once the paper is open the canopies and grasses of the rubbings rise into an ink landscape, raked by
    a low light, with mist in its hollows and distance. The camera looks straight down at the first sheet (the drawing as it is), sinks and skims the land, then
    draws back to where the cover photograph was taken: the world was the scroll of paper on the grass all along, laid
@@ -15,7 +14,7 @@ window.CMStage = function (frame, opts) {
   const smt = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
   const eio = t => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const T0 = [.05, .7, 1.35, 2.0, 2.65, 3.3], TD = .95;     // each sheet unrolls: start, length (u)
-  const PH0 = 4.2, PH1 = 4.75, OUT0 = 4.7, OUT1 = 5.05, END = 5.4;
+  const PH0 = 4.55, PH1 = 5.05, OUT0 = 5.0, OUT1 = 5.35, END = 5.7;
   // the photograph's camera (assumed): a phone's main lens, 41° vertical on the 16:9 frame, eye height 1.5 m; the
   // horizon, where the paper's long edges meet, at .455 of the height
   const VFOV = 41, EYE = 1.5, HZ = .455;
@@ -27,6 +26,7 @@ window.CMStage = function (frame, opts) {
 
   let T = null, R = null, scene, cam, pts = null, mat = null, vw = 1, vh = 1, mobile = false, loaded = 0, key = '', built = false;
   let S = null;                                             // strip frame in the world
+  let lays = null, layers = [];                             // the other rubbings, and the layers made of them
   const imgs = [], NS = opts.sheets.length;
 
   function js(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); }); }
@@ -37,6 +37,9 @@ window.CMStage = function (frame, opts) {
     Promise.all([window.THREE ? 0 : js(opts.three), Promise.all(ims)]).then(([, list]) => {
       T = window.THREE; list.forEach((im, i) => imgs[i] = im);
       init(); key = '';
+      // the other rubbings, for the layers above the scroll; they come when they come
+      Promise.all((opts.layers || []).map(src => new Promise(res => { const im = new Image(); im.decoding = 'async'; im.src = src; (im.decode ? im.decode() : new Promise(r => { im.onload = r; })).then(() => res(im), () => res(null)); })))
+        .then(list => { lays = list.filter(Boolean); if (built) buildLayers(); });
     }).catch(e => console.warn('CM world off:', e));
   }
 
@@ -125,7 +128,7 @@ window.CMStage = function (frame, opts) {
     void main(){
       float k = aK, e = k < .5 ? uE.x : k < 1.5 ? uE.y : k < 2.5 ? uE.z : k < 3.5 ? uE.w : k < 4.5 ? uE2.x : uE2.y;
       // the axis each sheet unrolls along, as seen from above: 0 top→bottom, 1 left→right, 2 right→left, 3 bottom→top
-      float d = mod(k, 4.), x, L; bool alongS = d > .5 && d < 2.5;
+      float d = 1., x, L; bool alongS = true;              // every sheet unrolls along the scroll, ahead of the eye
       if (d < .5) { x = aP.y; L = uW; } else if (d < 1.5) { x = aP.x; L = uLs; } else if (d < 2.5) { x = 1. - aP.x; L = uLs; } else { x = 1. - aP.y; L = uW; }
       float h, rise = smoothstep(0., .16, e - x);
       vec3 nL = normalize(vec3(-aG.x * uRel * rise / uLs, 1., -aG.y * uRel * rise / uW));   // (along, up, across)
@@ -195,7 +198,7 @@ window.CMStage = function (frame, opts) {
   function init() {
     if (!T || built) return;
     try { R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, premultipliedAlpha: false }); } catch (e) { console.warn('CM world off:', e); return; }
-    R.setClearColor(0xffffff, 0);
+    R.setClearColor(0x000000, 0);                           // black under the transparent, so light adds onto black
     scene = new T.Scene(); cam = new T.PerspectiveCamera(VFOV, 1, .002, 200);
     mat = new T.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: true, side: T.DoubleSide,
       uniforms: { uO: { value: new T.Vector3() }, uD: { value: new T.Vector3() }, uN: { value: new T.Vector3() }, uLs: { value: 1 }, uW: { value: 1 }, uS0: { value: 0 },
@@ -204,6 +207,7 @@ window.CMStage = function (frame, opts) {
     built = true; size();
     pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); mat.uniforms.uTex.value = atlas;
     buildMotes(); size();
+    if (lays) buildLayers();
   }
   function size() {
     if (!R) return;
@@ -225,41 +229,93 @@ window.CMStage = function (frame, opts) {
     mobile = m; size(); key = '';
   }
 
-  /* ---------- the camera: straight down at the first sheet; down into the land; back to the photograph ---------- */
+  /* ---------- the camera: along the scroll from its narrow end, rising to a bird's eye; back to the photograph ----------
+     The scroll runs up the screen. The camera starts low behind its first end, looking along it, and as the page is
+     scrolled it moves along the scroll and climbs, the view turning steadily further down, the sheets unrolling ahead
+     of it; at the top it stands far above, then comes round and down to where the photograph was taken. */
   let keys = null;
   function makeKeys() {
-    const b = photoBox(), tv = Math.tan(VFOV * Math.PI / 360) * vh / b.ph, th = tv * vw / vh;
-    const H0 = Math.max(S.W / (2 * .78 * tv), S.Ls / (2 * .9 * th));
-    const L = S.Ls, W = S.W, s0 = S.s0, up = new T.Vector3(0, 1, 0), far = S.N.clone().negate();
-    const k = (u, pa, ta, upv) => ({ u, p: P(s0 + pa[0], pa[1], pa[2]), t: P(s0 + ta[0], ta[1], ta[2]), up: upv || up });
+    const L = S.Ls, W = S.W, s0 = S.s0, up = new T.Vector3(0, 1, 0);
+    const k = (u, pa, ta) => ({ u, p: P(s0 + pa[0] * L, pa[1] * W, pa[2]), t: P(s0 + ta[0] * L, ta[1] * W, ta[2]), up });
     const fin = { u: PH1 - .05, p: new T.Vector3(0, EYE, 0), t: new T.Vector3(0, EYE - Math.tan(S.pitch) * 10, -10), up };
     return [
-      k(0, [.5 * L, .5 * W, H0], [.5 * L, .5 * W, 0], far),
-      k(.85, [.62 * L, .62 * W, H0 * .62], [.75 * L, .5 * W, 0], far),
-      k(1.5, [1.05 * L, 1.15 * W, .32], [1.6 * L, .45 * W, 0]),
-      k(2.15, [1.85 * L, 1.0 * W, .16], [2.5 * L, .45 * W, 0]),
-      k(2.75, [2.75 * L, .05 * W, .1], [3.35 * L, .55 * W, 0]),
-      k(3.3, [3.7 * L, .75 * W, .09], [4.4 * L, .4 * W, 0]),
-      k(3.85, [3.4 * L, 2.9 * W, 1.0], [2.9 * L, .5 * W, 0]),
+      k(0, [-.55, .5, .95], [.55, .5, 0]),
+      k(.9, [.1, .5, 1.25], [1.2, .5, 0]),
+      k(1.75, [1.0, .5, 1.7], [2.1, .5, 0]),
+      k(2.6, [2.0, .5, 2.3], [3.1, .5, 0]),
+      k(3.45, [3.1, .5, 3.0], [4.0, .5, 0]),
+      k(4.2, [3.65, .5, 3.9], [4.25, .5, 0]),
       fin,
     ];
+  }
+
+  /* ---------- the layers: the other rubbings, red and green ones among them, their ink as light hanging in the air
+     above the scroll, each at the height the camera reaches as it passes; so the camera rises up through them one
+     after another, and once through, each lies below between the eye and the scroll.
+     Each is echoed twice a little below itself, fainter, as if left behind in time. ---------- */
+  const LU = { uA: { value: 0 } };
+  function buildLayers() {
+    if (layers.length || !lays || !lays.length) return;
+    const geo = new T.PlaneGeometry(1, 1);
+    const tex = lays.map(im => { const t = new T.Texture(im); t.needsUpdate = true; t.anisotropy = 4; if ('encoding' in t) t.encoding = T.LinearEncoding; return t; });
+    const NL = mobile ? 18 : 30;
+    let seed = 29; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const colour = lays.length - 3;                         // the red, the green and the green-edged one are last
+    for (let i = 0; i < NL; i++) {
+      const ti = i % 7 === 4 ? colour + (i / 7 | 0) % 3 : (i * 5) % colour;
+      const r = [rnd(), rnd(), rnd(), rnd(), rnd()];
+      for (let c = 0; c < 3; c++) {
+        const m = new T.ShaderMaterial({ transparent: true, depthWrite: false, side: T.DoubleSide, blending: T.AdditiveBlending,
+          uniforms: { uMap: { value: tex[ti] }, uA: LU.uA, uK: { value: [1, .42, .18][c] } },
+          vertexShader: `varying vec2 vUv; varying float vD; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.); vD = -mv.z; gl_Position = projectionMatrix * mv; }`,
+          fragmentShader: `precision mediump float; uniform sampler2D uMap; uniform float uA, uK; varying vec2 vUv; varying float vD;
+            float inkAt(vec2 q){ vec3 c = texture2D(uMap, q).rgb; return 1. - min(min(c.r, c.g), c.b); }
+            void main(){ vec3 c = texture2D(uMap, vUv).rgb; float mx = max(max(c.r, c.g), c.b), mn = min(min(c.r, c.g), c.b);
+              // the ink drawn as light along its edges only, so each rubbing hangs there as a drawing of fine bright lines:
+              // white where the ink was black, its own colour where it was red or green
+              vec2 px = vec2(1. / 480., 1. / 679.);
+              float gx = inkAt(vUv + vec2(px.x, 0.)) - inkAt(vUv - vec2(px.x, 0.)), gy = inkAt(vUv + vec2(0., px.y)) - inkAt(vUv - vec2(0., px.y));
+              float edge = smoothstep(.07, .38, length(vec2(gx, gy)));
+              vec3 col = mix(vec3(.93, .93, .9), c / max(mx, .01), smoothstep(.15, .4, mx - mn));
+              vec2 e = min(vUv, 1. - vUv);
+              float a = uA * uK * 1.15 * edge * smoothstep(.2, 1., vD) * (1. - smoothstep(6., 14., vD)) * smoothstep(0., .08, min(e.x, e.y));
+              gl_FragColor = vec4(col * a, 1.); }` });
+        const mesh = new T.Mesh(geo, m); mesh.rotation.order = 'YXZ'; mesh.frustumCulled = false; mesh.userData = { i, c, r };
+        scene.add(mesh); layers.push(mesh);
+      }
+    }
+    placeLayers();
+  }
+  function placeLayers() {
+    if (!layers.length || !keys) return;
+    const L = S.Ls, W = S.W, NL = layers.length / 3, yaw0 = Math.atan2(-S.D.x, -S.D.z);
+    layers.forEach(mesh => {
+      const { i, c, r } = mesh.userData, ui = .3 + i * 3.8 / NL, at = curve(keys, ui);
+      const rel = at.p.clone().sub(S.O), a = rel.dot(S.D) + (r[0] - .25) * .9 * L, b = rel.dot(S.N) + (r[1] - .5) * 5.2 * W;
+      const H = at.p.y * (.88 + .08 * r[2]) - c * (.05 + .05 * r[3]), sc = .55 + .7 * r[4];
+      mesh.position.copy(S.O).addScaledVector(S.D, a + c * .025 * L).addScaledVector(S.N, b); mesh.position.y = H;
+      mesh.rotation.set(-Math.PI / 2, yaw0 + (r[2] - .5) * .9 + (r[3] > .82 ? Math.PI / 2 : 0), 0);
+      mesh.scale.set(W * sc, L * sc, 1);
+    });
   }
   const cr = (p0, p1, p2, p3, t) => {                       // Catmull–Rom
     const t2 = t * t, t3 = t2 * t;
     return .5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
   };
   const crv = (a, b, c, d, t) => new T.Vector3(cr(a.x, b.x, c.x, d.x, t), cr(a.y, b.y, c.y, d.y, t), cr(a.z, b.z, c.z, d.z, t));
-  function camAt(u) {
-    if (!keys) keys = makeKeys();
-    const K = keys, n = K.length;
+  function curve(K, u) {
+    const n = K.length;
     let i = 0; while (i < n - 2 && u > K[i + 1].u) i++;
     const a = K[Math.max(0, i - 1)], b = K[i], c = K[i + 1], d = K[Math.min(n - 1, i + 2)];
     const t = eio(clamp((u - b.u) / (c.u - b.u), 0, 1));
-    const p = crv(a.p, b.p, c.p, d.p, t), tg = crv(a.t, b.t, c.t, d.t, t);
+    return { p: crv(a.p, b.p, c.p, d.p, t), t: crv(a.t, b.t, c.t, d.t, t), up: b.up.clone().lerp(c.up, t).normalize() };
+  }
+  function camAt(u) {
+    if (!keys) { keys = makeKeys(); placeLayers(); }
+    const v = curve(keys, u), p = v.p, tg = v.t, upv = v.up;
     if (p.y < .012) p.y = .012;
-    const upv = b.up.clone().lerp(c.up, t).normalize();
     cam.position.copy(p); cam.up.copy(upv); cam.lookAt(tg);
-    sway(tg, 1 - smt(3.8, 4.3, u));
+    sway(tg, 1 - smt(4.3, 4.85, u));
     return p;
   }
 
@@ -293,10 +349,11 @@ window.CMStage = function (frame, opts) {
     U.uE.value.set(E[0], E[1], E[2], E[3]); U.uE2.value.set(E[4], E[5]);
     const p = camAt(clamp(u, 0, END));
     // fog: close in over the land, gone when the camera stands back where the photograph was taken
-    const hgt = Math.max(.02, p.y), back = smt(3.5, 4.3, u);
+    const hgt = Math.max(.02, p.y), back = smt(3.9, 4.65, u);
     U.uFogN.value = lerp(Math.max(.3, hgt * 3.2), 30, back); U.uFogF.value = lerp(Math.max(1.3, hgt * 12), 60, back);
-    U.uMist.value = .85 * smt(1.2, 2.2, u) * (1 - back); U.uMistH.value = .014;
-    U.uRel.value = .035 * (1 - smt(3.9, 4.6, u) * .85);
+    U.uMist.value = 0; U.uMistH.value = .014;                // seen from above, the paper as it is
+    U.uRel.value = .035 * (1 - smt(4.3, 4.95, u) * .85);
+    LU.uA.value = smt(.1, .5, u) * (1 - smt(4.15, 4.6, u));
     if (moteMat) { moteMat.uniforms.uT.value = u * 2.2; moteMat.uniforms.uA.value = smt(1.0, 1.8, u) * (1 - back); }
     R.render(scene, cam);
     return 1 - ph;
