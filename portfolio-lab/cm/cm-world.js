@@ -29,7 +29,7 @@ window.CMStage = function (frame, opts) {
   const cv = document.createElement('canvas'); cv.className = 'ws-cv'; cv.setAttribute('aria-hidden', 'true');
   frame.appendChild(photo); frame.appendChild(cv);
 
-  let T = null, R = null, vw = 1, vh = 1, mobile = false, loaded = 0, built = false, lastU = -9, lastT = 0, clock = 0;
+  let T = null, R = null, vw = 1, vh = 1, mobile = false, loaded = 0, built = false, lastU = -9, lastT = 0, clock = 0, tVis0 = 0;
   const imgs = [], NS = opts.sheets.length, OV = .12, G = NS - (NS - 1) * OV;   // the scroll's length, in sheet lengths
 
   function js(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); }); }
@@ -203,14 +203,16 @@ window.CMStage = function (frame, opts) {
         float du = texture2D(uDye, uv + vec2(0., uDTx.y)).x, db = texture2D(uDye, uv - vec2(0., uDTx.y)).x;
         float edge = length(vec2(dr - dl, du - db));
         // the ink as water carries it: dense where it gathers, a darker tide line where it meets the white
-        float inkF = 1. - exp(-dye * 1.55);
-        inkF = clamp(inkF + smoothstep(.04, .2, edge) * .28 * inkF + smoothstep(.02, .3, dye) * (noise(uv * uRes / 3.) - .5) * .08, 0., 1.);
+        float inkF = 1. - exp(-dye * 1.35);
+        inkF = clamp(inkF + smoothstep(.04, .2, edge) * .18 * inkF + smoothstep(.02, .3, dye) * (noise(uv * uRes / 3.) - .5) * .08, 0., 1.);
         // the drawing, bent by the water where it still moves
         vec2 bend = vec2(vel.x, -vel.y) * uFlowBend;
         vec2 st = toScroll(px - bend);
-        float inkS = drawInk(st, 0.), inkL = drawInk(st, 2.2) * 1.25;
-        float calm = uSettle * (1. - smoothstep(.07, .4, abs(dye - inkL)));
-        float ink = mix(inkF, inkS, calm);
+        float ink = inkF;
+        if (uSettle > .001) {
+          float inkS = drawInk(st, 0.), inkL = drawInk(st, 2.2) * 1.25;
+          ink = mix(inkF, inkS, uSettle * (1. - smoothstep(.07, .4, abs(dye - inkL))));
+        }
         // the relief: the drawing's darkness as height, a low light raking across it
         float shade = 1.;
         if (uRelief > .001) {
@@ -334,7 +336,7 @@ window.CMStage = function (frame, opts) {
     const ph = smt(PH0, PH1, u), out = smt(OUT0, OUT1, u);
     photo.style.opacity = ph.toFixed(3);
     cv.style.opacity = (1 - out).toFixed(3);
-    if (!built || u < -1.05 || u > END + .2) { lastT = 0; return; }
+    if (!built || u < -1.05 || u > END + .2) { lastT = 0; if (u < -1.05) tVis0 = 0; return; }
     const now = performance.now(), dt = lastT ? Math.min(1 / 30, (now - lastT) / 1000) : 1 / 60; lastT = now; clock += dt;
 
     // the scroll's place on the screen: a window reading along it, then gathering into the photograph
@@ -355,7 +357,8 @@ window.CMStage = function (frame, opts) {
       } else splat(vel, t.x, t.y, [520, 0, 0], .0035, 1, [simW, simH]);
     }
     // the pour: strongest as the work arrives, quietening as the drawing settles, never quite stopping before it
-    const amt = smt(-1, -.55, u) * (1 - settle) * (.35 + .65 * (1 - smt(-.3, .5, u)));
+    if (u > -1 && !tVis0) tVis0 = clock;
+    const amt = smt(-1, -.55, u) * (1 - settle) * (.35 + .65 * (1 - smt(-.3, .5, u))) * (.3 + .7 * Math.exp(-(clock - tVis0) / 7));
     if (amt > .002) pour(dt, amt);
 
     // the water
@@ -371,7 +374,7 @@ window.CMStage = function (frame, opts) {
     const A = M.advect.uniforms; A.uV.value = vel.r.texture; A.uSrc.value = vel.r.texture; A.uVTx.value.set(1 / simW, 1 / simH); A.uDt.value = dt; A.uDis.value = lerp(.25, 2.2, settle);
     pass(M.advect, vel.w, vt); vel.swap();
     const D = M.dye.uniforms; D.uV.value = vel.r.texture; D.uSrc.value = dye.r.texture; D.uVTx.value.set(1 / simW, 1 / simH); D.uDt.value = dt;
-    D.uDis.value = lerp(.09, 0, settle); D.uRelax.value = settle * settle * 7;
+    D.uDis.value = lerp(.16, 0, settle); D.uRelax.value = settle * settle * 7;
     pass(M.dye, dye.w, dtx); dye.swap();
 
     // what is seen
