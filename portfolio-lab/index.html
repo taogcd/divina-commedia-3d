@@ -479,6 +479,28 @@ DATA.forEach((p, i) => {
    Fourteen Years' fourteen typefaces and the J as printed in the book (measured against the photograph, 1600 × 711);
    Brick's table, moulds and twenty-eight blocks, ending on the close photograph of one of them (9.jpg) */
 const wsList = chapters.filter(ch => ch.ws);
+/* the hand-over from one work to the next: every work is a frame pinned for a stretch of scroll (the opening with the
+   Commedia's pictures, then each work's stage or pictures). Where one ends and the next begins, the next frame is
+   pinned a screen early and comes up over the last picture of the one before, which holds still beneath it: a
+   dissolve in step with the scroll, both ways, instead of one page pushing the other off the screen. */
+let BLK = [];
+function blocksLayout() {
+  BLK = [{ frame: stageFrameEl, top: 0, L: SD }].concat(chapters.slice(1).map(ch => ch.ws ? { frame: ch.ws.frame, top: ch.ws.top, L: ch.ws.L, ref: ch.ws } : { frame: ch.wc.frame, top: ch.wc.top, L: ch.wc.L, ref: ch.wc }));
+  BLK.forEach((b, i) => {
+    b.FH = b.frame.offsetHeight || vh; b.o = ''; b.next = null;
+    const a = BLK[i - 1]; b.prev = a && Math.abs(a.top + a.FH + a.L - b.top) < 4 ? a : null;
+    if (b.prev) b.prev.next = b;
+    if (b.ref) b.ref.blk = b;
+    b.frame.style.opacity = '';
+  });
+}
+function blockPin(b, y) {                                  // where the frame sits (its pin, px) and how much of it shows
+  if (!SMOOTH || !b) return [clamp(y, 0, b ? b.L : 0), 1];
+  const s = clamp(y, b.prev ? -b.FH : 0, b.L + (b.next ? b.next.FH : 0));
+  const o = b.prev ? smt(.12, .88, y / b.FH + 1) : 1;
+  const os = o.toFixed(3); if (os !== b.o) { b.o = os; b.frame.style.opacity = o > .999 ? '' : os; }
+  return [s, o];
+}
 wsList.forEach(ch => {
   const w = ch.ws, im = ch.p.i[WS_PHOTO[w.k]];
   try {
@@ -525,7 +547,7 @@ function stageFrame() {
   //  then  (.60–1)    a longer stretch of scroll (SB): the four column lines draw down, the page darkens in place
   //                   and the Commedia comes up.
   const q = cur < SA ? .6 * clamp(cur / SA, 0, 1) : .6 + .4 * clamp((cur - SA) / SB, 0, 1), seg = (a, b) => clamp((q - a) / (b - a), 0, 1);
-  if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${Math.min(Math.max(cur, 0), SD).toFixed(2)}px,0)`;
+  if (SMOOTH) stageFrameEl.style.transform = `translate3d(0,${(BLK[0] ? blockPin(BLK[0], cur)[0] : Math.min(Math.max(cur, 0), SD)).toFixed(2)}px,0)`;
   const y1 = navOff + vh * .11, io3 = easeInOut;
   const e1 = io3(seg(0, .22)), e2 = seg(.22, .44), e3 = Math.pow(seg(.44, .58), 1.8);
   let yb, sy;
@@ -960,6 +982,7 @@ function layout() {
     const w = ch.wc;                                         // where the pictures begin (scroll px)
     w.top = !w.hosted ? docTop(w.el) : ch.i === 0 ? WC0 : ch.ws.top + ch.ws.L0;
   });
+  blocksLayout();
   tiles.forEach(t => { const r = t.box.getBoundingClientRect(); t.x = r.left; t.y = r.top + sp; t.w = r.width; t.h = r.height; });
   heroH = vh; navOff = navOffset();
   secTops.index = 0;
@@ -1111,7 +1134,7 @@ function wcFrame(w) {
   // in a stage's frame the pictures show once the stage has ended: they lie over its last frame
   const on = !w.hosted || y >= -1;
   if (on !== w.on) { w.el.classList.toggle('on', on); w.on = on; if (!on) w.setOpen(false); }
-  if (SMOOTH && !w.hosted) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
+  if (SMOOTH && !w.hosted) { const s = blockPin(w.blk, y)[0].toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const yy = clamp(y, 0, w.L);
   let k = 0; while (k < n - 1 && yy >= w.a[k + 1]) k++;
   const hold = k === 0 && w.hosted ? .1 : WC_HOLD;
@@ -1155,7 +1178,7 @@ function wsFrame(w) {
   if (y < -vh * 3.5 || y > w.L + vh * 1.2) return;
   if (w.st) w.st.load();                                    // fetch ahead, a few screens before the stage
   if (y < -vh * 1.05) return;
-  if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
+  if (SMOOTH) { const s = blockPin(w.blk, y)[0].toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const u = y / vh, dk = w.st && y <= w.L0 + vh * .25 ? w.st.step(u) || 0 : w.dk0 || 0;
   w.dk0 = dk;
   w.dark = (w.k === 'fy' || w.k === 'br') && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
