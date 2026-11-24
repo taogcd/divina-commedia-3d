@@ -40,7 +40,7 @@ window.CMStage = function (frame, opts) {
 
   /* ---------- the strip on the ground, from the photograph ---------- */
   function photoBox() {
-    const iw = opts.photoW, ih = opts.photoH, sc = mobile ? Math.min(vw / iw, vh / ih) : Math.max(vw / iw, vh / ih);
+    const iw = opts.photoW, ih = opts.photoH, sc = Math.max(vw / iw, vh / ih);      // full screen, like every picture
     return { pw: iw * sc, ph: ih * sc, ox: (vw - iw * sc) / 2, oy: (vh - ih * sc) / 2 };
   }
   function strip() {
@@ -215,5 +215,5 @@ window.CMStage = function (frame, opts) {
     U.uRel.value = .035 * (1 - smt(3.9, 4.6, u) * .85);
     R.render(scene, cam);
   }
-  return { load, layout, step, END };
+  return { load, layout, step, END, PHOTO: OUT1 };
 };

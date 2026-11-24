@@ -167,9 +167,9 @@ window.FYStage = function (frame, opts) {
     size();
   }
 
-  // where the printed J sits on screen (the photograph shown whole, on black)
+  // where the printed J sits on screen (the photograph full screen)
   function reg() {
-    const s = Math.min(vw / REG.pw, vh / REG.ph), x0 = (vw - REG.pw * s) / 2, y0 = (vh - REG.ph * s) / 2;
+    const s = Math.max(vw / REG.pw, vh / REG.ph), x0 = (vw - REG.pw * s) / 2, y0 = (vh - REG.ph * s) / 2;   // full screen
     return { x: x0 + REG.tx * s, y: y0 + REG.ty * s, s: REG.s * s, a: REG.a * Math.PI / 180 };
   }
 
@@ -268,5 +268,5 @@ window.FYStage = function (frame, opts) {
     ox.globalAlpha = 1;
     return dk;
   }
-  return { load, layout, step, END };
+  return { load, layout, step, END, PHOTO: PH[1] + .05 };
 };
