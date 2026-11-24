@@ -368,9 +368,9 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 
 <script src="data.js?v=67"></script>
 <script src="texts.js?v=67"></script>
-<script src="cm/cm-world.js?v=74"></script>
-<script src="fy/fy-world.js?v=68"></script>
-<script src="br/br-world.js?v=69"></script>
+<script src="cm/cm-world.js?v=75"></script>
+<script src="fy/fy-world.js?v=75"></script>
+<script src="br/br-world.js?v=75"></script>
 <script>
 (() => {
 'use strict';
@@ -523,6 +523,10 @@ let mx = -1, my = -1, STILL = false, stillFor = 0, FK = 1, DT = 16;
 addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { mx = e.clientX; my = e.clientY; } }, { passive: true });
 document.documentElement.addEventListener('mouseleave', () => { mx = my = -1; });
 const pointer = () => !STILL ? null : TOUCH ? [vw / 2, vh / 2] : mx >= 0 ? [mx, my] : null;
+// the stages turn a little toward the mouse, as the Commedia does: the pointer, -1..1 across the screen (0 when away)
+window.TAO_PTR = { x: 0, y: 0 };
+addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { TAO_PTR.x = e.clientX / innerWidth * 2 - 1; TAO_PTR.y = e.clientY / innerHeight * 2 - 1; } }, { passive: true });
+document.documentElement.addEventListener('mouseleave', () => { TAO_PTR.x = TAO_PTR.y = 0; });
 const toward = (v, t) => v + (t - v) * (1 - Math.pow(1 - (t > v ? .06 : .2), FK));   // slow into colour, quick back to grey
 const inside = (P, x, y, w, h) => P && P[0] >= x && P[0] <= x + w && P[1] >= y && P[1] <= y + h;
 const F3 = [0, 1, -.55], F2 = [0, .85];

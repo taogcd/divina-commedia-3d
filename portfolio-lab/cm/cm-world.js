@@ -258,9 +258,26 @@ window.CMStage = function (frame, opts) {
     if (p.y < .012) p.y = .012;
     const upv = b.up.clone().lerp(c.up, t).normalize();
     cam.position.copy(p); cam.up.copy(upv); cam.lookAt(tg);
+    sway(tg, 1 - smt(3.8, 4.3, u));
     return p;
   }
 
+
+  /* the pointer turns the view a little, as in the Commedia: the camera swings round what it looks at, easing after
+     the mouse, and lets go as the view comes to the photograph (window.TAO_PTR, set by the page) */
+  const sw = { x: 0, y: 0, t: 0 };
+  function swayEase() {
+    const P = window.TAO_PTR || { x: 0, y: 0 }, now = performance.now(), dt = sw.t ? Math.min(.05, (now - sw.t) / 1000) : .016; sw.t = now;
+    sw.x += (P.x - sw.x) * Math.min(1, dt * 3); sw.y += (P.y - sw.y) * Math.min(1, dt * 3);
+    return `|${sw.x.toFixed(4)}|${sw.y.toFixed(4)}`;
+  }
+  function sway(target, free) {
+    if (free <= .001) return;
+    const up = cam.up.clone().normalize(), o = cam.position.clone().sub(target), fwd = o.clone().negate().normalize();
+    const side = new T.Vector3().crossVectors(fwd, up); if (side.lengthSq() < 1e-6) side.set(1, 0, 0); side.normalize();
+    o.applyAxisAngle(up, -sw.x * .16 * free).applyAxisAngle(side, sw.y * .08 * free);
+    cam.position.copy(target).add(o); cam.lookAt(target);
+  }
   function step(u) {
     if (u > -1.8) load();
     const ph = smt(PH0, PH1, u), out = smt(OUT0, OUT1, u);
@@ -268,7 +285,7 @@ window.CMStage = function (frame, opts) {
     cv.style.opacity = (1 - out).toFixed(3);
     if (!R || !pts) return;
     if (u < -1.05 || u > END + .2) return;
-    const k = `${u.toFixed(4)}|${vw}|${vh}`;
+    const k = `${u.toFixed(4)}|${vw}|${vh}` + swayEase();
     if (k === key) return; key = k;
     const U = mat.uniforms;
     const E = T0.map(a => eio(clamp((u - a) / TD, 0, 1)));

@@ -267,11 +267,27 @@ window.BRStage = function (frame, opts) {
     ];
   }
 
+
+  /* the pointer turns the view a little, as in the Commedia: the camera swings round what it looks at, easing after
+     the mouse, and lets go as the view comes to the photograph (window.TAO_PTR, set by the page) */
+  const sw = { x: 0, y: 0, t: 0 };
+  function swayEase() {
+    const P = window.TAO_PTR || { x: 0, y: 0 }, now = performance.now(), dt = sw.t ? Math.min(.05, (now - sw.t) / 1000) : .016; sw.t = now;
+    sw.x += (P.x - sw.x) * Math.min(1, dt * 3); sw.y += (P.y - sw.y) * Math.min(1, dt * 3);
+    return `|${sw.x.toFixed(4)}|${sw.y.toFixed(4)}`;
+  }
+  function sway(target, free) {
+    if (free <= .001) return;
+    const up = cam.up.clone().normalize(), o = cam.position.clone().sub(target), fwd = o.clone().negate().normalize();
+    const side = new T.Vector3().crossVectors(fwd, up); if (side.lengthSq() < 1e-6) side.set(1, 0, 0); side.normalize();
+    o.applyAxisAngle(up, -sw.x * .16 * free).applyAxisAngle(side, sw.y * .08 * free);
+    cam.position.copy(target).add(o); cam.lookAt(target);
+  }
   function step(u) {
     if (u > -1.8) load();
     photo.style.opacity = smt(PH[0], PH[1], u).toFixed(3);
     if (!R || !built) return 1;
-    const k0 = `${u.toFixed(4)}|${vw}|${vh}`;
+    const k0 = `${u.toFixed(4)}|${vw}|${vh}` + swayEase();
     if (k0 === key) return 1;
     key = k0;
     const vib = smt(VIB[0], VIB[0] + .15, u) * (1 - smt(VIB[1] - .2, VIB[1], u));
@@ -286,6 +302,7 @@ window.BRStage = function (frame, opts) {
     cam.position.copy(p);
     cam.up.copy(u < .9 ? V(0, 0, -1).lerp(V(0, 1, 0), smt(.1, .9, u)).normalize() : V(0, 1, 0));
     cam.lookAt(tg);
+    sway(tg, 1 - smt(3.95, PH[0] - .05, u));
     cam.fov = Math.atan(lerp(tJ, tP, toPhoto)) * 360 / Math.PI; cam.updateProjectionMatrix();
     [lineMat, ptMat].forEach(m => {
       const U = m.uniforms;

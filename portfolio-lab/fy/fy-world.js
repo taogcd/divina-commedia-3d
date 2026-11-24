@@ -177,11 +177,27 @@ window.FYStage = function (frame, opts) {
   const cr = (p0, p1, p2, p3, t) => { const t2 = t * t, t3 = t2 * t; return .5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3); };
   const crv = (a, b, c, d, t) => V(cr(a.x, b.x, c.x, d.x, t), cr(a.y, b.y, c.y, d.y, t), cr(a.z, b.z, c.z, d.z, t));
 
+
+  /* the pointer turns the view a little, as in the Commedia: the camera swings round what it looks at, easing after
+     the mouse, and lets go as the view comes to the photograph (window.TAO_PTR, set by the page) */
+  const sw = { x: 0, y: 0, t: 0 };
+  function swayEase() {
+    const P = window.TAO_PTR || { x: 0, y: 0 }, now = performance.now(), dt = sw.t ? Math.min(.05, (now - sw.t) / 1000) : .016; sw.t = now;
+    sw.x += (P.x - sw.x) * Math.min(1, dt * 3); sw.y += (P.y - sw.y) * Math.min(1, dt * 3);
+    return `|${sw.x.toFixed(4)}|${sw.y.toFixed(4)}`;
+  }
+  function sway(target, free) {
+    if (free <= .001) return;
+    const up = cam.up.clone().normalize(), o = cam.position.clone().sub(target), fwd = o.clone().negate().normalize();
+    const side = new T.Vector3().crossVectors(fwd, up); if (side.lengthSq() < 1e-6) side.set(1, 0, 0); side.normalize();
+    o.applyAxisAngle(up, -sw.x * .16 * free).applyAxisAngle(side, sw.y * .08 * free);
+    cam.position.copy(target).add(o); cam.lookAt(target);
+  }
   function step(u) {
     if (u > -1.8) load();
     const dk = eio(clamp((u - DARK[0]) / (DARK[1] - DARK[0]), 0, 1));
     photo.style.opacity = smt(PH[0], PH[1], u).toFixed(3);
-    const k0 = `${u.toFixed(4)}|${!!R}|${vw}|${vh}`;
+    const k0 = `${u.toFixed(4)}|${!!R}|${vw}|${vh}` + swayEase();
     if (k0 === key) return dk;
     key = k0;
     const bg = Math.round(lerp(255, 2, dk));
@@ -236,6 +252,7 @@ window.FYStage = function (frame, opts) {
     const fl = eio(clamp((u - K2) / (K3 - K2), 0, 1));
     cam.fov = lerp(FOV, FOV_END, Math.pow(fl, 1.6)); cam.updateProjectionMatrix();
     cam.position.copy(p); cam.up.set(0, 1, 0); cam.lookAt(t);
+    sway(t, 1 - smt(K2 + .4, K3 - .15, u));
     // the body turns a little on its axis, to the angle of the page in the photograph
     body.rotation.set(0, 0, -Rg.a * fl);
     bodyMat.uniforms.uA.value = smt(K0 - .15, K0 + .05, u) * (1 - smt(PH[0] + .05, PH[1], u));
@@ -249,14 +266,16 @@ window.FYStage = function (frame, opts) {
     // ----- labels on the stands; the year being passed through -----
     ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, ov.width, ov.height);
     ox.setTransform(dpr, 0, 0, dpr, 0, 0); ox.font = font; ox.textBaseline = 'top';
+    const pj = (x, y) => { const v = scr(x, y).project(cam); return [(v.x + 1) / 2 * vw, (1 - v.y) / 2 * vh]; };
     const labA = 1 - smt(GATHER[0] - .1, GATHER[0] + .2, u);
     if (labA > .003 && u > SET[0]) for (const c of cards) {
       const st = eo3(clamp((u - SET[0] - c.k * SET_ST - .08) / SET[1], 0, 1)) * labA;
       if (st <= 0) continue;
-      const y0 = c.y + card.h + 8;
-      ox.globalAlpha = st; ox.fillStyle = 'rgba(210,230,255,.3)'; ox.fillRect(c.x, y0, card.w * st, 1);
-      ox.fillStyle = 'rgba(236,240,244,.92)'; ox.textAlign = 'left'; ox.fillText(String(c.k + 1).padStart(2, '0'), c.x, y0 + 6);
-      ox.fillStyle = 'rgba(150,160,170,1)'; ox.textAlign = 'right'; ox.fillText(String(c.yr), c.x + card.w, y0 + 6);
+      // under its card, wherever the turned view now shows it
+      const y0 = c.y + card.h + 8, [lx, ly] = pj(c.x, y0), [rx] = pj(c.x + card.w, y0);
+      ox.globalAlpha = st; ox.fillStyle = 'rgba(210,230,255,.3)'; ox.fillRect(lx, ly, (rx - lx) * st, 1);
+      ox.fillStyle = 'rgba(236,240,244,.92)'; ox.textAlign = 'left'; ox.fillText(String(c.k + 1).padStart(2, '0'), lx, ly + 6);
+      ox.fillStyle = 'rgba(150,160,170,1)'; ox.textAlign = 'right'; ox.fillText(String(c.yr), rx, ly + 6);
     }
     const ya = smt(K2 - .1, K2 + .1, u) * (1 - smt(PH[0] - .1, PH[0] + .15, u));
     if (ya > .003) {
