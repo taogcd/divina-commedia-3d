@@ -6,6 +6,7 @@
    a low light, with mist in its hollows and distance. The camera looks straight down at the first sheet (the drawing as it is), sinks and skims the land, then
    draws back to where the cover photograph was taken: the world was the scroll of paper on the grass all along, laid
    exactly where the paper lies in the picture, and the picture takes over.
+   It is shown on black: the paper white against the dark, the distance falling away into it.
    step(u): u = screen heights of scroll since the frame pinned. Needs THREE (r128). */
 window.CMStage = function (frame, opts) {
   'use strict';
@@ -151,7 +152,7 @@ window.CMStage = function (frame, opts) {
     }`;
   const FS = `
     precision highp float;
-    uniform sampler2D uTex; uniform vec3 uSun; uniform float uFogN, uFogF, uMist, uMistH, uA;
+    uniform sampler2D uTex; uniform vec3 uSun, uFogC; uniform float uFogN, uFogF, uMist, uMistH, uA;
     varying vec2 vUv; varying vec3 vNrm; varying vec3 vW; varying float vDist, vRoll;
     void main(){
       float ink = 1. - texture2D(uTex, vUv).r;
@@ -162,7 +163,7 @@ window.CMStage = function (frame, opts) {
       // mist: in the distance, and lying low in the hollows
       float f = smoothstep(uFogN, uFogF, vDist);
       float m = uMist * (1. - smoothstep(0., uMistH, vW.y)) * smoothstep(uFogN * .25, uFogF * .7, vDist);
-      c = mix(c, paper, clamp(max(f, m), 0., 1.));
+      c = mix(c, uFogC, clamp(max(f, m * .6), 0., 1.));
       gl_FragColor = vec4(c, uA);
     }`;
   // dust in the light: a few hundred motes around the scroll, drifting as the page scrolls
@@ -187,7 +188,7 @@ window.CMStage = function (frame, opts) {
           vA = .35 * smoothstep(.01, .06, -mv.z) * (1. - smoothstep(.8, 2.2, -mv.z));
         }`,
       fragmentShader: `precision mediump float; uniform float uA; varying float vA;
-        void main(){ vec2 c = gl_PointCoord - .5; if (dot(c, c) > .25) discard; gl_FragColor = vec4(.2, .2, .2, vA * uA); }` });
+        void main(){ vec2 c = gl_PointCoord - .5; if (dot(c, c) > .25) discard; gl_FragColor = vec4(.86, .85, .82, vA * uA); }` });
     motes = new T.Points(g, moteMat); motes.frustumCulled = false; scene.add(motes);
   }
 
@@ -199,7 +200,7 @@ window.CMStage = function (frame, opts) {
     mat = new T.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: true, side: T.DoubleSide,
       uniforms: { uO: { value: new T.Vector3() }, uD: { value: new T.Vector3() }, uN: { value: new T.Vector3() }, uLs: { value: 1 }, uW: { value: 1 }, uS0: { value: 0 },
         uE: { value: new T.Vector4() }, uE2: { value: new T.Vector2() }, uAR: { value: Math.ceil(NS / 3) }, uRel: { value: .035 }, uTex: { value: null }, uSun: { value: new T.Vector3(.35, .55, -.76).normalize() },
-        uFogN: { value: 1 }, uFogF: { value: 2 }, uMist: { value: 0 }, uMistH: { value: .012 }, uA: { value: 1 } } });
+        uFogN: { value: 1 }, uFogF: { value: 2 }, uMist: { value: 0 }, uMistH: { value: .012 }, uA: { value: 1 }, uFogC: { value: new T.Vector3(0, 0, 0) } } });
     built = true; size();
     pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); mat.uniforms.uTex.value = atlas;
     buildMotes(); size();
@@ -283,10 +284,10 @@ window.CMStage = function (frame, opts) {
     const ph = smt(PH0, PH1, u), out = smt(OUT0, OUT1, u);
     photo.style.opacity = ph.toFixed(3);
     cv.style.opacity = (1 - out).toFixed(3);
-    if (!R || !pts) return;
-    if (u < -1.05 || u > END + .2) return;
+    if (!R || !pts) return 1 - ph;
+    if (u < -1.05 || u > END + .2) return 1 - ph;
     const k = `${u.toFixed(4)}|${vw}|${vh}` + swayEase();
-    if (k === key) return; key = k;
+    if (k === key) return 1 - ph; key = k;
     const U = mat.uniforms;
     const E = T0.map(a => eio(clamp((u - a) / TD, 0, 1)));
     U.uE.value.set(E[0], E[1], E[2], E[3]); U.uE2.value.set(E[4], E[5]);
@@ -298,6 +299,7 @@ window.CMStage = function (frame, opts) {
     U.uRel.value = .035 * (1 - smt(3.9, 4.6, u) * .85);
     if (moteMat) { moteMat.uniforms.uT.value = u * 2.2; moteMat.uniforms.uA.value = smt(1.0, 1.8, u) * (1 - back); }
     R.render(scene, cam);
+    return 1 - ph;
   }
   return { load, layout, step, END, PHOTO: OUT1 };
 };
