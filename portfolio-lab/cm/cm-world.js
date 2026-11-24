@@ -6,6 +6,7 @@
    a low light, with mist in its hollows and distance. The camera looks straight down at the first sheet (the drawing as it is), sinks and skims the land, then
    draws back to where the cover photograph was taken: the world was the scroll of paper on the grass all along, laid
    exactly where the paper lies in the picture, and the picture takes over.
+   The paper is white as it is; around it, until the photograph, the frame is black.
    step(u): u = screen heights of scroll since the frame pinned. Needs THREE (r128). */
 window.CMStage = function (frame, opts) {
   'use strict';
@@ -283,10 +284,10 @@ window.CMStage = function (frame, opts) {
     const ph = smt(PH0, PH1, u), out = smt(OUT0, OUT1, u);
     photo.style.opacity = ph.toFixed(3);
     cv.style.opacity = (1 - out).toFixed(3);
-    if (!R || !pts) return;
-    if (u < -1.05 || u > END + .2) return;
+    if (!R || !pts) return 1 - ph;
+    if (u < -1.05 || u > END + .2) return 1 - ph;
     const k = `${u.toFixed(4)}|${vw}|${vh}` + swayEase();
-    if (k === key) return; key = k;
+    if (k === key) return 1 - ph; key = k;
     const U = mat.uniforms;
     const E = T0.map(a => eio(clamp((u - a) / TD, 0, 1)));
     U.uE.value.set(E[0], E[1], E[2], E[3]); U.uE2.value.set(E[4], E[5]);
@@ -298,6 +299,7 @@ window.CMStage = function (frame, opts) {
     U.uRel.value = .035 * (1 - smt(3.9, 4.6, u) * .85);
     if (moteMat) { moteMat.uniforms.uT.value = u * 2.2; moteMat.uniforms.uA.value = smt(1.0, 1.8, u) * (1 - back); }
     R.render(scene, cam);
+    return 1 - ph;
   }
   return { load, layout, step, END, PHOTO: OUT1 };
 };

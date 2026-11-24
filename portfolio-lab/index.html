@@ -139,7 +139,7 @@ html:not(.smooth) .ws-frame{position:sticky;top:0}
 html.smooth .ws-frame{will-change:transform}
 .ws-cv{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%)}
 .ws-photo{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%);opacity:0;pointer-events:none;object-fit:cover}
-.cm.ws-frame{background:#fff}
+.cm.ws-frame{background:#000}
 .br.ws-frame{background:#000}
 .ws .ws-head .ix-rule{transform-origin:0 50%}
 /* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
@@ -368,7 +368,7 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 
 <script src="data.js?v=67"></script>
 <script src="texts.js?v=67"></script>
-<script src="cm/cm-world.js?v=78"></script>
+<script src="cm/cm-world.js?v=79"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script>
@@ -1185,7 +1185,7 @@ function wsFrame(w) {
   if (SMOOTH) { const s = blockPin(w.blk, y)[0].toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const u = y / vh, dk = w.st && y <= w.L0 + vh * .25 ? w.st.step(u) || 0 : w.dk0 || 0;
   w.dk0 = dk;
-  w.dark = (w.k === 'fy' || w.k === 'br') && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
+  w.dark = (w.k === 'fy' || w.k === 'br' || w.k === 'cm') && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
 }
 function ixoOpen(on) { ixo.classList.toggle('open', on); html.classList.toggle('lock', on || !!vt); }
 ixo.addEventListener('click', e => { const a = e.target.closest('a[data-wk]'); if (!a) return; e.preventDefault(); ixoOpen(false); goTo(workStart(+a.dataset.wk)); });
