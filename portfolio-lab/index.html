@@ -368,7 +368,7 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 
 <script src="data.js?v=67"></script>
 <script src="texts.js?v=67"></script>
-<script src="cm/cm-world.js?v=69"></script>
+<script src="cm/cm-world.js?v=70"></script>
 <script src="fy/fy-world.js?v=68"></script>
 <script src="br/br-world.js?v=69"></script>
 <script>
@@ -484,7 +484,7 @@ wsList.forEach(ch => {
   try {
     if (w.k === 'cm' && window.CMStage) w.st = window.CMStage(w.frame, {
       photo: url(im, 2400), photoW: im[2], photoH: im[3], strip: [[0, .8644], [1, .78], [1, .84], [0, .94]], three: '../three.min.js',
-      sheets: [1, 2, 5, 3, 6, 4].map(k => ({ src: `cm/cm-${k}.jpg?v=${WSV}` })) });   // IMG_20240828_0002, _0019, _0015, _0021, _0013, IMG_20240829_0008
+      sheets: [1, 2, 5, 3, 6, 4].map(k => ({ src: `cm/cm-${k}.jpg?v=${WSV}`, hi: `cm/cm-${k}h.jpg?v=${WSV}` })) });   // IMG_20240828_0002, _0019, _0015, _0021, _0013, IMG_20240829_0008
     if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, { three: '../three.min.js',
       photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
     if (w.k === 'br' && window.BRStage) w.st = window.BRStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), photoW: im[2], photoH: im[3] });

@@ -7,6 +7,7 @@
    opens, follows it, sinks and skims the land, then draws back to where the cover photograph was taken: the world was
    the scroll of paper on the grass all along, laid exactly where the paper lies in the picture, and the picture takes
    over.
+   The ink is particles; the scroll is kept in three high-resolution pieces, with xuan paper's fibres in it.
    step(u): u = screen heights of scroll since the frame pinned. Needs THREE (r128). */
 window.CMStage = function (frame, opts) {
   'use strict';
@@ -33,7 +34,7 @@ window.CMStage = function (frame, opts) {
   function load() {
     if (loaded) return; loaded = 1;
     photo.src = opts.photo;
-    const ims = opts.sheets.map(s => new Promise(res => { const im = new Image(); im.decoding = 'async'; im.src = s.src; (im.decode ? im.decode() : new Promise(r => { im.onload = r; })).then(() => res(im), () => res(null)); }));
+    const ims = opts.sheets.map(s => new Promise(res => { const im = new Image(); im.decoding = 'async'; im.src = vw >= 700 && s.hi ? s.hi : s.src; (im.decode ? im.decode() : new Promise(r => { im.onload = r; })).then(() => res(im), () => res(null)); }));
     Promise.all([window.THREE ? 0 : js(opts.three), Promise.all(ims)]).then(([, list]) => {
       T = window.THREE; list.forEach((im, i) => imgs[i] = im);
       init(); key = '';
@@ -86,12 +87,13 @@ window.CMStage = function (frame, opts) {
     }
     return a;
   }
-  let atlas = null;
+  const NC = 3; let texs = [], CWr = 3;
   function build() {
-    // the scroll as one long drawing (along = x, across = y; the top of the canvas is the far edge, t = 1)
-    const SW = mobile ? 512 : 1024, AH = Math.round(SW * 2480 / 3507), CW = Math.round(G * SW);
-    const comp = document.createElement('canvas'); comp.width = CW; comp.height = AH;
-    const cx = comp.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, CW, AH);
+    // the scroll as one long drawing (along = x, across = y; the top of the canvas is the far edge, t = 1), kept in
+    // three pieces so it can stay sharp: about 2000 px to a sheet along the scroll on a wide screen
+    const SW = mobile ? 1024 : 2048, AH = Math.round(SW * 2480 / 3507), CW = Math.round(G * SW), CWc = Math.ceil(CW / NC);
+    CWr = CW / CWc;
+    const chunks = [...Array(NC)].map(() => { const c = document.createElement('canvas'); c.width = CWc; c.height = AH; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, CWc, AH); return c; });
     const tmp = document.createElement('canvas'); tmp.width = SW; tmp.height = AH; const tx = tmp.getContext('2d');
     imgs.forEach((im, k) => {
       if (!im) return;
@@ -99,30 +101,38 @@ window.CMStage = function (frame, opts) {
       tx.save(); tx.translate(0, AH); tx.rotate(-Math.PI / 2);   // the scan's margins and paper edges trimmed off
       tx.drawImage(im, im.width * .03, im.height * .022, im.width * .94, im.height * .956, 0, 0, AH, SW); tx.restore();
       // the joins: not a straight cut but a wandering, fibrous edge, as one sheet's ink runs into the next
-      const id = tx.getImageData(0, 0, SW, AH), dd = id.data, ph = [k * 1.7 + .3, k * 2.9 + 1.1, k * 4.3 + 2.2];
+      const ph = [k * 1.7 + .3, k * 2.9 + 1.1, k * 4.3 + 2.2], fw = OV * SW * .22;
       const edge = (y, side) => { const v = y / AH * 6.283; return OV * SW * (.5 + .22 * Math.sin(v * 1.3 + ph[0] + side) + .14 * Math.sin(v * 3.1 + ph[1] - side) + .07 * Math.sin(v * 7.7 + ph[2])); };
-      const fw = OV * SW * .22;
-      for (let y = 0; y < AH; y++) {
-        const eL = edge(y, 0), eR = SW - edge(y, 2.1);
-        for (let x = 0; x < SW; x++) {
-          let m = 1;
-          if (k > 0 && x < eL + fw) m *= clamp((x - eL + fw) / (2 * fw) + (Math.random() - .5) * .35, 0, 1);
-          if (k < NS - 1 && x > eR - fw) m *= clamp((eR + fw - x) / (2 * fw) + (Math.random() - .5) * .35, 0, 1);
-          if (m < 1) dd[(y * SW + x) * 4 + 3] *= m;
+      const zone = Math.ceil(OV * SW * 1.2);
+      const fray = (x0, side) => {
+        const id = tx.getImageData(x0, 0, zone, AH), dd = id.data;
+        for (let y = 0; y < AH; y++) {
+          const e = side ? SW - edge(y, 2.1) : edge(y, 0);
+          for (let i = 0; i < zone; i++) {
+            const x = x0 + i, m = side ? (e + fw - x) / (2 * fw) : (x - e + fw) / (2 * fw);
+            const mm = clamp(m + (Math.random() - .5) * .35, 0, 1);
+            if (mm < 1) dd[(y * zone + i) * 4 + 3] *= mm;
+          }
         }
-      }
-      tx.putImageData(id, 0, 0);
-      cx.globalCompositeOperation = 'darken'; cx.drawImage(tmp, Math.round(k * (1 - OV) * SW), 0);   // the ink of both, where they overlap
+        tx.putImageData(id, x0, 0);
+      };
+      if (k > 0) fray(0, 0);
+      if (k < NS - 1) fray(SW - zone, 1);
+      const x0 = Math.round(k * (1 - OV) * SW);
+      chunks.forEach((c, ci) => {
+        const ox = x0 - ci * CWc; if (ox > CWc || ox + SW < 0) return;
+        const cx = c.getContext('2d'); cx.globalCompositeOperation = 'darken'; cx.drawImage(tmp, ox, 0); cx.globalCompositeOperation = 'source-over';   // the ink of both, where they overlap
+      });
     });
-    cx.globalCompositeOperation = 'source-over';
-    // the atlas: the long drawing cut in two, one half above the other (power-of-two, so it can blur by mipmap)
-    const AX = mobile ? 2048 : 4096, AY = mobile ? 512 : 1024, ac = document.createElement('canvas'); ac.width = AX; ac.height = AY;
-    const ax = ac.getContext('2d'); ax.imageSmoothingQuality = 'high';
-    ax.drawImage(comp, 0, 0, CW / 2, AH, 0, 0, AX, AY / 2); ax.drawImage(comp, CW / 2, 0, CW / 2, AH, 0, AY / 2, AX, AY / 2);
-    if (atlas) atlas.dispose();
-    atlas = new T.CanvasTexture(ac); atlas.anisotropy = 4; atlas.minFilter = T.LinearMipmapLinearFilter; atlas.generateMipmaps = true;
+    texs.forEach(t => t.dispose());
+    const an = R.capabilities.getMaxAnisotropy();
+    texs = chunks.map(c => { const t = new T.CanvasTexture(c); t.anisotropy = Math.min(16, an); t.minFilter = T.LinearMipmapLinearFilter; t.generateMipmaps = true; return t; });
+    // the heights, from the whole drawing at low resolution
+    const nx0 = Math.round(G * (mobile ? 110 : 190)) + 1, nt0 = mobile ? 90 : 150;
+    const comp = document.createElement('canvas'); comp.width = nx0 * 2; comp.height = nt0 * 2; const hx = comp.getContext('2d');
+    chunks.forEach((c, ci) => hx.drawImage(c, ci * CWc / CW * comp.width, 0, CWc / CW * comp.width, comp.height));
     // one grid along the whole scroll
-    const nx = Math.round(G * (mobile ? 110 : 190)) + 1, nt = mobile ? 90 : 150, hm = heights(comp, nx, nt);
+    const nx = nx0, nt = nt0, hm = heights(comp, nx, nt);
     const P = [], Gr = [], idx = [];
     for (let j = 0; j < nt; j++) for (let i = 0; i < nx; i++) {
       const h = hm[j * nx + i];
@@ -164,8 +174,7 @@ window.CMStage = function (frame, opts) {
       }
       vec3 w = uO + uD * (uS0 + X) + uN * (t * uW) + vec3(0., h, 0.);
       vNrm = normalize(uD * nL.x + vec3(0., nL.y, 0.) + uN * nL.z);
-      float px = g / uG, row = step(.5, px);
-      vUv = vec2((px - .5 * row) * 2., (t + 1. - row) * .5);
+      vUv = vec2(g / uG, t);
       vG = g; vT = t; vW = w;
       vec4 mv = modelViewMatrix * vec4(w, 1.);
       vDist = -mv.z;
@@ -173,11 +182,13 @@ window.CMStage = function (frame, opts) {
     }`;
   const FS = `
     precision highp float;
-    uniform sampler2D uTex; uniform vec3 uSun; uniform float uFogN, uFogF, uMist, uMistH, uA, uFR;
+    uniform sampler2D uTex0, uTex1, uTex2; uniform vec3 uSun; uniform float uFogN, uFogF, uMist, uMistH, uA, uFR, uCW;
     varying vec2 vUv; varying vec3 vNrm; varying vec3 vW; varying float vDist, vRoll, vG, vT;
     ${NOISE}
+    float tx(float c, vec2 uv, float b){ return c < .5 ? texture2D(uTex0, uv, b).r : c < 1.5 ? texture2D(uTex1, uv, b).r : texture2D(uTex2, uv, b).r; }
     void main(){
-      float inkS = 1. - texture2D(uTex, vUv).r, inkB = 1. - texture2D(uTex, vUv, 3.2).r;
+      float px = vUv.x * uCW, ch = min(floor(px), ${NC - 1}.); vec2 uv = vec2(px - ch, vUv.y);
+      float inkS = 1. - tx(ch, uv, 0.), inkB = 1. - tx(ch, uv, 3.);
       // the ink seeping in: how long ago this paper came off the roll, against an uneven front that follows the fibres
       float n = fbm(vec2(vG * 7.5, vT * 5.2)), fib = noise(vec2(vG * 150., vT * 24.)), fib2 = noise(vec2(vG * 40., vT * 70.));
       float q = (uFR - vG) * 2. - n * .9 - (1. - inkB) * .75 + .2;
@@ -186,7 +197,12 @@ window.CMStage = function (frame, opts) {
       float ink = mix(inkB * 1.3, inkS, set) * wet;
       ink += inkB * .4 * (smoothstep(-.06, .04, q) - smoothstep(.04, .22, q));     // the tide line the front leaves
       ink = clamp(ink, 0., 1.);
-      vec3 paper = vec3(.972, .966, .952), inkC = vec3(.075, .075, .08);
+      // xuan paper: its fibres in the white, and the ink settling grainy in them; fading out with distance
+      float near = 1. - smoothstep(.35, 2.5, vDist);
+      float fA = noise(vec2(vG * 900., vT * 150.)), fB = noise(vec2(vG * 230., vT * 640.)), fC = noise(vec2(vG * 1300., vT * 260.));
+      float grain = (fA * .5 + fB * .3 + fC * .2 - .5) * near;
+      ink = clamp(ink * (1. + (fC - .5) * .22 * near) + max(0., grain) * ink * .15, 0., 1.);
+      vec3 paper = vec3(.972, .966, .952) * (1. + grain * .07), inkC = vec3(.075, .075, .08);
       vec3 nn = normalize(vNrm); if (dot(nn, cameraPosition - vW) < 0.) nn = -nn;   // the side the eye sees
       float lit = .62 + .5 * max(dot(nn, uSun), 0.) - .1 * vRoll;
       vec3 c = mix(paper, inkC, pow(ink, 1.15)) * lit;
@@ -196,53 +212,66 @@ window.CMStage = function (frame, opts) {
       c = mix(c, paper, clamp(max(f, m), 0., 1.));
       gl_FragColor = vec4(c, uA);
     }`;
-  /* ---------- before the scroll: ink. Random blooms of ink open out of the white and drift in toward the middle, where
-     the scroll will run; as the scroll unrolls beneath them they thin away into it. Each bloom is a wash with a
-     darker core and the tide line ink leaves on xuan paper, its outline worked by slow currents. ---------- */
-  let inkScene = null, inkCam = null, inkMat = null;
+  /* ---------- before the scroll: ink, as particles. A dozen drops land in the white and drift in toward the middle,
+     where the scroll will run. From each, ink keeps leaving in particles: out along the paper's fibres, in threads,
+     slowing as the paper drinks it and piling up where it stops, so every bloom grows a fraying edge and the darker
+     tide line ink leaves on xuan paper. Fresh drops stay dense at the heart; spread washes go pale inside. It grows
+     as the page is scrolled and, more slowly, while it is watched; as the scroll unrolls beneath it, the paper drinks it
+     in from the left. ---------- */
+  let inkScene = null, inkCam = null, inkMat = null, inkT0 = 0;
   function buildInk() {
     inkScene = new T.Scene(); inkCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    // three kinds of particle in each bloom: broad soft washes that fill it, small dark ones that pile up at its edge
+    // (the tide line), and fine grains scattered through it
+    const A = [], Bv = [], C = [], M = mobile ? .45 : 1, ND = 12;
+    for (let i = 0; i < ND; i++) {
+      const big = i < 10, R0 = big ? .05 + .075 * rnd() : .016 + .018 * rnd(), fresh = rnd() < .5 ? 1 : 0, t0 = rnd() * .5;
+      const da = [rnd() * 6.283, .78 + .5 * rnd(), -.3 + .78 * rnd(), (rnd() - .5) * .18], db = [t0, R0, fresh, rnd() * 50];
+      const sc = big ? .5 + R0 / .15 * .7 : .3;
+      const put = (type, n, rhoF) => { for (let j = 0; j < Math.round(n * sc * M); j++) { A.push(...da); Bv.push(...db); C.push(rnd() * 6.283, rhoF(), Math.pow(rnd(), 1.5) * 1.1, type + .99 * rnd()); } };
+      put(0, 1700, () => fresh ? Math.pow(rnd(), .75) : Math.sqrt(rnd()));
+      put(1, 3200, () => .86 + .14 * Math.pow(rnd(), .5));
+      put(2, 2200, () => Math.sqrt(rnd()));
+    }
+    const n = C.length / 4, g = new T.BufferGeometry();
+    g.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute('aA', new T.Float32BufferAttribute(A, 4)); g.setAttribute('aB', new T.Float32BufferAttribute(Bv, 4)); g.setAttribute('aC', new T.Float32BufferAttribute(C, 4));
+    g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
     inkMat = new T.ShaderMaterial({ transparent: true, depthTest: false, depthWrite: false,
-      uniforms: { uP: { value: 0 }, uTime: { value: 0 }, uAsp: { value: 1 }, uFade: { value: 1 }, uBand: { value: .5 }, uFront: { value: -1 } },
-      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }`,
-      fragmentShader: `precision highp float; uniform float uP, uTime, uAsp, uFade, uBand, uFront; varying vec2 vUv;
+      uniforms: { uT: { value: 0 }, uTime: { value: 0 }, uAsp: { value: 1 }, uFade: { value: 1 }, uBand: { value: .5 }, uFront: { value: -1 }, uPS: { value: 1 }, uPxH: { value: 800 } },
+      vertexShader: `attribute vec4 aA, aB, aC; uniform float uT, uTime, uAsp, uFade, uBand, uFront, uPS, uPxH; varying float vA, vSoft;
         ${NOISE}
         void main(){
-          vec2 q = vec2((vUv.x - .5) * uAsp, vUv.y - uBand);
-          float tm = uTime * .03;
-          vec2 w = q + .07 * (vec2(fbm(q * 1.8 + vec2(tm, 0.)), fbm(q * 1.8 + vec2(7.3, -tm))) - .5);
-          float nA = fbm(w * 3.1 + vec2(0., tm)), nB = fbm(w * 3.4 + 31.7 - vec2(tm, 0.));
-          float fine = fbm(w * 13. + 5.), fib = noise(vec2(w.x * 90., w.y * 23.)) * .6 + noise(vec2(w.x * 25., w.y * 85.)) * .4;
-          float keep = 1.;                                   // what the ink leaves on the white, 1 = nothing
-          for (int i = 0; i < 12; i++) {
-            float fi = float(i) + 1., h1 = hash(vec2(fi, 1.3)), h2 = hash(vec2(fi, 2.1)), h3 = hash(vec2(fi, 4.4));
-            float h4 = hash(vec2(fi, 9.1)), h5 = hash(vec2(fi, 6.6)), h6 = hash(vec2(fi, 7.7));
-            float an = h1 * 6.283, rr = .75 + .5 * h2;
-            vec2 s = vec2(cos(an) * max(uAsp, 1.) * .58 * rr, sin(an) * .6 * rr);
-            vec2 e = vec2(mix(-.3, .48, hash(vec2(fi, 3.7))) * max(uAsp, .7), (hash(vec2(fi, 5.9)) - .5) * .18);
-            float t0 = hash(vec2(fi, 8.2)) * .42, p = smoothstep(t0, t0 + .58, uP);
-            vec2 c = mix(s, e, p * p * (3. - 2. * p));
-            float r = (i < 10 ? .055 + .09 * h3 : .02 + .02 * h3) * (.2 + 1.25 * p) * smoothstep(t0 - .01, t0 + .05, uP);
-            // each bloom its own lean and stretch, its own petalled, fraying outline
-            float ca = cos(h4 * 3.14), sa = sin(h4 * 3.14);
-            vec2 dv = w - c; dv = vec2(ca * dv.x + sa * dv.y, -sa * dv.x + ca * dv.y); dv.x /= 1. + 1.1 * h5;
-            vec2 lc = dv / max(r, 1e-3); float nn = mix(nA, nB, h2);
-            float lob = noise(lc * 1.3 + fi * 3.1) * .62 + noise(lc * 3.4 + fi * 7.3) * .38;   // lobes in its own frame
-            float ed = length(lc) + (nn - .5) * 1.1 + (lob - .5) * .85 + (fine - .5) * .3;
-            float body = smoothstep(1.03, .88, ed + (fib - .5) * .2);                     // feathered into the fibres
-            // a fresh drop is dense at its heart; a spread wash is pale inside, the ink gathered at its rim
-            float fresh = step(.5, h6);
-            float tone = mix(mix(.18, .38, smoothstep(.95, .2, ed)), mix(.3, .9, smoothstep(.95, .1, ed)), fresh) * (.7 + .45 * fine);
-            tone += (.12 + .2 * (1. - fresh)) * (smoothstep(.78, .9, ed) - smoothstep(.9, 1., ed)) * step(float(i), 9.5);
-            keep *= 1. - clamp(tone, 0., 1.) * body;
-          }
-          float a = 1. - keep;
-          // drunk in by the paper where the scroll has already passed under it, and gone at last
-          float drink = smoothstep(uFront + .07, uFront - .08, vUv.x) * 1.25 + (1. - uFade) * 1.25 - (nA - .5) * .5 - (fine - .5) * .3;
-          a *= 1. - smoothstep(.15, .65, drink);
-          gl_FragColor = vec4(vec3(.05, .05, .055), clamp(a, 0., 1.));
-        }` });
-    const quad = new T.Mesh(new T.PlaneGeometry(2, 2), inkMat); quad.frustumCulled = false; inkScene.add(quad);
+          float asp = uAsp, age = uT - aB.x, type = floor(aC.w), rn = fract(aC.w);
+          vec2 s = vec2(cos(aA.x) * max(asp, 1.) * .58 * aA.y, sin(aA.x) * .6 * aA.y), e = vec2(aA.z * max(asp, .7), aA.w);
+          float pd = smoothstep(0., 1.5, age); pd = pd * pd * (3. - 2. * pd);
+          vec2 c = mix(s, e, pd);                                       // the drop, drifting in to the middle
+          float a2 = age - aC.z * (type > .5 ? 1.2 : .55), go = 1. - exp(-max(a2, 0.) * 1.7);   // out, slowing as it soaks in
+          vec2 dir = vec2(cos(aC.x), sin(aC.x));
+          float lobe = fbm(dir * 1.3 + aB.w) * .7 + noise(dir * 3.3 + aB.w * 1.7) * .3;    // the bloom's own outline
+          float Rg = aB.y * (.22 + 1.05 * smoothstep(-.1, 2.1, age));      // and the bloom keeps growing
+          float rr = Rg * aC.y * (.5 + .95 * lobe) * go, k = rr / max(Rg, 1e-3);
+          vec2 p = c + dir * rr;
+          // the paper's own unevenness bends the bloom: the whole of it warped by where it lies
+          vec2 q = p * 5. + aB.w;
+          p += (vec2(noise(q), noise(q + 7.7)) - .5) * .07 * Rg / .12 * smoothstep(0., .4, k);
+          p += (vec2(noise(p * 23. + aB.w), noise(p * 23. + 3.3)) - .5) * .012 * k;
+          p += (vec2(noise(c * 4. + uTime * .02), noise(c * 4. + 9.1 - uTime * .02)) - .5) * .015;  // a slow drift
+          vec2 sc = vec2(p.x / asp + .5, p.y + uBand);
+          gl_Position = vec4(sc * 2. - 1., 0., 1.);
+          float al, sz;
+          if (type < .5) { al = aB.z > .5 ? mix(.12, .045, k) : mix(.03, .05, k); sz = clamp(Rg * uPxH * .42 * (.55 + .7 * rn), 3. * uPS, 70. * uPS); vSoft = 1.; }
+          else if (type < 1.5) { al = (aB.z > .5 ? .11 : .2) * smoothstep(.55, 1., go); sz = uPS * (1.6 + 2.6 * rn); vSoft = .5; }
+          else { al = aB.z > .5 ? .32 : .2; sz = uPS * (1. + 1.3 * rn); vSoft = .25; }
+          float drink = smoothstep(uFront + .07, uFront - .08, sc.x) * 1.25 + (1. - uFade) * 1.25 - (noise(p * 9.) - .5) * .6;
+          vA = al * step(0., a2) * smoothstep(0., .08, a2) * (1. - smoothstep(.15, .7, drink));
+          gl_PointSize = sz;
+        }`,
+      fragmentShader: `precision mediump float; varying float vA, vSoft;
+        void main(){ vec2 c = gl_PointCoord - .5; float r = length(c); if (r > .5) discard;
+          gl_FragColor = vec4(vec3(.045, .045, .05), vA * (1. - smoothstep(.5 - .5 * vSoft, .5, r))); }` });
+    const pts2 = new T.Points(g, inkMat); pts2.frustumCulled = false; inkScene.add(pts2);
   }
   // dust in the light: a few hundred motes around the scroll, drifting as the page scrolls
   let motes = null, moteMat = null;
@@ -277,16 +306,17 @@ window.CMStage = function (frame, opts) {
     scene = new T.Scene(); cam = new T.PerspectiveCamera(VFOV, 1, .002, 200);
     mat = new T.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: true, side: T.DoubleSide,
       uniforms: { uO: { value: new T.Vector3() }, uD: { value: new T.Vector3() }, uN: { value: new T.Vector3() }, uLs: { value: 1 }, uW: { value: 1 }, uS0: { value: 0 },
-        uF: { value: 0 }, uFR: { value: 0 }, uG: { value: G }, uR0: { value: .045 }, uRel: { value: .035 }, uTex: { value: null }, uSun: { value: new T.Vector3(.35, .55, -.76).normalize() },
+        uF: { value: 0 }, uFR: { value: 0 }, uG: { value: G }, uR0: { value: .045 }, uRel: { value: .035 }, uTex0: { value: null }, uTex1: { value: null }, uTex2: { value: null }, uCW: { value: 3 }, uSun: { value: new T.Vector3(.35, .55, -.76).normalize() },
         uFogN: { value: 1 }, uFogF: { value: 2 }, uMist: { value: 0 }, uMistH: { value: .012 }, uA: { value: 1 } } });
     buildInk();
     built = true; size();
-    pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); mat.uniforms.uTex.value = atlas;
+    pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); setTex();
     buildMotes(); size();
   }
+  function setTex() { const U = mat.uniforms; U.uTex0.value = texs[0]; U.uTex1.value = texs[1]; U.uTex2.value = texs[2]; U.uCW.value = CWr; }
   function size() {
     if (!R) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 1.5);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     R.setPixelRatio(dpr); R.setSize(vw, vh, false);
     // the camera projects exactly as the photograph is shown (cover on a wide screen, whole on a phone)
     const b = photoBox();
@@ -301,7 +331,7 @@ window.CMStage = function (frame, opts) {
   }
   function layout(w, h) {
     vw = w; vh = h; const m = vw < 700;
-    if (built && m !== mobile) { mobile = m; scene.remove(pts); pts.geometry.dispose(); pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); mat.uniforms.uTex.value = atlas; }
+    if (built && m !== mobile) { mobile = m; scene.remove(pts); pts.geometry.dispose(); pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); setTex(); }
     mobile = m; size(); key = '';
   }
 
@@ -350,7 +380,7 @@ window.CMStage = function (frame, opts) {
     cv.style.opacity = (1 - out).toFixed(3);
     if (!R || !pts) return;
     if (u < -1.05 || u > END + .2) return;
-    const inkFade = 1 - smt(1.0, 1.5, u), now = performance.now();
+    const inkFade = 1 - smt(1.1, 1.6, u), now = performance.now();
     const k = `${u.toFixed(4)}|${vw}|${vh}` + (inkFade > 0 ? '|' + Math.floor(now / 33) : '');
     if (k === key) return; key = k;
     const U = mat.uniforms, F = front(u);
@@ -365,9 +395,13 @@ window.CMStage = function (frame, opts) {
     R.autoClear = false; R.clear();
     R.render(scene, cam);
     if (inkFade > 0) {                                       // the ink, over everything, until the paper has taken it
-      const I = inkMat.uniforms; I.uP.value = smt(-.9, .45, u); I.uTime.value = now / 1000; I.uFade.value = inkFade;
-      const fp = P(S.s0 + F * S.Ls, .5 * S.W, 0).project(cam), bp = P(S.s0 + F * S.Ls, .5 * S.W, 0).project(cam);
-      I.uFront.value = F > .001 ? (fp.x + 1) / 2 : -1; I.uBand.value = (bp.y + 1) / 2;
+      if (!inkT0) inkT0 = now;
+      const tv = (now - inkT0) / 1000, I = inkMat.uniforms;
+      I.uT.value = 2.15 * smt(-.95, 1.1, u) + .35 * (1 - Math.exp(-tv / 30));
+      I.uTime.value = tv; I.uFade.value = inkFade;
+      const fp = P(S.s0 + F * S.Ls, .5 * S.W, 0).project(cam);
+      I.uFront.value = F > .001 ? (fp.x + 1) / 2 : -1; I.uBand.value = (fp.y + 1) / 2;
+      I.uPS.value = R.getPixelRatio() * Math.sqrt(vh / 810); I.uPxH.value = vh * R.getPixelRatio();
       R.render(inkScene, inkCam);
     }
   }
