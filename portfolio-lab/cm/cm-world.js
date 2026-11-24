@@ -6,7 +6,6 @@
    a low light, with mist in its hollows and distance. The camera looks straight down at the first sheet (the drawing as it is), sinks and skims the land, then
    draws back to where the cover photograph was taken: the world was the scroll of paper on the grass all along, laid
    exactly where the paper lies in the picture, and the picture takes over.
-   It is shown on black, and no paper is drawn: each rubbing is a cloud of points of light where its ink lies.
    step(u): u = screen heights of scroll since the frame pinned. Needs THREE (r128). */
 window.CMStage = function (frame, opts) {
   'use strict';
@@ -63,18 +62,17 @@ window.CMStage = function (frame, opts) {
   }
   const P = (a, c, h) => S.O.clone().addScaledVector(S.D, a).addScaledVector(S.N, c).add(new T.Vector3(0, h, 0));
 
-  /* ---------- the land: each sheet as a cloud of points, its ink standing as high as it is dark ----------
-     No paper is drawn. Each rubbing is read as light on the dark: points of light where its ink lies, thick where the
-     ink is heavy and thinning out to a faint dust where the paper was bare, every point lifted as high as the ink is
-     dark around it. So the canopies and grasses of the rubbings rise as a landscape of light, and the sheets, rolled,
-     are luminous rolls. */
-  function sample(im, ns, nt, blur) {
+  /* ---------- the land: each sheet a sheet of paper, its ink standing as high as it is dark ----------
+     Drawn as paper, not as points: the rubbing itself is the paper's surface (an atlas of the six), the relief comes
+     from its darkness, a low light from the far side rakes across it, and mist lies in the hollows and the distance, so
+     the canopies and grasses of the rubbings read as an ink landscape. A few motes of dust drift with the scroll. */
+  function sample(im, ns, nt) {
     const c = document.createElement('canvas'); c.width = nt; c.height = ns;
-    const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(im, 0, 0, nt, ns);
+    const x = c.getContext('2d'); x.drawImage(im, 0, 0, nt, ns);
     const d = x.getImageData(0, 0, nt, ns).data, n = ns * nt, dk = new Float32Array(n);
     for (let i = 0; i < n; i++) dk[i] = 1 - d[i * 4] / 255;
     let a = dk, b = new Float32Array(n);
-    for (let pass = 0; pass < blur; pass++) {                // softened: canopies are hills, not needles
+    for (let pass = 0; pass < 3; pass++) {                   // softened: canopies are hills, not needles
       for (let j = 0; j < ns; j++) for (let i = 0; i < nt; i++) {
         let sum = 0, m = 0;
         for (let dj = -2; dj <= 2; dj++) for (let di = -2; di <= 2; di++) { const jj = j + dj, ii = i + di; if (jj < 0 || ii < 0 || jj >= ns || ii >= nt) continue; sum += a[jj * nt + ii]; m++; }
@@ -84,61 +82,89 @@ window.CMStage = function (frame, opts) {
     }
     return a;
   }
+  let atlas = null;
   function build() {
-    const NP = mobile ? 50000 : 160000, P = new Float32Array(NP * 6 * 3), Q = new Float32Array(NP * 6 * 3); let np = 0;
-    let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const ns = mobile ? 150 : 240, nt = mobile ? 106 : 170;
+    const P = [], G = [], K = [], idx = [];
+    // the atlas: the rubbings three to a row, each turned so its long side runs along the scroll (3072 × 1448: inside
+    // every phone's texture limit)
+    const AC = 3, AR = Math.ceil(NS / AC), AW = 1024, AH = 724, ac = document.createElement('canvas'); ac.width = AW * AC; ac.height = AH * AR;
+    const ax = ac.getContext('2d'); ax.fillStyle = '#fff'; ax.fillRect(0, 0, ac.width, ac.height);
     imgs.forEach((im, k) => {
       if (!im) return;
-      const hs = 220, ht = 156, hb = sample(im, hs, ht, 3);             // the heights, softened
-      const fs = 640, ft = 452, ink = sample(im, fs, ft, 0);           // the ink, as it is
-      const hAt = (s, t) => { const y = s * (hs - 1), x = t * (ht - 1), j = Math.floor(y), i = Math.floor(x), fy = y - j, fx = x - i, j1 = Math.min(hs - 1, j + 1), i1 = Math.min(ht - 1, i + 1);
-        return (hb[j * ht + i] * (1 - fx) + hb[j * ht + i1] * fx) * (1 - fy) + (hb[j1 * ht + i] * (1 - fx) + hb[j1 * ht + i1] * fx) * fy; };
-      const sm = v => { const t = Math.min(1, Math.max(0, (v - .15) / .8)); return t * t * (3 - 2 * t); };
-      for (let n = 0, tries = 0; n < NP && tries < NP * 30; tries++) {
-        const s = rnd(), t = rnd(), v = ink[Math.min(fs - 1, Math.floor(s * fs)) * ft + Math.min(ft - 1, Math.floor(t * ft))];
-        if (rnd() > sm(v) * .985 + .008) continue;              // where the ink is; a faint dust where it is not
-        P[np * 3] = s; P[np * 3 + 1] = t; P[np * 3 + 2] = hAt(s, t); Q[np * 3] = v; Q[np * 3 + 1] = k; Q[np * 3 + 2] = rnd(); np++; n++;
+      ax.save(); ax.translate((k % AC) * AW, (Math.floor(k / AC) + 1) * AH); ax.rotate(-Math.PI / 2); ax.drawImage(im, 0, 0, AH, AW); ax.restore();
+      const hb = sample(im, ns, nt), base = K.length;
+      // vertex (j along, i across): s = j/(ns-1) along the scroll, t = i/(nt-1) across it
+      for (let j = 0; j < ns; j++) for (let i = 0; i < nt; i++) {
+        const h = hb[j * nt + i];
+        const gs = (hb[Math.min(ns - 1, j + 1) * nt + i] - hb[Math.max(0, j - 1) * nt + i]) * (ns - 1) / 2;
+        const gt = (hb[j * nt + Math.min(nt - 1, i + 1)] - hb[j * nt + Math.max(0, i - 1)]) * (nt - 1) / 2;
+        P.push(j / (ns - 1), i / (nt - 1), h, 0); G.push(gs, gt); K.push(k);
+      }
+      for (let j = 0; j < ns - 1; j++) for (let i = 0; i < nt - 1; i++) {
+        const a = base + j * nt + i, b = a + nt;
+        idx.push(a, b, a + 1, a + 1, b, b + 1);
       }
     });
+    if (atlas) atlas.dispose();
+    atlas = new T.CanvasTexture(ac); atlas.anisotropy = 4;
     const g = new T.BufferGeometry();
-    g.setAttribute('position', new T.BufferAttribute(P.subarray(0, np * 3), 3));
-    g.setAttribute('aQ', new T.BufferAttribute(Q.subarray(0, np * 3), 3));
+    g.setAttribute('aP', new T.Float32BufferAttribute(P, 4));
+    g.setAttribute('aG', new T.Float32BufferAttribute(G, 2));
+    g.setAttribute('aK', new T.Float32BufferAttribute(K, 1));
+    g.setAttribute('position', new T.Float32BufferAttribute(new Float32Array(K.length * 3), 3));
+    g.setIndex(K.length > 65535 ? new T.Uint32BufferAttribute(idx, 1) : new T.Uint16BufferAttribute(idx, 1));
     g.boundingSphere = new T.Sphere(new T.Vector3(), 1e6);
     return g;
   }
   const VS = `
-    attribute vec3 aQ;                                       // position: (s along, t across, height); aQ: (ink, sheet, random)
-    uniform vec3 uO, uD, uN; uniform float uLs, uW, uS0; uniform vec4 uE; uniform vec2 uE2; uniform float uRel, uFogN, uFogF, uPS, uTime, uA;
-    varying float vA;
+    attribute vec4 aP; attribute vec2 aG; attribute float aK;
+    uniform vec3 uO, uD, uN; uniform float uLs, uW, uS0; uniform vec4 uE; uniform vec2 uE2; uniform float uRel, uAR;
+    varying vec2 vUv; varying vec3 vNrm; varying vec3 vW; varying float vDist, vRoll;
     void main(){
-      vec4 aP = vec4(position, aQ.x); float aK = aQ.y, aR = aQ.z;
       float k = aK, e = k < .5 ? uE.x : k < 1.5 ? uE.y : k < 2.5 ? uE.z : k < 3.5 ? uE.w : k < 4.5 ? uE2.x : uE2.y;
       // the axis each sheet unrolls along, as seen from above: 0 top→bottom, 1 left→right, 2 right→left, 3 bottom→top
       float d = mod(k, 4.), x, L; bool alongS = d > .5 && d < 2.5;
       if (d < .5) { x = aP.y; L = uW; } else if (d < 1.5) { x = aP.x; L = uLs; } else if (d < 2.5) { x = 1. - aP.x; L = uLs; } else { x = 1. - aP.y; L = uW; }
-      float h, rise = smoothstep(0., .16, e - x), roll = 0.;
+      float h, rise = smoothstep(0., .16, e - x);
+      vec3 nL = normalize(vec3(-aG.x * uRel * rise / uLs, 1., -aG.y * uRel * rise / uW));   // (along, up, across)
+      vRoll = 0.;
       if (x <= e) h = aP.z * uRel * rise;
       else {
         // still rolled: wound round a roll lying on its front edge, thinner as less paper is left
         float r = L * (.006 + .026 * sqrt(1. - e)), ph = (x - e) * L / r;
-        x = e + r * sin(ph) / L; h = r * (1. - cos(ph)); roll = 1.;
+        x = e + r * sin(ph) / L; h = r * (1. - cos(ph));
+        vec2 rn = vec2(sin(ph), -cos(ph));                   // outward from the roll's axis (along the unroll, up)
+        nL = alongS ? vec3(rn.x * (d < 1.5 ? 1. : -1.), rn.y, 0.) : vec3(0., rn.y, rn.x * (d < .5 ? 1. : -1.));
+        vRoll = 1.;
       }
       float s = aP.x, t = aP.y;
       if (alongS) s = d < 1.5 ? x : 1. - x; else t = d < .5 ? x : 1. - x;
-      vec3 w = uO + uD * (uS0 + (k + s) * uLs) + uN * (t * uW) + vec3(0., h + (aR - .5) * .0012 * rise, 0.);
+      vec3 w = uO + uD * (uS0 + (k + s) * uLs) + uN * (t * uW) + vec3(0., h, 0.);
+      vNrm = normalize(uD * nL.x + vec3(0., nL.y, 0.) + uN * nL.z);
+      float col = mod(k, 3.), row = floor(k / 3. + .01);
+      vUv = vec2((col + aP.x) / 3., (aP.y + uAR - 1. - row) / uAR);   // the atlas: along the scroll = atlas x, across = atlas y
+      vW = w;
       vec4 mv = modelViewMatrix * vec4(w, 1.);
-      float dist = -mv.z;
+      vDist = -mv.z;
       gl_Position = projectionMatrix * mv;
-      float sz = uPS * (.0010 + .0012 * aR) / dist;
-      gl_PointSize = clamp(sz, 1., 3.2);
-      float a = (.3 + .7 * aP.w) * (roll > .5 ? .3 : 1.) * (.8 + .2 * sin(uTime + aR * 50.));
-      a *= (1. - smoothstep(uFogN, uFogF, dist)) * smoothstep(.004, .03, dist) * min(1., sz);
-      vA = a * uA;
     }`;
   const FS = `
-    precision mediump float; varying float vA;
-    void main(){ vec2 c = gl_PointCoord - .5; float r = dot(c, c); if (r > .25) discard;
-      gl_FragColor = vec4(vec3(.94, .93, .9) * vA * (1. - r * 2.6), 1.); }`;
+    precision highp float;
+    uniform sampler2D uTex; uniform vec3 uSun; uniform float uFogN, uFogF, uMist, uMistH, uA;
+    varying vec2 vUv; varying vec3 vNrm; varying vec3 vW; varying float vDist, vRoll;
+    void main(){
+      float ink = 1. - texture2D(uTex, vUv).r;
+      vec3 paper = vec3(.972, .966, .952), inkC = vec3(.075, .075, .08);
+      vec3 n = normalize(vNrm); if (dot(n, cameraPosition - vW) < 0.) n = -n;   // the side the eye sees
+      float lit = .62 + .5 * max(dot(n, uSun), 0.) - .12 * vRoll;
+      vec3 c = mix(paper, inkC, pow(ink, 1.15)) * lit;
+      // mist: in the distance, and lying low in the hollows
+      float f = smoothstep(uFogN, uFogF, vDist);
+      float m = uMist * (1. - smoothstep(0., uMistH, vW.y)) * smoothstep(uFogN * .25, uFogF * .7, vDist);
+      c = mix(c, paper, clamp(max(f, m), 0., 1.));
+      gl_FragColor = vec4(c, uA);
+    }`;
   // dust in the light: a few hundred motes around the scroll, drifting as the page scrolls
   let motes = null, moteMat = null;
   function buildMotes() {
@@ -161,25 +187,26 @@ window.CMStage = function (frame, opts) {
           vA = .35 * smoothstep(.01, .06, -mv.z) * (1. - smoothstep(.8, 2.2, -mv.z));
         }`,
       fragmentShader: `precision mediump float; uniform float uA; varying float vA;
-        void main(){ vec2 c = gl_PointCoord - .5; if (dot(c, c) > .25) discard; gl_FragColor = vec4(.86, .85, .82, vA * uA); }` });
+        void main(){ vec2 c = gl_PointCoord - .5; if (dot(c, c) > .25) discard; gl_FragColor = vec4(.2, .2, .2, vA * uA); }` });
     motes = new T.Points(g, moteMat); motes.frustumCulled = false; scene.add(motes);
   }
 
   function init() {
     if (!T || built) return;
     try { R = new T.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, premultipliedAlpha: false }); } catch (e) { console.warn('CM world off:', e); return; }
-    R.setClearColor(0x000000, 0);
+    R.setClearColor(0xffffff, 0);
     scene = new T.Scene(); cam = new T.PerspectiveCamera(VFOV, 1, .002, 200);
-    mat = new T.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: true, depthTest: false, depthWrite: false, blending: T.AdditiveBlending,
+    mat = new T.ShaderMaterial({ vertexShader: VS, fragmentShader: FS, transparent: true, side: T.DoubleSide,
       uniforms: { uO: { value: new T.Vector3() }, uD: { value: new T.Vector3() }, uN: { value: new T.Vector3() }, uLs: { value: 1 }, uW: { value: 1 }, uS0: { value: 0 },
-        uE: { value: new T.Vector4() }, uE2: { value: new T.Vector2() }, uRel: { value: .035 }, uFogN: { value: 1 }, uFogF: { value: 2 }, uPS: { value: 800 }, uTime: { value: 0 }, uA: { value: .62 } } });
+        uE: { value: new T.Vector4() }, uE2: { value: new T.Vector2() }, uAR: { value: Math.ceil(NS / 3) }, uRel: { value: .035 }, uTex: { value: null }, uSun: { value: new T.Vector3(.35, .55, -.76).normalize() },
+        uFogN: { value: 1 }, uFogF: { value: 2 }, uMist: { value: 0 }, uMistH: { value: .012 }, uA: { value: 1 } } });
     built = true; size();
-    pts = new T.Points(build(), mat); pts.frustumCulled = false; scene.add(pts);
+    pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); mat.uniforms.uTex.value = atlas;
     buildMotes(); size();
   }
   function size() {
     if (!R) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 2 : 1.5);
     R.setPixelRatio(dpr); R.setSize(vw, vh, false);
     // the camera projects exactly as the photograph is shown (cover on a wide screen, whole on a phone)
     const b = photoBox();
@@ -187,14 +214,13 @@ window.CMStage = function (frame, opts) {
     S = strip();
     const U = mat.uniforms;
     U.uO.value.copy(S.O); U.uD.value.copy(S.D); U.uN.value.copy(S.N); U.uLs.value = S.Ls; U.uW.value = S.W; U.uS0.value = S.s0;
-    U.uPS.value = b.ph / (2 * Math.tan(VFOV * Math.PI / 360)) * dpr;
     if (moteMat) { const M = moteMat.uniforms; M.uO.value.copy(S.O); M.uD.value.copy(S.D); M.uN.value.copy(S.N); M.uLen.value = S.Ls * NS; M.uW.value = S.W; M.uS0.value = S.s0;
       M.uScale.value = b.ph / (2 * Math.tan(VFOV * Math.PI / 360)) * dpr; }
     keys = null; key = '';
   }
   function layout(w, h) {
     vw = w; vh = h; const m = vw < 700;
-    if (built && m !== mobile) { mobile = m; scene.remove(pts); pts.geometry.dispose(); pts = new T.Points(build(), mat); pts.frustumCulled = false; scene.add(pts); }
+    if (built && m !== mobile) { mobile = m; scene.remove(pts); pts.geometry.dispose(); pts = new T.Mesh(build(), mat); pts.frustumCulled = false; scene.add(pts); mat.uniforms.uTex.value = atlas; }
     mobile = m; size(); key = '';
   }
 
@@ -257,10 +283,10 @@ window.CMStage = function (frame, opts) {
     const ph = smt(PH0, PH1, u), out = smt(OUT0, OUT1, u);
     photo.style.opacity = ph.toFixed(3);
     cv.style.opacity = (1 - out).toFixed(3);
-    if (!R || !pts) return 1 - ph;
-    if (u < -1.05 || u > END + .2) return 1 - ph;
+    if (!R || !pts) return;
+    if (u < -1.05 || u > END + .2) return;
     const k = `${u.toFixed(4)}|${vw}|${vh}` + swayEase();
-    if (k === key) return 1 - ph; key = k;
+    if (k === key) return; key = k;
     const U = mat.uniforms;
     const E = T0.map(a => eio(clamp((u - a) / TD, 0, 1)));
     U.uE.value.set(E[0], E[1], E[2], E[3]); U.uE2.value.set(E[4], E[5]);
@@ -268,11 +294,10 @@ window.CMStage = function (frame, opts) {
     // fog: close in over the land, gone when the camera stands back where the photograph was taken
     const hgt = Math.max(.02, p.y), back = smt(3.5, 4.3, u);
     U.uFogN.value = lerp(Math.max(.3, hgt * 3.2), 30, back); U.uFogF.value = lerp(Math.max(1.3, hgt * 12), 60, back);
-    U.uTime.value = u * 3;
+    U.uMist.value = .85 * smt(1.2, 2.2, u) * (1 - back); U.uMistH.value = .014;
     U.uRel.value = .035 * (1 - smt(3.9, 4.6, u) * .85);
     if (moteMat) { moteMat.uniforms.uT.value = u * 2.2; moteMat.uniforms.uA.value = smt(1.0, 1.8, u) * (1 - back); }
     R.render(scene, cam);
-    return 1 - ph;
   }
   return { load, layout, step, END, PHOTO: OUT1 };
 };
