@@ -183,7 +183,8 @@ html:not(.ready) #tl,html:not(.ready) #tlf{opacity:0}
 .wc-frame{position:relative;height:100vh;height:100lvh;overflow:hidden;background:#000;color:#fff}
 html:not(.smooth) .wc-frame{position:sticky;top:0}
 html.smooth .wc-frame{will-change:transform}
-.wc-after:not(.on) .wc-frame{visibility:hidden}
+.wc-in{position:absolute;left:0;top:0;width:100%;height:100%;z-index:6;background:#000;visibility:hidden}
+.wc-in.on{visibility:visible}
 .wc-s{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100vh);overflow:hidden;visibility:hidden;background:#000}
 .wc-s.v{visibility:visible}
 .wc-m{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;transform-origin:50% 100%;filter:grayscale(1);transition:filter .8s ease}
@@ -386,26 +387,29 @@ const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
 const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '64';
 /* ---------- a work's pictures: one full screen, pinned; scrolling lifts each picture into the next from below ----------
-   The first picture is the one its stage ended on, shown exactly as the stage showed it, so the hand-over is not
-   seen. A quiet text, bottom left, rolls slowly up through its window as the pictures go by; a counter bottom right.
+   A work with a stage keeps the same pinned frame: the pictures are a layer in the stage's own frame and the frame
+   simply stays pinned longer, so model, photograph and pictures are one page. Their first picture is the one the
+   stage ended on, shown exactly as the stage showed it, so the hand-over is not seen. A quiet text, bottom left, rolls slowly up through its window as the pictures go by; a counter bottom right.
    The Commedia's film is the second picture: it plays (muted, looping) while it is on screen; sound on request. */
 const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', poster: 'dc/dc-film.jpg', posterS: 'dc/dc-film-s.jpg', ar: 16 / 9 } };
 const WC_UNIT = .85, WC_FILM = 1.9, WC_TAIL = .35;          // screen heights of scroll per picture, for the film, at the end
-function buildWC(i, p, no, wk, links) {
-  const first = wk ? WS_PHOTO[wk] : 0, after = i === 0 || !!wk;
+function buildWC(i, p, no, wk, links, host) {
+  const first = wk ? WS_PHOTO[wk] : 0, after = !!host;
   const S = [first].concat(p.i.map((_, j) => j).filter(j => j !== first)).map(j => ({ kind: 'img', im: p.i[j], j }));
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
-  const sec = document.createElement('section');
-  sec.className = 'wc' + (after ? ' wc-after' : ''); sec.setAttribute('aria-label', `${p.t}: pictures`);
+  const sec = document.createElement(host ? 'div' : 'section');
+  sec.className = host ? 'wc wc-in' : 'wc'; sec.setAttribute('aria-label', `${p.t}: pictures`);
   const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span><span>${pad(p.i.length)} images</span></p><p class="wc-l">${p.l}</p>${links ? `<p class="wc-links">${links}</p>` : ''}</div>`;
-  sec.innerHTML = `<div class="wc-frame">${S.map((s, k) => `<div class="wc-s">${s.kind === 'film'
+  const inner = `${S.map((s, k) => `<div class="wc-s">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : `<img class="wc-m" alt="${p.t}, image ${s.j + 1} of ${p.i.length}" decoding="async">`}<i class="wc-dim"></i></div>`).join('')}
     <aside class="wc-txt"><div class="wc-txt-in">${block(false)}</div></aside>
-    <div class="wc-n mono" aria-hidden="true"><button class="wc-snd" type="button" hidden>Sound off</button><span class="wc-c"></span></div></div>`;
-  const frame = $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
+    <div class="wc-n mono" aria-hidden="true"><button class="wc-snd" type="button" hidden>Sound off</button><span class="wc-c"></span></div>`;
+  sec.innerHTML = host ? inner : `<div class="wc-frame">${inner}</div>`;
+  if (host) host.appendChild(sec);
+  const frame = host || $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
   S.forEach((s, k) => { s.el = els[k]; s.m = $('.wc-m', els[k]); s.dim = $('.wc-dim', els[k]); s.src = ''; s.st = ''; });
-  const w = { i, p, no, el: sec, frame, S, after, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
+  const w = { i, p, no, el: sec, frame, S, after, hosted: !!host, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
     txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '' };
   if (w.film >= 0) {
     const v = S[w.film].m;
@@ -436,8 +440,8 @@ DATA.forEach((p, i) => {
     const frame = $('.ws-frame', sec), row = $('.ix-row', sec);
     ch.ws = { k: wk, el: sec, frame, row, m: [...row.querySelectorAll('.mk > span')], rule: $('.ix-rule', row), top: 0, L: 1, st: null, pin: '', hk: '' };
   }
-  ch.wc = buildWC(i, p, no, wk, links);
-  el.appendChild(ch.wc.el);
+  ch.wc = buildWC(i, p, no, wk, links, i === 0 ? document.querySelector('.stage-frame') : ch.ws ? ch.ws.frame : null);
+  if (!ch.wc.hosted) el.appendChild(ch.wc.el);
   chapters.push(ch);
 });
 /* the stages: Compressed Modernity's four rubbings (scans from the work's own folder of traced black-and-white
@@ -898,26 +902,31 @@ function layout() {
   html.style.setProperty('--A', A + 'px');
   fitHero(); SG = null; stageCuts.clear();
   DCU = vw < 700 ? 7 : 8.5; UEND = DCT.in1 + DCU;
-  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; SD = SA + SB;   // TAO → lines; then the first title, the dark, the Commedia
+  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND;   // TAO → lines; then the dark and the Commedia
+  chapters.forEach(ch => wcLayout(ch));
+  SD = SA + SB + chapters[0].wc.L;                          // … and its pictures, in the same frame
   html.style.setProperty('--vhp', vh + 'px');
   const FH = stageFrameEl.offsetHeight || vh;               // the frame's own height (the large viewport on a phone)
   stageEl.style.height = (FH + SD).toFixed(0) + 'px';
   if (dc) dcFit();
   const wg = wsGeom();
   wsList.forEach(ch => {
-    const w = ch.ws; w.L = vh * (w.st ? w.st.END : 3);
+    const w = ch.ws; w.L0 = vh * (w.st ? w.st.END : 3); w.L = w.L0 + (ch.wc.hosted ? ch.wc.L : 0);
     w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
     if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: w.row.offsetTop + w.row.offsetHeight }, wg));
   });
-  chapters.forEach(ch => wcLayout(ch));
   const sp = SMOOTH ? cur : scrollY;
-  wsList.forEach(ch => { ch.ws.top = ch.ws.el.getBoundingClientRect().top + sp; });
-  chapters.forEach(ch => { ch.elTop = ch.el.getBoundingClientRect().top + sp; ch.wc.top = ch.wc.el.getBoundingClientRect().top + sp; });
+  wsList.forEach(ch => { ch.ws.top = docTop(ch.ws.el); });
+  chapters.forEach(ch => {
+    ch.elTop = docTop(ch.el);
+    const w = ch.wc;                                         // where the pictures begin (scroll px)
+    w.top = !w.hosted ? docTop(w.el) : ch.i === 0 ? SA + SB : ch.ws.top + ch.ws.L0;
+  });
   tiles.forEach(t => { const r = t.box.getBoundingClientRect(); t.x = r.left; t.y = r.top + sp; t.w = r.width; t.h = r.height; });
   heroH = vh; navOff = navOffset();
-  secTops.index = $('#index').getBoundingClientRect().top + sp;
-  secTops.works = works.getBoundingClientRect().top + sp;
-  secTops.info = $('#info').getBoundingClientRect().top + sp;
+  secTops.index = 0;
+  secTops.works = docTop(works);
+  secTops.info = docTop($('#info'));
   secTops.hero = 0;
   docH = main.offsetHeight;
   if (SMOOTH) document.body.style.height = docH + 'px';
@@ -925,6 +934,8 @@ function layout() {
   resizeGL();
 }
 const secTops = {};
+// a position in the page, from the layout itself (transforms, a smooth scroll in flight, have no part in it)
+function docTop(el) { let y = 0; for (let e = el; e && e !== main; e = e.offsetParent) y += e.offsetTop; return y; }
 
 /* ---------- the Commedia: Mappa della Commedia, in the same pinned frame, after its title ---------- */
 // u (screen heights of scroll after the opening): the first work's title is written on its line (u ≈ .2, see
@@ -1042,12 +1053,8 @@ function wcLayout(ch) {
     s.el.classList.toggle('cover', cover); s.st = '';
   });
   w.L = acc - w.d[n - 1] * .5 + vh * WC_TAIL;
-  w.frame.style.transform = ''; w.pin = ''; w.on = null;
-  const FH = w.frame.offsetHeight || vh;
-  w.el.style.height = (FH + w.L).toFixed(0) + 'px';
-  // after a stage the pictures begin where the stage's frame stops, lying over it
-  const prevFH = !w.after ? 0 : w.i === 0 ? (stageFrameEl.offsetHeight || vh) : (ch.ws ? ch.ws.frame.offsetHeight || vh : 0);
-  w.el.style.marginTop = w.after ? -prevFH + 'px' : '';
+  w.pin = ''; w.on = null;
+  if (!w.hosted) { w.frame.style.transform = ''; w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; }
   w.wh = w.txt.clientHeight; w.th = w.txtIn.offsetHeight; w.lh = parseFloat(getComputedStyle(w.txt).lineHeight) || 14;
   w.mob = mob;
 }
@@ -1065,10 +1072,10 @@ function wcFrame(w) {
   const y = cur - w.top, n = w.S.length;
   w.dark = false;
   if (y < -vh * 2.2 || y > w.L + vh * 1.2) { if (w.on !== false) { w.el.classList.remove('on'); w.on = false; } wcPlay(w, false); return; }
-  // after a stage the pictures show only once the stage has stopped: they lie over its last frame
-  const on = !w.after || y >= -1;
+  // in a stage's frame the pictures show once the stage has ended: they lie over its last frame
+  const on = !w.hosted || y >= -1;
   if (on !== w.on) { w.el.classList.toggle('on', on); w.on = on; }
-  if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
+  if (SMOOTH && !w.hosted) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const yy = clamp(y, 0, w.L);
   let k = 0; while (k < n - 1 && yy >= w.a[k + 1]) k++;
   const t = k < n - 1 ? easeInOut(clamp((yy - w.a[k] - .5 * w.d[k]) / (.5 * w.d[k]), 0, 1)) : 0;
@@ -1112,7 +1119,8 @@ function wsFrame(w) {
   if (w.st) w.st.load();                                    // fetch ahead, a few screens before the stage
   if (y < -vh * 1.05) return;
   if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
-  const u = y / vh, dk = w.st ? w.st.step(u) || 0 : 0;
+  const u = y / vh, dk = w.st && y <= w.L0 + vh * .25 ? w.st.step(u) || 0 : w.dk0 || 0;
+  w.dk0 = dk;
   w.dark = w.k === 'fy' && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
   // the title is written on its line as the frame comes up, as in the Index
   const hk = `${u.toFixed(3)}|${dk.toFixed(3)}`;
