@@ -189,7 +189,7 @@ html.smooth .wc-frame{will-change:transform}
 .wc.still .wc-m{filter:none}
 .wc-dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 .wc-txt{position:absolute;left:var(--m);top:calc(var(--vhp,100vh) - var(--m) - 30vh);height:30vh;width:min(380px,30vw);overflow:hidden;z-index:5;
-  color:#fff;mix-blend-mode:difference;pointer-events:none;
+  color:#fff;mix-blend-mode:difference;pointer-events:auto;cursor:pointer;transition:opacity .45s ease;
   -webkit-mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent);mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent)}
 .wc-txt-in{will-change:transform}
 .wc-tb p{margin:0 0 .9em}
@@ -197,11 +197,25 @@ html.smooth .wc-frame{will-change:transform}
 .wc-meta{opacity:.55}
 .wc-meta span{margin-left:1.2em}
 .wc-l{opacity:.8;text-wrap:pretty}
+.wc-h{margin-top:1.6em !important}
+.wc-sh{margin-top:1.4em !important;opacity:.55}
+/* the introduction in full: grows up out of the small window and covers the left of the screen; scrolls on its own */
+.wc-full{position:absolute;left:var(--m);top:calc(var(--navh) + 40px);width:min(560px,42vw);height:calc(var(--vhp,100vh) - var(--navh) - 40px - var(--m));
+  z-index:7;color:#ececec;background:rgba(12,12,12,.7);-webkit-backdrop-filter:blur(18px) saturate(.6);backdrop-filter:blur(18px) saturate(.6);
+  overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding:22px 24px 34px;pointer-events:none;opacity:0;
+  clip-path:inset(calc(100% - 30vh) calc(100% - min(380px,30vw)) 0 0);transition:clip-path .75s cubic-bezier(.7,0,.2,1),opacity .35s ease .05s}
+.wc-full::-webkit-scrollbar{display:none}
+.wc-full-in{transform:translate3d(0,18px,0);transition:transform .75s cubic-bezier(.2,.7,.2,1)}
+.wc-full .wc-tb p{max-width:42em}
+.txt-open .wc-full{pointer-events:auto;opacity:1;clip-path:inset(0 0 0 0)}
+.txt-open .wc-full-in{transform:none}
+.txt-open .wc-txt{opacity:0}
 .wc-links a{pointer-events:auto;margin-right:1.2em;border-bottom:1px solid currentColor}
 .wc-n{position:absolute;right:var(--m);top:calc(var(--vhp,100vh) - var(--m) - var(--L));z-index:5;color:#fff;mix-blend-mode:difference;display:flex;gap:1.6em;white-space:pre;font-variant-numeric:tabular-nums}
 .wc-c{opacity:.7}
 .wc-snd{pointer-events:auto;font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;border-bottom:1px solid currentColor}
-@media (max-width:699px){ .wc-txt{width:calc(100% - 2 * var(--m));height:22vh;top:calc(var(--vhp,100vh) - var(--m) - 22vh)} .wc-n{top:calc(var(--navh) + 34px)} }
+@media (max-width:699px){ .wc-txt{width:calc(100% - 2 * var(--m));height:22vh;top:calc(var(--vhp,100vh) - var(--m) - 22vh)} .wc-n{top:calc(var(--navh) + 34px)}
+  .wc-full{width:calc(100% - 2 * var(--m));clip-path:inset(calc(100% - 22vh) 0 0 0)} }
 .ch-head{padding-top:6vh}
 .ch-num{border-top:1px solid var(--ink);padding-top:8px}
 .ch-num span:first-child{grid-column:1/4}
@@ -351,7 +365,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
   <div class="v-bar grid mono"><span class="v-t"></span><span class="v-c"></span><span class="v-n"><button class="pv" type="button">← Prev</button><button class="nx" type="button">Next →</button></span></div>
 </div>
 
-<script src="data.js"></script>
+<script src="data.js?v=67"></script>
+<script src="texts.js?v=67"></script>
 <script src="cm/cm-world.js?v=66"></script>
 <script src="fy/fy-world.js?v=66"></script>
 <script>
@@ -396,18 +411,34 @@ function buildWC(i, p, no, wk, links, host) {
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
   const sec = document.createElement(host ? 'div' : 'section');
   sec.className = host ? 'wc wc-in' : 'wc'; sec.setAttribute('aria-label', `${p.t}: pictures`);
-  const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span><span>${pad(p.i.length)} images</span></p><p class="wc-l">${p.l}</p>${links ? `<p class="wc-links">${links}</p>` : ''}</div>`;
+  const TX = (window.TAO_TEXT || {})[p.t] || [['p', p.l]];
+  const body = TX.map(([k, v]) => k === 'h' ? `<p class="wc-h">${v}</p>` : k === 's' ? `<p class="wc-sh">${v}</p>` : `<p class="wc-l">${v}</p>`).join('');
+  const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span></p>${body}${links ? `<p class="wc-links">${links}</p>` : ''}</div>`;
   const inner = `${S.map((s, k) => `<div class="wc-s">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : `<img class="wc-m" alt="${p.t}, image ${s.j + 1} of ${p.i.length}" decoding="async">`}<i class="wc-dim"></i></div>`).join('')}
-    <aside class="wc-txt"><div class="wc-txt-in">${block(false)}</div></aside>
+    <aside class="wc-txt" aria-hidden="true"><div class="wc-txt-in">${block(true)}</div></aside>
+    <aside class="wc-full" aria-label="${p.t}: introduction"><div class="wc-full-in">${block(false)}</div></aside>
     <div class="wc-n mono" aria-hidden="true"><button class="wc-snd" type="button" hidden>Sound off</button><span class="wc-c"></span></div>`;
   sec.innerHTML = host ? inner : `<div class="wc-frame">${inner}</div>`;
   if (host) host.appendChild(sec);
   const frame = host || $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
   S.forEach((s, k) => { s.el = els[k]; s.m = $('.wc-m', els[k]); s.dim = $('.wc-dim', els[k]); s.src = ''; s.st = ''; });
   const w = { i, p, no, el: sec, frame, S, after, hosted: !!host, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
-    txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '' };
+    txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), full: $('.wc-full', sec), open: false, ot: 0, c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '' };
+  /* the whole introduction: the pointer resting on the text (or a click / tap) opens it in full; leaving closes it */
+  const setOpen = on => {
+    clearTimeout(w.ot); if (on === w.open) return; w.open = on;
+    sec.classList.toggle('txt-open', on);
+    if (on) w.full.scrollTop = 0;
+  };
+  w.txt.addEventListener('mouseenter', () => { clearTimeout(w.ot); w.ot = setTimeout(() => setOpen(true), 160); });
+  w.txt.addEventListener('mouseleave', () => { if (!w.open) clearTimeout(w.ot); });
+  w.txt.addEventListener('click', () => setOpen(true));
+  w.full.addEventListener('mouseleave', () => { clearTimeout(w.ot); w.ot = setTimeout(() => setOpen(false), 120); });
+  w.full.addEventListener('mouseenter', () => clearTimeout(w.ot));
+  w.full.addEventListener('click', e => { if (!e.target.closest('a') && matchMedia('(hover: none)').matches) setOpen(false); });
+  w.setOpen = setOpen;
   if (w.film >= 0) {
     const v = S[w.film].m;
     w.snd.addEventListener('click', () => { v.muted = !v.muted; w.snd.textContent = v.muted ? 'Sound off' : 'Sound on'; if (!v.muted) v.play().catch(() => {}); });
@@ -838,9 +869,11 @@ function drawIntro(t) {
     ix.fill('nonzero');
   });
 }
+let introSkip = false;
 function introFrame(now) {
   if (!fontsReady) return;                                 // the screen stays empty until Gotham has arrived
   if (!introT0) introT0 = now;
+  if (introSkip) introT0 = Math.min(introT0, now - INTRO_END * 1000);   // skipped: straight to the word at rest
   const t = (now - introT0) / 1000;
   if (t >= INTRO_END) {
     introDone = true;
@@ -851,6 +884,9 @@ function introFrame(now) {
   drawIntro(t);
 }
 const holdScroll = e => { if (!introDone) e.preventDefault(); };
+// any key, a wheel turn, a click or a touch skips the opening animation
+const skipIntro = () => { if (!introDone) introSkip = true; };
+['keydown', 'wheel', 'pointerdown', 'touchstart'].forEach(t => addEventListener(t, skipIntro, { passive: true }));
 addEventListener('wheel', holdScroll, { passive: false });
 addEventListener('touchmove', holdScroll, { passive: false });
 addEventListener('keydown', e => { if (!introDone && [' ', 'PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) e.preventDefault(); });
@@ -1067,10 +1103,10 @@ function wcPlay(w, on) {
 function wcFrame(w) {
   const y = cur - w.top, n = w.S.length;
   w.dark = false;
-  if (y < -vh * 2.2 || y > w.L + vh * 1.2) { if (w.on !== false) { w.el.classList.remove('on'); w.on = false; } wcPlay(w, false); return; }
+  if (y < -vh * 2.2 || y > w.L + vh * 1.2) { if (w.on !== false) { w.el.classList.remove('on'); w.on = false; w.setOpen(false); } wcPlay(w, false); return; }
   // in a stage's frame the pictures show once the stage has ended: they lie over its last frame
   const on = !w.hosted || y >= -1;
-  if (on !== w.on) { w.el.classList.toggle('on', on); w.on = on; }
+  if (on !== w.on) { w.el.classList.toggle('on', on); w.on = on; if (!on) w.setOpen(false); }
   if (SMOOTH && !w.hosted) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const yy = clamp(y, 0, w.L);
   let k = 0; while (k < n - 1 && yy >= w.a[k + 1]) k++;
