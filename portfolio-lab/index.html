@@ -178,6 +178,32 @@ html:not(.ready) #tl,html:not(.ready) #tlf{opacity:0}
 
 /* chapters */
 .ch{position:relative}
+/* a work's pictures, full screen (see buildWC) */
+.wc{position:relative;z-index:2}
+.wc-frame{position:relative;height:100vh;height:100lvh;overflow:hidden;background:#000;color:#fff}
+html:not(.smooth) .wc-frame{position:sticky;top:0}
+html.smooth .wc-frame{will-change:transform}
+.wc-after:not(.on) .wc-frame{visibility:hidden}
+.wc-s{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100vh);overflow:hidden;visibility:hidden;background:#000}
+.wc-s.v{visibility:visible}
+.wc-m{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:contain;transform-origin:50% 100%;filter:grayscale(1);transition:filter .8s ease}
+.wc-s.cover .wc-m{object-fit:cover}
+.wc.still .wc-m{filter:none}
+.wc-dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+.wc-txt{position:absolute;left:var(--m);top:calc(var(--vhp,100vh) - var(--m) - 30vh);height:30vh;width:min(380px,30vw);overflow:hidden;z-index:5;
+  color:#fff;mix-blend-mode:difference;pointer-events:none;
+  -webkit-mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent);mask-image:linear-gradient(transparent,#000 20%,#000 80%,transparent)}
+.wc-txt-in{will-change:transform}
+.wc-tb p{margin:0 0 .9em}
+.wc-no{display:inline-block;min-width:2.6em;opacity:.55}
+.wc-meta{opacity:.55}
+.wc-meta span{margin-left:1.2em}
+.wc-l{opacity:.8;text-wrap:pretty}
+.wc-links a{pointer-events:auto;margin-right:1.2em;border-bottom:1px solid currentColor}
+.wc-n{position:absolute;right:var(--m);top:calc(var(--vhp,100vh) - var(--m) - var(--L));z-index:5;color:#fff;mix-blend-mode:difference;display:flex;gap:1.6em;white-space:pre;font-variant-numeric:tabular-nums}
+.wc-c{opacity:.7}
+.wc-snd{pointer-events:auto;font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;border-bottom:1px solid currentColor}
+@media (max-width:699px){ .wc-txt{width:calc(100% - 2 * var(--m));height:22vh;top:calc(var(--vhp,100vh) - var(--m) - 22vh)} .wc-n{top:calc(var(--navh) + 34px)} }
 .ch-head{padding-top:6vh}
 .ch-num{border-top:1px solid var(--ink);padding-top:8px}
 .ch-num span:first-child{grid-column:1/4}
@@ -358,7 +384,35 @@ let total = 0;
 /* ---------- build ---------- */
 const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
-const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '63';
+const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '64';
+/* ---------- a work's pictures: one full screen, pinned; scrolling lifts each picture into the next from below ----------
+   The first picture is the one its stage ended on, shown exactly as the stage showed it, so the hand-over is not
+   seen. A quiet text, bottom left, rolls slowly up through its window as the pictures go by; a counter bottom right.
+   The Commedia's film is the second picture: it plays (muted, looping) while it is on screen; sound on request. */
+const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', poster: 'dc/dc-film.jpg', posterS: 'dc/dc-film-s.jpg', ar: 16 / 9 } };
+const WC_UNIT = .85, WC_FILM = 1.9, WC_TAIL = .35;          // screen heights of scroll per picture, for the film, at the end
+function buildWC(i, p, no, wk, links) {
+  const first = wk ? WS_PHOTO[wk] : 0, after = i === 0 || !!wk;
+  const S = [first].concat(p.i.map((_, j) => j).filter(j => j !== first)).map(j => ({ kind: 'img', im: p.i[j], j }));
+  if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
+  const sec = document.createElement('section');
+  sec.className = 'wc' + (after ? ' wc-after' : ''); sec.setAttribute('aria-label', `${p.t}: pictures`);
+  const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span><span>${pad(p.i.length)} images</span></p><p class="wc-l">${p.l}</p>${links ? `<p class="wc-links">${links}</p>` : ''}</div>`;
+  sec.innerHTML = `<div class="wc-frame">${S.map((s, k) => `<div class="wc-s">${s.kind === 'film'
+      ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
+      : `<img class="wc-m" alt="${p.t}, image ${s.j + 1} of ${p.i.length}" decoding="async">`}<i class="wc-dim"></i></div>`).join('')}
+    <aside class="wc-txt"><div class="wc-txt-in">${block(false)}</div></aside>
+    <div class="wc-n mono" aria-hidden="true"><button class="wc-snd" type="button" hidden>Sound off</button><span class="wc-c"></span></div></div>`;
+  const frame = $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
+  S.forEach((s, k) => { s.el = els[k]; s.m = $('.wc-m', els[k]); s.dim = $('.wc-dim', els[k]); s.src = ''; s.st = ''; });
+  const w = { i, p, no, el: sec, frame, S, after, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
+    txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '' };
+  if (w.film >= 0) {
+    const v = S[w.film].m;
+    w.snd.addEventListener('click', () => { v.muted = !v.muted; w.snd.textContent = v.muted ? 'Sound off' : 'Sound on'; if (!v.muted) v.play().catch(() => {}); });
+  }
+  return w;
+}
 DATA.forEach((p, i) => {
   const no = pad(i + 1);
   total += p.i.length;
@@ -371,17 +425,8 @@ DATA.forEach((p, i) => {
     .concat((p.x || []).map(([k, u]) => `<a href="${u}" target="_blank" rel="noopener">${k} ↗</a>`)).join('');
   const el = document.createElement('article');
   el.className = 'ch'; el.id = 'w' + no; el.setAttribute('aria-label', p.t);
-  const unit = `<span>${p.t}<i>${no}/${p.y}</i></span>`;
-  el.innerHTML = `<header class="ch-head"><div class="ch-num grid mono"><span>${no} / ${pad(N)}</span><span class="ch-num-f">${p.f}</span></div>
-    <div class="mq" aria-hidden="true"><div class="mq-track">${unit.repeat(5)}</div></div></header>
-    <div class="ch-body grid"><aside class="ch-meta"><div class="ch-meta-in">
-      <p class="mono ch-meta-no">${no}</p><h2>${p.t}</h2>
-      <dl class="mono"><div><dt>Year</dt><dd>${p.y}</dd></div><div><dt>Format</dt><dd>${p.f}</dd></div><div><dt>Images</dt><dd>${pad(p.i.length)}</dd></div></dl>
-      <p class="lede">${p.l}</p>${links ? `<p class="links mono">${links}</p>` : ''}
-    </div></aside><div class="ms"></div></div>`;
   works.appendChild(el);
-  const ch = { i, p, el, body: $('.ch-body', el), ms: $('.ms', el), metaIn: $('.ch-meta-in', el), track: $('.mq-track', el),
-    cols: [], off: [0, 0, 0], tiles: [], mx: Math.random() * 400, dir: i % 2 ? -1 : 1, top: 0, h: 0, elTop: 0, metaH: 0, uw: 1, ws: null };
+  const ch = { i, p, el, elTop: 0, ws: null, wc: null };
   const wk = WS[p.t];
   if (wk) {                                                 // a pinned stage opens the chapter
     const sec = document.createElement('section');
@@ -391,20 +436,8 @@ DATA.forEach((p, i) => {
     const frame = $('.ws-frame', sec), row = $('.ix-row', sec);
     ch.ws = { k: wk, el: sec, frame, row, m: [...row.querySelectorAll('.mk > span')], rule: $('.ix-rule', row), top: 0, L: 1, st: null, pin: '', hk: '' };
   }
-  p.i.forEach((im, j) => {
-    if (i === 0 && j === 0) return;                         // the Commedia's first picture closes its 3D stage instead
-    if (wk && j === WS_PHOTO[wk]) return;                   // so does each stage's photograph
-    const ar = im[2] / im[3];
-    const v = ar >= 1.95 ? 1 : VAR[(j * 4 + i * 3) % VAR.length];
-    const fig = document.createElement('figure');
-    fig.className = 'tile' + ((i + j) % 2 && v < 1 ? ' r' : '');
-    fig.style.setProperty('--v', v);
-    fig.innerHTML = `<div class="tile-im" style="--ar:${im[2]}/${im[3]}"><img alt="${p.t}, image ${j + 1} of ${p.i.length}" decoding="async" loading="lazy"><button class="tile-hit" type="button" aria-label="Open ${p.t}, image ${j + 1} of ${p.i.length}"></button></div><figcaption class="mono"><span>${no}.${pad(j + 1)}</span><span>${im[2]}×${im[3]}</span></figcaption>`;
-    const t = { el: fig, box: $('.tile-im', fig), img: $('img', fig), im, ar, v, ch: i, j, c: 0, x: 0, y: 0, w: 1, h: 1,
-      tex: null, loading: false, failed: false, loadedAt: 0, r0: -1, seen: 0, seed: Math.random(), hide: false };
-    $('.tile-hit', fig).addEventListener('click', () => openViewer(t));
-    ch.tiles.push(t); tiles.push(t);
-  });
+  ch.wc = buildWC(i, p, no, wk, links);
+  el.appendChild(ch.wc.el);
   chapters.push(ch);
 });
 /* the stages: Compressed Modernity's four rubbings (scans from the work's own folder of traced black-and-white
@@ -422,20 +455,6 @@ wsList.forEach(ch => {
   } catch (e) { console.warn('stage off:', e); w.st = null; }
 });
 
-let nCols = 0;
-function distribute(n) {
-  nCols = n;
-  chapters.forEach(ch => {
-    ch.ms.textContent = '';
-    ch.cols = Array.from({ length: n }, () => { const d = document.createElement('div'); d.className = 'col'; ch.ms.appendChild(d); return d; });
-    const hgt = new Array(n).fill(0);
-    ch.tiles.forEach(t => {
-      let c = 0; for (let k = 1; k < n; k++) if (hgt[k] < hgt[c] - 0.02) c = k;
-      t.c = c; hgt[c] += t.v / t.ar + 0.22;
-      ch.cols[c].appendChild(t.el);
-    });
-  });
-}
 
 /* ---------- state ---------- */
 const layoutW = () => document.getElementById('lines').getBoundingClientRect().width || document.documentElement.clientWidth;  // width of the fixed layers = the page's real layout width, scrollbar excluded
@@ -873,8 +892,6 @@ function fitHero() {
 
 function layout() {
   vw = layoutW(); vh = innerHeight;
-  const n = vw < 700 ? 2 : 3;
-  if (n !== nCols) distribute(n);
   A = REDUCE ? 0 : (vw < 700 ? vh * .09 : vh * .22);
   Z = REDUCE ? 0 : (vw < 700 ? vh * .17 : vh * .25);
   PIN = SMOOTH && vw >= 1100;
@@ -892,14 +909,10 @@ function layout() {
     w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
     if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: w.row.offsetTop + w.row.offsetHeight }, wg));
   });
-  chapters.forEach(ch => { ch.cols.forEach(c => c.style.transform = ''); ch.metaIn.style.transform = ''; ch.off = [0, 0, 0]; });
+  chapters.forEach(ch => wcLayout(ch));
   const sp = SMOOTH ? cur : scrollY;
   wsList.forEach(ch => { ch.ws.top = ch.ws.el.getBoundingClientRect().top + sp; });
-  chapters.forEach(ch => {
-    const r = ch.body.getBoundingClientRect(); ch.top = r.top + sp; ch.h = r.height;
-    ch.elTop = ch.el.getBoundingClientRect().top + sp; ch.metaH = ch.metaIn.offsetHeight; ch.metaTop = ch.metaIn.getBoundingClientRect().top + sp;
-    ch.uw = ch.track.firstElementChild.getBoundingClientRect().width || 1;
-  });
+  chapters.forEach(ch => { ch.elTop = ch.el.getBoundingClientRect().top + sp; ch.wc.top = ch.wc.el.getBoundingClientRect().top + sp; });
   tiles.forEach(t => { const r = t.box.getBoundingClientRect(); t.x = r.left; t.y = r.top + sp; t.w = r.width; t.h = r.height; });
   heroH = vh; navOff = navOffset();
   secTops.index = $('#index').getBoundingClientRect().top + sp;
@@ -1016,7 +1029,77 @@ function tlIntro(q, u) {
 /* the full Index, from the nav */
 const ixo = $('#ixo'), ixoList = $('.ixo-list', ixo);
 DATA.forEach((p, i) => { const a = document.createElement('a'); a.href = '#'; a.dataset.wk = i; a.innerHTML = `<span>${pad(i + 1)}</span><span>${p.t}</span><span>${p.y}</span>`; ixoList.appendChild(a); });
-const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].ws ? chapters[i].ws.top : chapters[i].elTop - topClear;
+const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].ws ? chapters[i].ws.top : chapters[i].wc.top;
+/* ---------- the pictures: sizes, then every frame ---------- */
+function wcLayout(ch) {
+  const w = ch.wc, n = w.S.length, sAR = vw / vh, mob = vw < 700;
+  w.a = []; w.d = []; let acc = 0;
+  w.S.forEach((s, k) => {
+    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : WC_UNIT); w.d.push(d); acc += d;
+    // the first picture keeps its stage's framing; the others fill the screen when their shape is close to it
+    const ar = s.kind === 'film' ? s.ar : s.im[2] / s.im[3], r = ar / sAR;
+    const cover = k === 0 && w.after ? (w.k === 'cm' && !mob) : (r > 1 / 1.45 && r < 1.45);
+    s.el.classList.toggle('cover', cover); s.st = '';
+  });
+  w.L = acc - w.d[n - 1] * .5 + vh * WC_TAIL;
+  w.frame.style.transform = ''; w.pin = ''; w.on = null;
+  const FH = w.frame.offsetHeight || vh;
+  w.el.style.height = (FH + w.L).toFixed(0) + 'px';
+  // after a stage the pictures begin where the stage's frame stops, lying over it
+  const prevFH = !w.after ? 0 : w.i === 0 ? (stageFrameEl.offsetHeight || vh) : (ch.ws ? ch.ws.frame.offsetHeight || vh : 0);
+  w.el.style.marginTop = w.after ? -prevFH + 'px' : '';
+  w.wh = w.txt.clientHeight; w.th = w.txtIn.offsetHeight; w.lh = parseFloat(getComputedStyle(w.txt).lineHeight) || 14;
+  w.mob = mob;
+}
+function wcLoad(w, s) {
+  if (s.src) return;
+  if (s.kind === 'film') { const f = FILM[w.i]; s.src = w.mob ? f.srcS : f.src; s.m.poster = w.mob ? f.posterS : f.poster; s.m.preload = 'auto'; s.m.src = s.src; return; }
+  s.src = url(s.im, w.mob ? 1000 : 2400); s.m.src = s.src;
+}
+function wcPlay(w, on) {
+  if (w.film < 0 || on === w.playing) return;
+  const v = w.S[w.film].m; w.playing = on;
+  if (on) { const pr = v.play(); if (pr) pr.catch(() => {}); } else v.pause();
+}
+function wcFrame(w) {
+  const y = cur - w.top, n = w.S.length;
+  w.dark = false;
+  if (y < -vh * 2.2 || y > w.L + vh * 1.2) { if (w.on !== false) { w.el.classList.remove('on'); w.on = false; } wcPlay(w, false); return; }
+  // after a stage the pictures show only once the stage has stopped: they lie over its last frame
+  const on = !w.after || y >= -1;
+  if (on !== w.on) { w.el.classList.toggle('on', on); w.on = on; }
+  if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
+  const yy = clamp(y, 0, w.L);
+  let k = 0; while (k < n - 1 && yy >= w.a[k + 1]) k++;
+  const t = k < n - 1 ? easeInOut(clamp((yy - w.a[k] - .5 * w.d[k]) / (.5 * w.d[k]), 0, 1)) : 0;
+  for (let j = Math.max(0, k - 1); j <= Math.min(n - 1, k + 3); j++) wcLoad(w, w.S[j]);
+  // this picture rises a little and dims; the next comes up over it from below
+  w.S.forEach((s, j) => {
+    const st = j === k ? 'v' + t.toFixed(4) : j === k + 1 && t > 0 ? 'n' + t.toFixed(4) : 'h';
+    if (st === s.st) return; s.st = st;
+    if (st === 'h') { s.el.classList.remove('v'); return; }
+    s.el.classList.add('v');
+    if (j === k) {
+      s.el.style.zIndex = 1; s.el.style.clipPath = ''; s.m.style.transform = '';
+      s.el.style.transform = t > 0 ? `translate3d(0,${(-7 * t).toFixed(3)}%,0)` : ''; s.dim.style.opacity = (t * .6).toFixed(3);
+    } else {
+      s.el.style.zIndex = 2; s.el.style.transform = ''; s.dim.style.opacity = '0';
+      s.el.style.clipPath = `inset(${((1 - t) * 100).toFixed(3)}% 0 0 0)`; s.m.style.transform = `scale(${(1 + .08 * (1 - t)).toFixed(4)})`;
+    }
+  });
+  if (w.film >= 0) {
+    const vis = on && ((k === w.film && t < .85) || (k + 1 === w.film && t > .25));
+    wcPlay(w, vis); if (w.snd.hidden === vis) w.snd.hidden = !vis;
+  }
+  // the text: one slow roll up through its window over the whole sequence
+  const P = w.L > 0 ? yy / w.L : 0;
+  w.txtIn.style.transform = `translate3d(0,${lerp(w.wh - w.lh * 3.2, -w.th + w.lh * 2.2, P).toFixed(2)}px,0)`;
+  const cs = w.S[t < .5 ? k : Math.min(n - 1, k + 1)];
+  const cnt = cs.kind === 'film' ? `${w.no}  Film` : `${w.no}.${pad(cs.j + 1)}  ${pad(w.p.i.length)}`;
+  if (cnt !== w.cnt) { w.cnt = cnt; w.c.textContent = cnt; }
+  if (STILL !== w.still) { w.el.classList.toggle('still', STILL); w.still = STILL; }
+  w.dark = on && y > -vh * .5 && y < w.L + vh * .5;
+}
 /* the work stages, pinned in place for w.L px of scroll (see .ws in the CSS); u: screen heights since the pin */
 function wsGeom() {
   const cs = getComputedStyle(html), t = parseFloat(getComputedStyle(document.body).fontSize) || 12;
@@ -1259,20 +1342,8 @@ function frame(now) {
   if (!introDone) introFrame(now);
   else if (cur < SD + vh * 1.5) stageFrame();
   if (introDone) for (const ch of wsList) { ch.ws.dark = false; wsFrame(ch.ws); }
-  setChrome(introDone && ((dcDk > .5 && cur < SD + vh * .5) || wsList.some(ch => ch.ws.dark)));
-  // chapters: column parallax, pinned meta, marquee
-  for (const ch of chapters) {
-    if (cur + vh < ch.elTop - 100 || cur > ch.top + ch.h + 100) continue;
-    const p = clamp((cur + vh - ch.top) / (ch.h + vh), 0, 1);
-    const F = nCols === 3 ? F3 : F2;
-    ch.cols.forEach((col, ci) => { const o = (.5 - p) * A * F[ci]; ch.off[ci] = o; col.style.transform = `translate3d(0,${o.toFixed(1)}px,0)`; });
-    if (PIN) { const y = clamp(cur + topClear + 18 - ch.metaTop, 0, Math.max(0, ch.top + ch.h - 70 - ch.metaTop - ch.metaH)); ch.metaIn.style.transform = `translate3d(0,${Math.round(y)}px,0)`; ch.metaIn.style.opacity = clamp((ch.metaTop + y - cur - topClear + 60) / 78, 0, 1).toFixed(3); }
-    if (!REDUCE) {
-      ch.mx += (.55 + Math.abs(vel) * .45) * k * ch.dir;
-      const x = ((ch.mx % ch.uw) + ch.uw) % ch.uw;
-      ch.track.style.transform = `translate3d(${-x.toFixed(1)}px,0,0) skewX(${clamp(-vel * .3, -14, 14).toFixed(2)}deg)`;
-    }
-  }
+  if (introDone) for (const ch of chapters) wcFrame(ch.wc);
+  setChrome(introDone && ((dcDk > .5 && cur < SD + vh * .5) || wsList.some(ch => ch.ws.dark) || chapters.some(ch => ch.wc.dark)));
   // nav progress + chapter tag
   const prog = clamp(cur / Math.max(1, docH - vh), 0, 1);
   setChars(pctChars, String(Math.round(prog * 100)).padStart(3, '0') + '% ↑');
