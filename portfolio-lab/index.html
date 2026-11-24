@@ -139,7 +139,8 @@ html:not(.smooth) .ws-frame{position:sticky;top:0}
 html.smooth .ws-frame{will-change:transform}
 .ws-cv{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%)}
 .ws-photo{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%);opacity:0;pointer-events:none;object-fit:cover}
-.ws .ws-head{z-index:3}
+.cm.ws-frame{background:#fff}
+.br.ws-frame{background:#000}
 .ws .ws-head .ix-rule{transform-origin:0 50%}
 /* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
    toward the next one (how far there is still to go); the works already passed stay drawn */
@@ -367,8 +368,9 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 
 <script src="data.js?v=67"></script>
 <script src="texts.js?v=67"></script>
-<script src="cm/cm-world.js?v=66"></script>
-<script src="fy/fy-world.js?v=66"></script>
+<script src="cm/cm-world.js?v=68"></script>
+<script src="fy/fy-world.js?v=68"></script>
+<script src="br/br-world.js?v=68"></script>
 <script>
 (() => {
 'use strict';
@@ -397,7 +399,7 @@ let total = 0;
 /* ---------- build ---------- */
 const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
-const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy' }, WS_PHOTO = { cm: 0, fy: 11 }, WSV = '66';
+const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy', 'Brick': 'br' }, WS_PHOTO = { cm: 0, fy: 11, br: 9 }, WSV = '68';
 /* ---------- a work's pictures: one full screen, pinned; scrolling lifts each picture into the next from below ----------
    A work with a stage keeps the same pinned frame: the pictures are a layer in the stage's own frame and the frame
    simply stays pinned longer, so model, photograph and pictures are one page. Their first picture is the one the
@@ -463,27 +465,29 @@ DATA.forEach((p, i) => {
   if (wk) {                                                 // a pinned stage opens the chapter
     const sec = document.createElement('section');
     sec.className = 'ws ws-' + wk; sec.setAttribute('aria-label', p.t);
-    sec.innerHTML = `<div class="ws-frame"><div class="ix ws-head" aria-hidden="true"><div class="ix-list"><div class="ix-row"><span class="c1 mk"><span>${no}</span></span><span class="c2 mk"><span>${p.t}</span></span><span class="c3 mk"><span>${p.y}</span></span><i class="ix-rule"></i></div></div></div></div>`;
+    sec.innerHTML = `<div class="ws-frame"></div>`;
     el.prepend(sec);
-    const frame = $('.ws-frame', sec), row = $('.ix-row', sec);
-    ch.ws = { k: wk, el: sec, frame, row, m: [...row.querySelectorAll('.mk > span')], rule: $('.ix-rule', row), top: 0, L: 1, st: null, pin: '', hk: '' };
+    const frame = $('.ws-frame', sec);
+    ch.ws = { k: wk, el: sec, frame, top: 0, L: 1, st: null, pin: '', hk: '' };
   }
   ch.wc = buildWC(i, p, no, wk, links, i === 0 ? document.querySelector('.stage-frame') : ch.ws ? ch.ws.frame : null);
   if (!ch.wc.hosted) el.appendChild(ch.wc.el);
   chapters.push(ch);
 });
-/* the stages: Compressed Modernity's four rubbings (scans from the work's own folder of traced black-and-white
+/* the stages: Compressed Modernity's six rubbings (scans from the work's own folder of traced black-and-white
    sheets) and its cover photograph, where the paper lies on the ground: the strip measured on the picture (TL TR BR BL);
-   Fourteen Years' fourteen typefaces and the J as printed in the book (measured against the photograph, 1600 × 711) */
+   Fourteen Years' fourteen typefaces and the J as printed in the book (measured against the photograph, 1600 × 711);
+   Brick's table, moulds and twenty-eight blocks, ending on the close photograph of one of them (9.jpg) */
 const wsList = chapters.filter(ch => ch.ws);
 wsList.forEach(ch => {
   const w = ch.ws, im = ch.p.i[WS_PHOTO[w.k]];
   try {
     if (w.k === 'cm' && window.CMStage) w.st = window.CMStage(w.frame, {
       photo: url(im, 2400), photoW: im[2], photoH: im[3], strip: [[0, .8644], [1, .78], [1, .84], [0, .94]], three: '../three.min.js',
-      sheets: [1, 2, 3, 4].map(k => ({ src: `cm/cm-${k}.jpg` })) });   // IMG_20240828_0002, _0019, _0021, IMG_20240829_0008
+      sheets: [1, 2, 5, 3, 6, 4].map(k => ({ src: `cm/cm-${k}.jpg?v=${WSV}` })) });   // IMG_20240828_0002, _0019, _0015, _0021, _0013, IMG_20240829_0008
     if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, { three: '../three.min.js',
       photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
+    if (w.k === 'br' && window.BRStage) w.st = window.BRStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), photoW: im[2], photoH: im[3] });
   } catch (e) { console.warn('stage off:', e); w.st = null; }
 });
 
@@ -947,7 +951,7 @@ function layout() {
   wsList.forEach(ch => {
     const w = ch.ws; w.L0 = vh * (w.st ? w.st.PHOTO || w.st.END : 3); w.L = w.L0 + (ch.wc.hosted ? ch.wc.L : 0);
     w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
-    if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: w.row.offsetTop + w.row.offsetHeight }, wg));
+    if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: tlTrackY() + (vw < 700 ? 30 : 24) }, wg));   // under the timeline's labels
   });
   const sp = SMOOTH ? cur : scrollY;
   wsList.forEach(ch => { ch.ws.top = docTop(ch.ws.el); });
@@ -1154,17 +1158,7 @@ function wsFrame(w) {
   if (SMOOTH) { const s = clamp(y, 0, w.L).toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const u = y / vh, dk = w.st && y <= w.L0 + vh * .25 ? w.st.step(u) || 0 : w.dk0 || 0;
   w.dk0 = dk;
-  w.dark = w.k === 'fy' && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
-  // the title is written on its line as the frame comes up, as in the Index
-  const hk = `${u.toFixed(3)}|${dk.toFixed(3)}`;
-  if (hk === w.hk) return; w.hk = hk;
-  w.m.forEach((m, k) => { const e = easeOut3(clamp((u + .42 - k * .025) / .16, 0, 1)); m.style.transform = e >= 1 ? 'none' : `translate3d(0,${((1 - e) * 110).toFixed(1)}%,0)`; });
-  const rl = easeInOut(clamp((u + .5) / .45, 0, 1)); w.rule.style.transform = rl >= 1 ? 'none' : `scaleX(${rl.toFixed(4)})`;
-  if (w.k === 'fy') {                                       // the ink turns light with the paper
-    const iv = smt(.35, .65, dk), c = Math.round(lerp(17, 236, iv));
-    w.row.style.color = iv > 0 ? `rgb(${c},${c},${c})` : '';
-    w.rule.style.background = iv > 0 ? `rgba(${c},${c},${c},${lerp(.08, .26, iv).toFixed(3)})` : '';
-  }
+  w.dark = (w.k === 'fy' || w.k === 'br') && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
 }
 function ixoOpen(on) { ixo.classList.toggle('open', on); html.classList.toggle('lock', on || !!vt); }
 ixo.addEventListener('click', e => { const a = e.target.closest('a[data-wk]'); if (!a) return; e.preventDefault(); ixoOpen(false); goTo(workStart(+a.dataset.wk)); });
