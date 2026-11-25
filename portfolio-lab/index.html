@@ -368,7 +368,7 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 
 <script src="data.js?v=67"></script>
 <script src="texts.js?v=67"></script>
-<script src="cm/cm-world.js?v=83"></script>
+<script src="cm/cm-world.js?v=84"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script>
@@ -508,7 +508,7 @@ wsList.forEach(ch => {
       photo: url(im, 2400), photoW: im[2], photoH: im[3], strip: [[0, .8644], [1, .78], [1, .84], [0, .94]], three: '../three.min.js',
       // thirteen black-and-white rubbings joined into one long scroll (IMG_20240828_0002, _0003, _0004, _0005, _0009,
       // _0013, _0014, _0015, _0018, _0019, _0020, _0021, IMG_20240829_0008), cut back into tiles a sheet wide
-      tiles: [...Array(13)].map((_, k) => { const n = String(k).padStart(2, '0'); return { lo: `cm/t/m${n}.jpg?v=83`, hi: `cm/t/h${n}.jpg?v=83` }; }) });
+      tiles: [...Array(13)].map((_, k) => { const n = String(k).padStart(2, '0'); return { lo: `cm/t/m${n}.jpg?v=84`, hi: `cm/t/h${n}.jpg?v=84` }; }) });
     if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, { three: '../three.min.js',
       photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
     if (w.k === 'br' && window.BRStage) w.st = window.BRStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), photoW: im[2], photoH: im[3] });
