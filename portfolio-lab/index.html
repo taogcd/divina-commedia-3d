@@ -377,7 +377,7 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 
 <script src="data.js?v=67"></script>
 <script src="texts.js?v=67"></script>
-<script src="cm/cm-world.js?v=89"></script>
+<script src="cm/cm-world.js?v=90"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script>
@@ -423,6 +423,8 @@ const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', post
    last, shadows passing over the printed paper. */
 const CMI = (id, w, h) => ({ t: 'i', src: `cm/x/${id}.jpg?v=89`, srcS: `cm/x/${id}-s.jpg?v=89`, ar: w / h });
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=88`, srcS: `cm/x/${id}-s.mp4?v=88`, poster: `cm/x/${id}.jpg?v=89`, ar: 16 / 9 });
+const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
+const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
   { lay: 'pair', it: [CMV('v2'), CMV('v3')] },
@@ -440,6 +442,28 @@ const SETS = { 'Compressed Modernity': [
   { lay: 'pair', it: [CMI('h1', 2000, 1722), CMI('h2', 2000, 1391)] },
   { lay: 'pair', it: [CMI('x0', 2200, 1467), CMI('x1', 2200, 1467)] },
   { lay: 'one', it: [CMV('v4')] },
+],
+/* Brick's, from its own folder: the factory (its walls of test cubes, scrap, pipes, the machines); the day's work in
+   film (filling the moulds, the mould on the vibrating table, nails pressed into the wet cement, the round-head nails
+   made); the moulds packed with nails; the blocks from above; the installation, from the side and close; the book,
+   a cube in the hand; last, the exhibition in film. */
+'Brick': [
+  { lay: 'full', it: [BRI('s0', 2200, 1238)] },
+  { lay: 'trio', it: [BRI('s1', 2200, 1238), BRI('s2', 2200, 1238), BRI('s3', 2200, 1238)] },
+  { lay: 'trio', it: [BRI('m0', 2200, 1555), BRI('m1', 2200, 1555), BRI('m2', 2200, 1555)] },
+  { lay: 'pair', it: [BRV('w0'), BRV('w1')] },
+  { lay: 'one', it: [BRV('w2')] },
+  { lay: 'pair', it: [BRI('n0', 2200, 1238), BRI('n1', 2200, 1238)] },
+  { lay: 'pair', it: [BRV('w3'), BRI('n2', 2200, 1238)] },
+  { lay: 'trio', it: [BRI('t0', 2200, 2200), BRI('t1', 2200, 2200), BRI('t2', 2200, 2200)] },
+  { lay: 'trio', it: [BRI('t3', 2200, 2200), BRI('t4', 2200, 2200), BRI('t5', 2200, 2200)] },
+  { lay: 'full', it: [BRI('i0', 2200, 1238)] },
+  { lay: 'trio', it: [BRI('o0', 2200, 1238), BRI('o1', 2200, 1238), BRI('o2', 2200, 1238)] },
+  { lay: 'trio', it: [BRI('q0', 2200, 1237), BRI('q1', 2200, 1237), BRI('q2', 2200, 1238)] },
+  { lay: 'trio', it: [BRI('u0', 2200, 1467), BRI('u1', 2200, 1467), BRI('u2', 2200, 1467)] },
+  { lay: 'trio', it: [BRI('b0', 2200, 1650), BRI('b1', 2200, 1650), BRI('b2', 2200, 1650)] },
+  { lay: 'one', it: [BRI('b3', 2200, 1650)] },
+  { lay: 'one', it: [BRV('w4')] },
 ] };
 const WC_UNIT = .7, WC_FIRST = .4, WC_FILM = 1.6, WC_TAIL = .3, WC_HOLD = .3;   // screen heights of scroll: per picture, the first after a stage, the film, at the end; share of each held still
 function buildWC(i, p, no, wk, links, host) {
