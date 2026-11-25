@@ -123,10 +123,13 @@ window.CMStage = function (frame, opts) {
     uniform vec3 uO, uD, uN; uniform float uLt, uW, uS0, uK, uRel, uLtot, uTime, uWind;
     varying vec2 vUv; varying vec3 vNrm; varying vec3 vW;
     float breeze(float A, float C){
-      float e = max(max(smoothstep(.14, 0., C), smoothstep(uW - .14, uW, C)), max(smoothstep(.11, 0., A), smoothstep(uLtot - .11, uLtot, A)));
-      float w = sin(A * 4.3 + uTime * 1.25 + 1.6 * sin(A * 1.1 + uTime * .31)) * .6 + sin(A * 9.7 + uTime * 2.1 + C * 3.) * .4;
-      float g = .62 + .38 * sin(uTime * .47 + 2. * sin(uTime * .19 + A * .4));
-      return e * e * uWind * (.4 + .6 * (.5 + .5 * w)) * g;
+      // strongest along the edges (a wide band of them), a faint swell through the middle; the waves run along the
+      // scroll from right to left, two or three to a screen, each point rising and settling every second or two
+      float e = max(max(smoothstep(.22, 0., C), smoothstep(uW - .22, uW, C)), max(smoothstep(.18, 0., A), smoothstep(uLtot - .18, uLtot, A)));
+      float w = .5 + .5 * (sin(A * 7. + uTime * 3.2 + 1.2 * sin(A * 2. + uTime * .7)) * .65 + sin(A * 13. + uTime * 4.6 + C * 3.) * .35);
+      float g = .6 + .4 * sin(uTime * .9 + A * .5 + 1.6 * sin(uTime * .37 + A * .25));       // gusts running along
+      float m = .1 * (.5 + .5 * sin(A * 2.3 + uTime * 1.8 + C * 1.4));
+      return uWind * g * (pow(e, 1.5) * (.15 + .85 * w) + m);
     }
     void main(){
       float s = aP.x, t = aP.y, A = (uK + s) * uLt, C = t * uW, ep = .006;
@@ -147,7 +150,7 @@ window.CMStage = function (frame, opts) {
       float ink = 1. - texture2D(uTex, vUv).r;
       vec3 paper = vec3(.972, .966, .952), inkC = vec3(.07, .07, .075);
       vec3 n = normalize(vNrm); if (dot(n, cameraPosition - vW) < 0.) n = -n;   // the side the eye sees
-      float lit = .74 + .3 * max(dot(n, uSun), 0.);
+      float lit = .66 + .52 * max(dot(n, uSun), 0.);           // low enough to show the paper's lift
       gl_FragColor = vec4(mix(paper, inkC, pow(ink, 1.1)) * lit, 1.);
     }`;
 
@@ -159,7 +162,7 @@ window.CMStage = function (frame, opts) {
     S = strip();
     U = { uO: { value: new T.Vector3() }, uD: { value: new T.Vector3() }, uN: { value: new T.Vector3() }, uLt: { value: 1 }, uW: { value: 1 }, uS0: { value: 0 },
       uLtot: { value: 1 }, uRel: { value: .008 }, uTime: { value: 0 }, uWind: { value: .014 },
-      uSun: { value: S.D.clone().multiplyScalar(-.45).addScaledVector(S.N, -.35).add(new T.Vector3(0, .82, 0)).normalize() } };
+      uSun: { value: S.D.clone().multiplyScalar(-.6).addScaledVector(S.N, -.45).add(new T.Vector3(0, .62, 0)).normalize() } };
     const an = Math.min(8, R.capabilities.getMaxAnisotropy());
     for (let k = 0; k < NT; k++) {
       const t = new T.Texture(lo[k] || undefined); t.format = T.LuminanceFormat; t.anisotropy = an; t.generateMipmaps = true;
@@ -232,7 +235,7 @@ window.CMStage = function (frame, opts) {
     const uc = clamp(u, 0, END);
     camAt(uc);
     U.uTime.value = now / 1000;
-    U.uWind.value = .017 * (1 + .8 * gust) * (1 - smt(PAN1, FIN, uc));
+    U.uWind.value = .065 * (1 + .8 * gust) * (1 - smt(PAN1, FIN, uc));
     U.uRel.value = .008 * (1 - smt(PAN1, FIN, uc));
     R.render(scene, cam);
     return 1 - ph;
