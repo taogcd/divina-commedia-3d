@@ -21,9 +21,11 @@ window.CMStage = function (frame, opts) {
   // the cover photograph's camera (assumed): a phone's main lens, 41° vertical on the 16:9 frame, eye height 1.5 m;
   // the horizon, where the paper's long edges meet, at .455 of the height
   const VFOV = 41, EYE = 1.5, HZ = .455;
-  // the unrolling photograph's camera (estimated): 39.5° vertical, the horizon a little below the middle (.52); the
-  // paper's far and near edges at .849 and .910 of the height, the roll's middle at .287 of the width
-  const OP = opts.open || null, VFOV2 = 39.5, HZ2 = .52, YF2 = .849, YN2 = .91, XR2 = .287, R0 = 1.95, ROLL0 = .1;
+  // the unrolling photograph's camera (estimated): 36° vertical, the horizon a little below the middle (.535); the
+  // paper's far and near edges at .837 and .878 of the height by the roll, the roll at .479 of the width. About four
+  // metres of paper are already laid when the picture was taken; the roll is never used up: at the end it lies at
+  // the tail of the rubbings with blank paper still wound on it
+  const OP = opts.open || null, VFOV2 = 36, HZ2 = .535, YF2 = .837, YN2 = .878, XR2 = .479, R0 = 4.1, ROLL0 = .1, ROLLE = .072;
   const NT = opts.tiles.length, TAR = opts.tileAspect || 1240 / 1754;     // a tile: along ÷ across
 
   frame.classList.add('cm');
@@ -265,7 +267,8 @@ window.CMStage = function (frame, opts) {
   }
   // how much paper is laid, and the roll's radius: what is left of it, wound
   function rollAt(u) { return evMono(RK, u); }
-  function rollR(Rr) { const thick = Math.PI * (ROLL0 * ROLL0 - .012 * .012) / Math.max(.01, S.Ltot - R0); return Math.sqrt(.012 * .012 + Math.max(0, S.Ltot - Rr) * thick / Math.PI); }
+  const thick = () => Math.PI * (ROLL0 * ROLL0 - ROLLE * ROLLE) / Math.max(.01, S.Ltot - R0);
+  function rollR(Rr) { return Math.sqrt(ROLLE * ROLLE + Math.max(0, S.Ltot - Rr) * thick() / Math.PI); }
   function frontAt(u) { return evMono(FK, u); }
   let RK = null, FK = null;
 
@@ -416,12 +419,12 @@ window.CMStage = function (frame, opts) {
     // the roll and how much paper is laid; the rubbing's front
     const Rr = rollAt(uc), rr = rollR(Rr);
     U.uRoll.value = Rr; U.uRollR.value = rr; U.uFront.value = frontAt(uc);
-    roll.visible = Rr < S.Ltot - .005 && rr > .013;
-    if (roll.visible) {
+    roll.visible = true;
+    {
       roll.position.copy(P(Rr, S.W * .5, rr + .003));
       roll.scale.set(rr * 2, S.W * 1.004, rr * 2);
       roll.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), S.N);
-      U.uTurns.value = rr / (Math.PI * (ROLL0 * ROLL0 - .012 * .012) / Math.max(.01, S.Ltot - R0));     // turns of paper left on it
+      U.uTurns.value = rr / thick();                       // turns of paper left on it
       U.uAng.value = (Rr - R0) / Math.max(.02, rr);
     }
     U.uTime.value = now / 1000;
