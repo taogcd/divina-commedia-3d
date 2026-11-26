@@ -79,16 +79,16 @@
 
   M.big = (() => {
     const W = 148, H = 210, N = 10, G = 3.5;
-    const cover = (() => { const L = []; for (let i = 0; i < 16; i++) { const s = .16 + i * .028; seg(L, s, .9, s, .9 - .1 - (i * 7 % 5) * .04); } seg(L, .86, .9, .86, .8); return L; })();
+    const cover = (() => { const L = []; for (let i = 0; i < 16; i++) { const t = .88 - i * .021; seg(L, .13, t, .13 + .2 + (i * 7 % 5) * .05, t); } for (let i = 0; i < 3; i++) seg(L, .13, .1 - i * .018, .21, .1 - i * .018); return L; })();
     const A = Array.from({ length: N }, (_, k) => [textPage(31 + k, { pic: true }), textPage(61 + k, { pic: true })]);
     const Bp = Array.from({ length: N }, (_, k) => [textPage(131 + k, { pic: true }), textPage(161 + k)]);
     return {
       ns: 14,
-      cam: P => ({ phi: lerp(-.5, .45, ease(P)), el: .42, R: 640, T: [W / 2, H * .45, 0] }),
+      cam: P => ({ phi: lerp(-.5, .15, ease(P)), el: lerp(.42, .7, ease(P)), R: 640, T: [W / 2, H * .45, 0] }),
       open: P => clamp((P - .3) / .4, 0, 1),
-      // the photograph that follows: the book standing open on its stand, seen from the front, a little below; the
-      // fans close in part on the way, to the narrow spread of the photograph
-      end: { img: [2880, 1920], rect: [.30, .17, .58, .64], fit: 'h', cam: { phi: .3, el: .04, R: 1100, T: [W / 2, H * .5, 0] } },
+      // the photograph that follows (dc-13): the two books standing fanned, seen from above; the two spines (the
+      // heads of the spine edges) come to lie on the photograph's
+      end: { img: [2880, 1920], anchor: [[[0, H, 0], [.335, .292]], [[W, H, 0], [.628, .583]]], cam: { phi: 0, el: 1.35, R: 1200, T: [W / 2, H / 2, 0], roll: -.585 } },
       build(o, e = 0) {
         const S = [];
         // the shared back board
@@ -96,7 +96,7 @@
         // Heaven, on the near side: spine at the left edge, its leaves (cover last) turning toward the eye and over
         for (let k = 0; k <= N; k++) {
           const isC = k === N, z = (k + 1) * G, ok = ease(clamp((o - .07 * (N - k)) / (1 - .07 * N), 0, 1));
-          const th = ok * (isC ? 172 : lerp(14, 158, k / N)) * (1 - .55 * e) * D2R, c = Math.cos(th), sn = Math.sin(th), bend = isC ? 0 : 10 * Math.sin(th);
+          const th = ok * lerp(isC ? 172 : lerp(14, 158, k / N), isC ? 140 : lerp(26, 140, k / N), e) * D2R, c = Math.cos(th), sn = Math.sin(th), bend = isC ? 0 : 10 * Math.sin(th);
           const pt = s => { const u = s * W, v = bend * Math.sin(Math.PI * s * .8); return [u * c - v * sn, z + u * sn + v * c]; };
           S.push({ B: s => { const p = pt(s); return [p[0], 0, p[1]]; }, T: s => { const p = pt(s); return [p[0], H, p[1]]; }, outer: isC ? cover : A[k][0], inner: isC ? [] : A[k][1] });
         }
@@ -104,7 +104,7 @@
         // Hell, behind: spine at the right edge, its leaves turning away from the eye and round to the right
         for (let k = 0; k <= N; k++) {
           const isC = k === N, z = -(k + 1) * G, ok = ease(clamp((o - .1 - .06 * (N - k)) / (.9 - .06 * N), 0, 1));
-          const th = ok * (isC ? 168 : lerp(16, 150, k / N)) * (1 - .55 * e) * D2R, c = Math.cos(th), sn = Math.sin(th), bend = isC ? 0 : 10 * Math.sin(th);
+          const th = ok * lerp(isC ? 168 : lerp(16, 150, k / N), isC ? 142 : lerp(40, 142, k / N), e) * D2R, c = Math.cos(th), sn = Math.sin(th), bend = isC ? 0 : 10 * Math.sin(th);
           const pt = s => { const u = s * W, v = bend * Math.sin(Math.PI * s * .8); return [W - u * c - v * sn, z - u * sn + v * c]; };
           S.push({ B: s => { const p = pt(s); return [p[0], 0, p[1]]; }, T: s => { const p = pt(s); return [p[0], H, p[1]]; }, flip: true, outer: isC ? cover : Bp[k][0], inner: isC ? [] : Bp[k][1] });
         }
@@ -168,8 +168,8 @@
     const leaves = Array.from({ length: N + 1 }, (_, k) => [textPage(501 + k, { vertical: true, cols: 22, head: true }), textPage(601 + k, { vertical: true, cols: 18 })]);
     const coverFace = (() => { const Lf = []; rect(Lf, .82, .62, .9, .9); return Lf; })();
     return {
-      ns: 26, mirror: true,
-      cam: P => ({ phi: lerp(.25, -.18, ease(P)), el: .78, R: 2100, T: [-L * .22, 0, D / 2] }),
+      ns: 26, mirror: true, envelope: true,
+      cam: P => ({ phi: lerp(.14, -.08, ease(P)), el: .72, R: 2400, T: [0, 0, D / 2] }),
       open: P => clamp((P - .3) / .4, 0, 1),
       end: { img: [2880, 1920], rect: [.02, .5, .98, .9], cam: { phi: 0, el: 1.48, R: 3200, T: [0, 0, D / 2] } },
       build(o, e = 0) {
@@ -209,7 +209,7 @@
       ns: 10, layered: true,
       cam: P => ({ phi: lerp(-.35, .2, ease(P)), el: .42, R: 4200, T: [lerp(150, L / 2, ease(P)), H * .4, 0] }),
       open: P => clamp((P - .28) / .42, 0, 1),
-      end: { img: [1920, 2880], rect: [-.08, 0, 1.08, 1], fit: 'w', cam: { phi: -.35, el: .05, R: 900, T: [L * .35, H / 2, 0], roll: Math.PI / 2 } },
+      end: { img: [2880, 1920], rect: [0, .08, 1, .93], fit: 'h', cam: { phi: -.35, el: .05, R: 900, T: [L * .35, H / 2, 0] } },
       build(o) {
         const S = [], lines = [], u = 60 + (L - 60) * o, r0 = 70, r = Math.max(9, r0 * Math.sqrt(1 - .92 * o));
         // the base sheet, unrolled as far as u
@@ -273,8 +273,13 @@
       let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
       const acc = p => { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; };
       surf.forEach(q => { q.Bv.forEach(acc); q.Tv.forEach(acc); }); lv.forEach(([a, b]) => { acc(a); acc(b); });
-      const bw = Math.max(1e-6, x1 - x0), bh = Math.max(1e-6, y1 - y0), ah = ch - top - bot, fill = lerp(.62, .8, o);
-      F = fill * Math.min(cw * .9 / bw, ah / bh); cx = cw / 2 - F * (x0 + x1) / 2; cy = (top + ch - bot) / 2 + F * (y0 + y1) / 2;
+      const bw = Math.max(1e-6, x1 - x0), bh = Math.max(1e-6, y1 - y0), ah = ch - top - bot;
+      let fill = lerp(.62, .8, o), fx0 = x0, fx1 = x1, fy0 = y0, fy1 = y1;
+      if (m.envelope) {
+        fill = .86;
+        [0, .2, .4, .6, .8, 1].forEach(oo => { let r2 = m.build(oo, 0); if (m.mirror) r2 = mirrorX(r2); r2.S.forEach(sf => { for (let i = 0; i <= 6; i++) { [sf.B(i / 6), sf.T(i / 6)].forEach(q => { const v = view(q); if (v[0] < fx0) fx0 = v[0]; if (v[0] > fx1) fx1 = v[0]; if (v[1] < fy0) fy0 = v[1]; if (v[1] > fy1) fy1 = v[1]; }); } }); });
+      }
+      F = fill * Math.min(cw * .9 / (fx1 - fx0), ah / (fy1 - fy0)); cx = cw / 2 - F * (fx0 + fx1) / 2; cy = (top + ch - bot) / 2 + F * (fy0 + fy1) / 2;
       if (e > 0) {
         // where the photograph lies on the screen: full screen, or (upright) whole between the bar and the foot
         const [iw, ih] = m.end.img;
@@ -285,7 +290,7 @@
         if (m.end.anchor) {
           const [[wa, fa], [wb, fb]] = m.end.anchor, va = view(wa), vb = view(wb);
           const sa = [R.x + fa[0] * R.w, R.y + fa[1] * R.h], sb = [R.x + fb[0] * R.w, R.y + fb[1] * R.h];
-          FB = (sb[0] - sa[0]) / (vb[0] - va[0]); cxB = sa[0] - FB * va[0]; cyB = sa[1] + FB * va[1];
+          FB = Math.hypot(sb[0] - sa[0], sb[1] - sa[1]) / Math.hypot(vb[0] - va[0], vb[1] - va[1]); cxB = (sa[0] + sb[0]) / 2 - FB * (va[0] + vb[0]) / 2; cyB = (sa[1] + sb[1]) / 2 + FB * (va[1] + vb[1]) / 2;
         } else {
           const q = m.end.rect, X0 = R.x + q[0] * R.w, X1 = R.x + q[2] * R.w, Y0 = R.y + q[1] * R.h, Y1 = R.y + q[3] * R.h;
           FB = m.end.fit === 'h' ? (Y1 - Y0) / bh : m.end.fit === 'w' ? (X1 - X0) / bw : Math.min((X1 - X0) / bw, (Y1 - Y0) / bh); cxB = (X0 + X1) / 2 - FB * (x0 + x1) / 2; cyB = (Y0 + Y1) / 2 + FB * (y0 + y1) / 2;
