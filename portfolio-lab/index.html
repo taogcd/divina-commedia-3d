@@ -125,6 +125,7 @@ html.ready .mega .ln{overflow:visible}
 
 /* the Commedia: after its title is written in the Index, the page darkens in place and Mappa della Commedia (the
    poem as a world of its own letters) comes up in the same pinned frame; no words are laid over it */
+.dc-tt{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
 .dc-dark{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 .dc-layer{position:absolute;left:0;top:0;right:0;height:var(--vhp,100%);opacity:0;pointer-events:none;visibility:hidden}
 .dc-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
@@ -354,6 +355,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
         <h1 class="mega" aria-label="TAO."><span class="ln"><span class="chr">T</span><span class="chr">A</span><span class="chr">O</span><span class="chr">.</span></span></h1>
       </section>
       <canvas class="stage-cv" aria-hidden="true"></canvas>
+      <canvas class="dc-tt" aria-hidden="true"></canvas>
       <div class="dc-dark" aria-hidden="true"></div>
       <section id="index" class="ix" aria-labelledby="index-h">
         <div class="ix-list">
@@ -618,7 +620,7 @@ DATA.forEach((p, i) => {
     tsec.className = 'tp'; tsec.setAttribute('aria-label', p.t);
     tsec.innerHTML = `<div class="tp-frame"><canvas class="tp-cv" aria-hidden="true"></canvas><h2 class="tp-h">${p.t}</h2></div>`;
     el.prepend(tsec);
-    ch.tp = { el: tsec, frame: $('.tp-frame', tsec), cv: $('.tp-cv', tsec), lines: p.t.split(' '), top: 0, L: 1, pin: '', key: '', fit: null };
+    ch.tp = { i, el: tsec, frame: $('.tp-frame', tsec), cv: $('.tp-cv', tsec), lines: ttWords(p.t), top: 0, L: 1, pin: '', key: '', fit: null };
   }
   ch.wc = buildWC(i, p, no, wk, links, i === 0 ? document.querySelector('.stage-frame') : ch.ws ? ch.ws.frame : null);
   if (!ch.wc.hosted) el.appendChild(ch.wc.el);
@@ -721,7 +723,7 @@ function stageFrame() {
   tlIntro(q, u);
   // the four column lines draw down from the top edge once the Index is forming, one column after another
   gridLines.forEach((ln, c) => { const v = q > .6 ? easeInOut(clamp((u - c * .03) / .25, 0, 1)) : 0; ln.style.transform = v >= 1 ? 'none' : `scaleY(${v.toFixed(4)})`; });
-  dcStep(u);
+  dcStep(u); dcTitle(u);
 }
 /* While the stage moves, the word is drawn from its own outlines (same font as the DOM word). Stretched, every letter
    keeps its bottom on the baseline (the O's overshoot is not magnified). Then the letters turn into lines: each stem's
@@ -1009,13 +1011,6 @@ function introGeom(fs, base, bo, cap) {
   IC.width = Math.round(vw * D); IC.height = Math.round(vh * D); ix.setTransform(D, 0, 0, D, 0, 0);
 }
 function outline(i, wdth, wght) { return glyphOutline(HB.gids[i], wdth, wght); }
-const GO = new Map();
-function glyphOutlineC(gid, wdth, wght) {                    // the titles: the same, at instances rounded a little, kept
-  const key = gid + '|' + Math.round(wdth * 2) + '|' + Math.round(wght / 4);
-  let o = GO.get(key); if (o) return o;
-  if (GO.size > 2500) GO.clear();
-  o = glyphOutline(gid, Math.round(wdth * 2) / 2, Math.round(wght / 4) * 4); GO.set(key, o); return o;
-}
 function glyphOutline(gid, wdth, wght) {                   // contours as flat point lists, in font units (y up)
   const f = HB.font, hb = HB.hb;
   f.setVariations([new hb.Variation('wdth', wdth), new hb.Variation('wght', wght)]);
@@ -1063,98 +1058,100 @@ function drawIntro(t) {
     ix.fill('nonzero');
   });
 }
-/* ---------- the title pages ----------
-   Each work after the first opens on white with its title, one word to a line, set as TAO. is: Acumin Variable at
-   weight 900, at the width (wdth 50–115) and size that let the lines fill the width and the band under the nav, the
-   last line on TAO.'s baseline, ranged left on the margin. Coming in, it plays the opening's lens (the lines slide in
-   from above, magnified at their feet; the lens climbs through the letters as the axes run to the resting instance;
-   the lens relaxes and they settle), scrubbed by the scroll; going out, it does what TAO. does as the opening scrolls
-   on: pulled up and stretched from its baseline, thinning, out of the top, as the next work comes up over it. */
-const TPGAP = .2;
-function tpShape(text, wd) {
+/* ---------- the titles ----------
+   Each work opens on white with its title: one word to a line (a short word kept with the next), Acumin Variable Thin,
+   at the width (wdth 50–115) and size that let the lines fill the width and the band under the timeline, the last
+   line on TAO.'s baseline, ranged left on the margin; nothing else on the page. It is brought down from the timeline:
+   a hairline drops from the work's tick past the lines' baselines and runs out along each as a rule; the letters
+   stand up out of the rules (each glyph from flat to full height, outward from where the hairline came down) while
+   the hairline draws back up into the timeline. Going out, the same backwards. All of it scrubbed by the scroll. The
+   Commedia's title is drawn the same way in the opening's own frame, once the timeline has formed. */
+const TTW = 100, TTGAP = .16;
+function ttWords(t) { const w = t.split(' '), o = []; for (let i = 0; i < w.length; i++) { if (w[i].length <= 3 && i + 1 < w.length) { o.push(w[i] + ' ' + w[i + 1]); i++; } else o.push(w[i]); } return o; }
+function ttShape(text, wd) {
   const f = HB.font, hb = HB.hb;
-  f.setVariations([new hb.Variation('wdth', wd), new hb.Variation('wght', 900)]);
+  f.setVariations([new hb.Variation('wdth', wd), new hb.Variation('wght', TTW)]);
   const b = new hb.Buffer(); b.addText(text); b.guessSegmentProperties(); hb.shape(f, b);
   const inf = b.getGlyphInfos(), pos = b.getGlyphPositions();
   return inf.map((g, k) => ({ gid: g.codepoint, ax: pos[k].xAdvance, dx: pos[k].xOffset }));
 }
-function tpFit(t) {
+function ttFit(t) {
   const cs = getComputedStyle(html), m = parseFloat(cs.getPropertyValue('--m')) || 20, mob = vw < 700;
   const W = t.frame.clientWidth || vw, H = t.frame.offsetHeight || vh, D = Math.min(window.devicePixelRatio || 1, 2);
   t.cv.width = Math.round(W * D); t.cv.height = Math.round(H * D); t.g = t.cv.getContext('2d'); t.g.setTransform(D, 0, 0, D, 0, 0); t.cw = W; t.chh = H;
-  const avail = W - 2 * m, base = H - (mob ? 40 : 46), top = tlTrackY() + (mob ? 44 : 56), boxH = Math.max(40, base - top), n = t.lines.length;
+  t.tx = Math.round((t.i + 1) / NS * W) + .5; t.ty = tlTrackY();
+  const avail = W - 2 * m, base = H - (mob ? 40 : 46), top = t.ty + (mob ? 44 : 56), boxH = Math.max(40, base - top), n = t.lines.length;
   if (HB) {
-    const upem = HB.upem, capU = HB.capH, fsH = boxH * upem / (capU * (n + TPGAP * (n - 1)));
-    const fsW = wd => avail * upem / Math.max(...t.lines.map(l => tpShape(l, wd).reduce((a, g) => a + g.ax, 0)));
+    const upem = HB.upem, capU = HB.capH, fsH = boxH * upem / (capU * (n + TTGAP * (n - 1)));
+    const fsW = wd => avail * upem / Math.max(...t.lines.map(l => ttShape(l, wd).reduce((a, g) => a + g.ax, 0)));
     let wd;
     if (fsW(50) <= fsH) wd = 50; else if (fsW(115) >= fsH) wd = 115;
     else { let lo = 50, hi = 115; for (let k = 0; k < 12; k++) { const mid = (lo + hi) / 2; if (fsW(mid) > fsH) lo = mid; else hi = mid; } wd = (lo + hi) / 2; }
-    const fs = Math.min(fsW(wd), fsH), sc = fs / upem, cap = capU * sc, pitch = cap * (1 + TPGAP);
-    t.fit = { wd, fs, sc, cap, pitch, base, m, N: 0, lines: t.lines.map((l, li) => {
-      let x = m; const G = tpShape(l, wd).map(g => { const o = { gid: g.gid, cx: x + (g.dx + g.ax / 2) * sc }; x += g.ax * sc; return o; });
+    const fs = Math.min(fsW(wd), fsH), sc = fs / upem, cap = capU * sc, pitch = cap * (1 + TTGAP);
+    const lines = t.lines.map((l, li) => {
+      let x = m; const G = [];
+      ttShape(l, wd).forEach(gl => {
+        const { out } = glyphOutline(gl.gid, wd, TTW), ox = x + gl.dx * sc, P = new Path2D();
+        let gx0 = 1e9, gx1 = -1e9;
+        out.forEach(c => { for (let k = 0; k < c.length; k += 2) { const X = ox + c[k] * sc, Y = -c[k + 1] * sc; if (k) P.lineTo(X, Y); else P.moveTo(X, Y); if (X < gx0) gx0 = X; if (X > gx1) gx1 = X; } P.closePath(); });
+        if (out.length) G.push({ P, cx: (gx0 + gx1) / 2 });
+        x += gl.ax * sc;
+      });
       return { G, yb: base - (n - 1 - li) * pitch, x0: m, x1: x };
-    }) };
-    t.fit.N = t.fit.lines.reduce((a, l) => a + l.G.length, 0);
+    });
+    const dm = Math.max(1, ...lines.flatMap(l => l.G.map(g => Math.abs(g.cx - t.tx))));
+    lines.forEach(l => l.G.forEach(g => { g.dn = Math.abs(g.cx - t.tx) / dm; }));
+    t.fit = { lines, cap, m };
   } else {                                                 // before the font's outlines have come: the same lines as type
-    const fam = wsGeom().font, c = t.g; c.font = `900 100px ${fam}`;
+    const fam = wsGeom().font, c = t.g; c.font = `100 100px ${fam}`;
     const capR = (c.measureText('H').actualBoundingBoxAscent || 72) / 100, wmax = Math.max(...t.lines.map(l => c.measureText(l).width));
-    const fs = Math.min(avail * 100 / wmax, boxH / (capR * (n + TPGAP * (n - 1)))), cap = capR * fs, pitch = cap * (1 + TPGAP);
-    t.fit = { fb: true, fam, fs, cap, pitch, base, m, lines: t.lines.map((l, li) => ({ text: l, yb: base - (n - 1 - li) * pitch })) };
+    const fs = Math.min(avail * 100 / wmax, boxH / (capR * (n + TTGAP * (n - 1)))), pitch = capR * fs * (1 + TTGAP);
+    t.fit = { fb: true, fam, fs, m, lines: t.lines.map((l, li) => ({ text: l, yb: base - (n - 1 - li) * pitch, x0: m, x1: m + c.measureText(l).width * fs / 100 })) };
   }
   t.key = '';
+}
+function ttDraw(t, st) {
+  const F = t.fit, g = t.g; if (!F || !g) return;
+  g.clearRect(0, 0, t.cw, t.chh); if (st <= 0) return;
+  const n = F.lines.length, tx = t.tx, ty = t.ty, yLow = F.lines[n - 1].yb, seg = (a, b) => clamp((st - a) / (b - a), 0, 1);
+  g.fillStyle = g.strokeStyle = '#111111'; g.lineWidth = 1;
+  // the hairline from the tick: down past the baselines, then back up into the timeline
+  const d = easeInOut(seg(0, .3)), r = easeInOut(seg(.6, .9)), yb = r > 0 ? lerp(yLow, ty, r) : lerp(ty, yLow, d);
+  if (yb - ty > .5) { g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx, yb); g.stroke(); }
+  const ra = 1 - smt(.62, .88, st);
+  F.lines.forEach((ln, li) => {
+    // its rule: out from the hairline once it has passed this baseline, to the ends of the line
+    const at = .3 * Math.sqrt(clamp((ln.yb - ty) / Math.max(1, yLow - ty), 0, 1)), b = easeInOut(seg(at, at + .22));
+    if (b > 0 && ra > 0) { g.globalAlpha = ra; g.beginPath(); g.moveTo(lerp(tx, ln.x0, b), ln.yb + .5); g.lineTo(lerp(tx, ln.x1, b), ln.yb + .5); g.stroke(); g.globalAlpha = 1; }
+    // the letters stand up out of it, outward from the hairline
+    if (F.fb) {
+      const sy = easeInOut(seg(.42 + .05 * li, .8)); if (sy <= 0) return;
+      g.save(); g.translate(F.m, ln.yb); g.scale(1, Math.max(sy, .004)); g.font = `100 ${F.fs.toFixed(2)}px ${F.fam}`; g.textBaseline = 'alphabetic'; g.fillText(ln.text, 0, 0); g.restore();
+      return;
+    }
+    ln.G.forEach(G => {
+      const s0 = .4 + .2 * G.dn, sy = easeInOut(seg(s0, s0 + .32)); if (sy <= 0) return;
+      g.save(); g.translate(0, ln.yb); g.scale(1, Math.max(sy, .004)); g.fill(G.P); g.restore();
+    });
+  });
 }
 function tpFrame(t) {
   const y = cur - t.top;
   if (y < -vh * 1.2 || y > t.L + vh * 1.2) return;
   if (SMOOTH) { const s = blockPin(t.blk, y)[0].toFixed(2); if (s !== t.pin) { t.pin = s; t.frame.style.transform = `translate3d(0,${s}px,0)`; } }
-  const FH = t.chh || vh;
-  const tin = lerp(PH.appear[0], INTRO_END, clamp((y + .55 * FH) / (.55 * FH + .95 * vh), 0, 1));
-  const eo = clamp((y - (t.L - .45 * vh)) / (1.15 * vh), 0, 1);
-  const key = `${tin.toFixed(3)}|${eo.toFixed(3)}|${t.fit && t.fit.fb ? 0 : 1}`; if (key === t.key) return; t.key = key;
-  tpDraw(t, tin, eo);
+  const FH = t.chh || vh, pin = clamp((y + .35 * FH) / (.35 * FH + .9 * vh), 0, 1), pout = clamp((y - (t.L - .3 * vh)) / (.3 * vh + .4 * FH), 0, 1);
+  const st = Math.min(pin, 1 - pout), key = st.toFixed(4) + (t.fit && t.fit.fb ? 'f' : '');
+  if (key === t.key) return; t.key = key; ttDraw(t, st);
 }
-function tpDraw(t, tin, eo) {
-  const F = t.fit, g = t.g; if (!F || !g) return;
-  g.clearRect(0, 0, t.cw, t.chh); g.fillStyle = '#111111';
-  const e2 = easeInOut(eo), sy = 1 + 1.6 * e2, YB = F.base - (F.base + 60) * Math.pow(e2, 1.25) * 1.15;   // the way out: up, stretched from the last baseline
-  const wOut = 900 - 800 * smt(0, .75, eo);
-  if (F.fb) {
-    const a = easeOut3(clamp((tin - PH.appear[0]) / (INTRO_END - PH.appear[0]), 0, 1));
-    g.font = `900 ${F.fs.toFixed(2)}px ${F.fam}`; g.textBaseline = 'alphabetic'; g.globalAlpha = a;
-    F.lines.forEach(ln => { const yr = ln.yb + (1 - a) * F.cap * .6; g.save(); g.translate(F.m, eo > 0 ? YB - (F.base - yr) * sy : yr); if (eo > 0) g.scale(1, sy); g.fillText(ln.text, 0, 0); g.restore(); });
-    g.globalAlpha = 1; return;
-  }
-  const n = F.lines.length, A0 = LA / Math.sqrt(n), fillH = t.chh + 2, capU = HB.capH, Hn = F.cap;
-  let gi = 0;
-  F.lines.forEach((ln, li) => {
-    const cxW = (ln.x0 + ln.x1) / 2, half = Math.max(1, (ln.x1 - ln.x0) / 2), off = (n - 1 - li) * F.pitch;
-    ln.G.forEach(G => {
-      const u = tin - .4 * gi / Math.max(1, F.N - 1); gi++;
-      let A, p, B, yb;
-      if (u < PH.appear[1]) { const e = expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); A = A0; p = .86; B = LB; yb = fillH * e - off; }
-      else if (u < PH.sweep[1]) { A = A0; p = .86 - .74 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); B = LB; yb = fillH - off; }
-      else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); A = A0 * (1 - e); p = .12; B = LB * (1 - e); yb = lerp(fillH - off, ln.yb, e); }
-      if (yb + off < 1) return;
-      const eg = qio(clamp((u - PH.sweep[0] + .1) / (PH.sweep[1] - PH.sweep[0]), 0, 1));
-      const { out, adv } = glyphOutlineC(G.gid, wPath(u, F.wd), Math.min(G0 + (G1 - G0) * eg, wOut));
-      const x0 = G.cx - adv * F.sc / 2, tb = Math.tanh((1 - p) / LR);
-      g.beginPath();
-      for (const c of out) {
-        for (let k = 0; k < c.length; k += 2) {
-          const xl = x0 + c[k] * F.sc, gg = 1 - c[k + 1] / capU, d = (gg - p) / LR, chh = Math.cosh(d), s = 1 / (chh * chh);
-          const dx = clamp((xl - cxW) / half, -1.3, 1.3), Ax = A * (1 - LC * dx * dx);
-          const X = cxW + (xl - cxW) * (1 + B * s);
-          let Y = yb - (1 - gg) * Hn + Ax * LR * Hn * (Math.tanh(d) - tb);
-          if (eo > 0) Y = YB - (F.base - Y) * sy;
-          if (k) g.lineTo(X, Y); else g.moveTo(X, Y);
-        }
-        g.closePath();
-      }
-      g.fill('nonzero');
-    });
-  });
+// the Commedia's title, in the opening's frame: once the timeline has formed (u screen heights after it)
+const DCTT = { in0: .3, in1: 1.2, out0: 1.6, out1: 2.2 };
+let dcTT = null;
+function dcTitle(u) {
+  const t = dcTT; if (!t) return;
+  const st = u < 0 ? 0 : Math.min(clamp((u - DCTT.in0) / (DCTT.in1 - DCTT.in0), 0, 1), 1 - clamp((u - DCTT.out0) / (DCTT.out1 - DCTT.out0), 0, 1));
+  const key = st.toFixed(4) + (t.fit && t.fit.fb ? 'f' : ''); if (key === t.key) return; t.key = key; ttDraw(t, st);
 }
-hbReady.then(() => { if (HB) chapters.forEach(ch => { if (ch.tp) tpFit(ch.tp); }); });
+hbReady.then(() => { if (HB) { chapters.forEach(ch => { if (ch.tp) ttFit(ch.tp); }); if (dcTT) ttFit(dcTT); } });
 let introSkip = false;
 function introFrame(now) {
   if (!fontsReady) return;                                 // the screen stays empty until Gotham has arrived
@@ -1221,7 +1218,7 @@ function layout() {
   html.style.setProperty('--A', A + 'px');
   fitHero(); SG = null; stageCuts.clear();
   DCU = vw < 700 ? 7 : 8.5; UEND = DCT.in1 + DCU;
-  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND;   // TAO → lines; then the dark and the Commedia
+  SA = vh * (vw < 700 ? 1.8 : 2.2) * .6; SB = vh * UEND; window.__SA = SA;   // TAO → lines; then the dark and the Commedia
   chapters.forEach(ch => wcLayout(ch));
   WC0 = SA + vh * (DCT.in1 + DCU * .955);                   // the photograph is whole (the 3D ends at .95)
   SD = WC0 + chapters[0].wc.L;                              // … and its pictures follow in the same frame
@@ -1237,7 +1234,9 @@ function layout() {
     w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
     if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: tlTrackY() + (vw < 700 ? 30 : 24) }, wg));   // under the timeline's labels
   });
-  chapters.forEach(ch => { const t = ch.tp; if (!t) return; t.L = vh * 2; t.el.style.height = ((t.frame.offsetHeight || vh) + t.L).toFixed(0) + 'px'; t.frame.style.transform = ''; t.pin = ''; t.key = ''; tpFit(t); });
+  chapters.forEach(ch => { const t = ch.tp; if (!t) return; t.L = vh * 1.8; t.el.style.height = ((t.frame.offsetHeight || vh) + t.L).toFixed(0) + 'px'; t.frame.style.transform = ''; t.pin = ''; t.key = ''; ttFit(t); });
+  if (!dcTT) dcTT = { i: 0, cv: $('.dc-tt'), frame: stageFrameEl, lines: ttWords(DATA[0].t), key: '', fit: null };
+  ttFit(dcTT);
   const sp = SMOOTH ? cur : scrollY;
   wsList.forEach(ch => { ch.ws.top = docTop(ch.ws.el); });
   chapters.forEach(ch => { if (ch.tp) ch.tp.top = docTop(ch.tp.el); });
@@ -1271,7 +1270,7 @@ function docTop(el) { let y = 0; for (let e = el; e && e !== main; e = e.offsetP
 // (dc/dc3d.js), and the model gives way to the photograph of the book
 const dcDark = $('.dc-dark'), dcLayer = $('.dc-layer'), dcCv = $('.dc-cv'), dcPhoto = $('.dc-photo'), dcPhotoBg = $('.dc-photo-bg');
 const DCV = '57';                                         // bump with every change to dc/dc3d.js (the browser keeps it otherwise)
-const DCT = { dark0: .2, dark1: .62, out0: .75, out1: 1.15, in0: .45, in1: .9 };
+const DCT = { dark0: 2.3, dark1: 2.72, out0: 2.85, out1: 3.25, in0: 2.55, in1: 3.0 };   // after its title (DCTT)
 let dc = null, dcState = 0, dcIdle = 0, DCU = 8.5, TLS = [], dcKey = '', dcMoving = false, dcSt = '';
 function dcLoad() {
   dcState = 1;
@@ -1311,12 +1310,12 @@ function dcStep(u) {
         out = easeInOut(clamp((u - DCT.out0) / (DCT.out1 - DCT.out0), 0, 1)),
         vin = easeInOut(clamp((u - DCT.in0) / (DCT.in1 - DCT.in0), 0, 1));
   dcDk = dk;
-  const st = `${dk.toFixed(3)}|${out.toFixed(3)}|${vin.toFixed(3)}`;
+  const st = `${dk.toFixed(3)}|${out.toFixed(3)}|${vin.toFixed(3)}|${smt(DCTT.in0 - .05, DCTT.in0 + .25, u).toFixed(3)}`;
   if (st !== dcSt) {
     dcSt = st;
     dcDark.style.opacity = dk.toFixed(3);
     const iv = smt(.38, .62, dk); ixEl.style.filter = iv > 0 ? `invert(${iv.toFixed(3)})` : '';   // the ink flips to light as the paper passes mid-grey
-    ixEl.style.opacity = out > 0 ? (1 - out).toFixed(3) : '';
+    const ixo2 = Math.max(out, smt(DCTT.in0 - .05, DCTT.in0 + .25, u)); ixEl.style.opacity = ixo2 > 0 ? (1 - ixo2).toFixed(3) : '';
     ixEl.style.transform = out > 0 ? `translate3d(0,${(-16 * out).toFixed(1)}px,0)` : '';
     dcLayer.style.opacity = vin.toFixed(3); dcLayer.style.visibility = vin > 0 ? 'visible' : '';
   }
@@ -1376,7 +1375,7 @@ function tlIntro(q, u) {
 /* the full Index, from the nav */
 const ixo = $('#ixo'), ixoList = $('.ixo-list', ixo);
 DATA.forEach((p, i) => { const a = document.createElement('a'); a.href = '#'; a.dataset.wk = i; a.innerHTML = `<span>${pad(i + 1)}</span><span>${p.t}</span><span>${p.y}</span>`; ixoList.appendChild(a); });
-const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].tp ? chapters[i].tp.top + vh * 1.05 : chapters[i].ws ? chapters[i].ws.top : chapters[i].wc.top;
+const workStart = i => i === 0 ? SA + vh * 1.25 : chapters[i].tp ? chapters[i].tp.top + vh * 1.05 : chapters[i].ws ? chapters[i].ws.top : chapters[i].wc.top;
 /* ---------- the pictures: sizes, then every frame ---------- */
 function wcLayout(ch) {
   const w = ch.wc, n = w.S.length, sAR = vw / vh, mob = vw < 700;
