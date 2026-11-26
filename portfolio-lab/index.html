@@ -218,7 +218,7 @@ html.smooth .wc-frame{will-change:transform}
   .lay-wide .wc-x{object-fit:cover} }
 .wc-x{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
 /* flats and pile: each picture placed by the script (flLayout) at one common scale, then brought in one by one (flFrame) */
-.wc-set.lay-flats,.wc-set.lay-pile{display:block}
+.wc-set.lay-flats,.wc-set.lay-pile{display:block;left:0;top:0;width:100%;height:100%}
 .lay-flats .wc-it,.lay-pile .wc-it{position:absolute;flex:none;opacity:0;will-change:opacity,transform}
 .lay-flats .wc-it:first-child{opacity:1}
 .wc-3d{object-fit:unset}
@@ -410,7 +410,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script src="cm/lines.js?v=96"></script>
-<script src="lm.js?v=104"></script>
+<script src="lm.js?v=107"></script>
 <script src="tt/tt-data.js?v=93"></script>
 <script src="tt/tt-world.js?v=93"></script>
 <script>
@@ -448,8 +448,8 @@ const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy', 'Brick': 'br'
    stage ended on, shown exactly as the stage showed it, so the hand-over is not seen. A quiet text, bottom left, rolls slowly up through its window as the pictures go by; a counter bottom right.
    The Commedia's film is the second picture: it plays (muted, looping) while it is on screen; sound on request. */
 const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', poster: 'dc/dc-film.jpg', posterS: 'dc/dc-film-s.jpg', ar: 16 / 9 },
-  // Compressed Modernity's film, near the end: just before the last loop (a negative place counts from the end)
-  1: { at: -1, src: 'cm/x/cm-film.mp4?v=97', srcS: 'cm/x/cm-film-s.mp4?v=97', poster: 'cm/x/cm-film.jpg?v=97', posterS: 'cm/x/cm-film-s.jpg?v=97', ar: 16 / 9 } };
+  // Compressed Modernity's film, at the end
+  1: { at: 1e3, src: 'cm/x/cm-film.mp4?v=97', srcS: 'cm/x/cm-film-s.mp4?v=97', poster: 'cm/x/cm-film.jpg?v=97', posterS: 'cm/x/cm-film-s.jpg?v=97', ar: 16 / 9 } };
 /* Compressed Modernity's pictures, from the work's own folder: after the stage's last photograph, sets of one to three
    pictures or film loops (never more than three to a screen), each whole on the black: the paper in the wind (from the
    film); rubbing, in red and in green; trials on paper and the survey drawings of the ground; then each book where it
@@ -459,7 +459,8 @@ const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', post
 const CMI = (id, w, h) => ({ t: 'i', src: `cm/x/${id}.jpg?v=97`, srcS: `cm/x/${id}-s.jpg?v=97`, ar: w / h });
 /* a book's inner pages as flat sheets, all at one scale (a page is a page): screens holding more and more of them, each
    screen's sheets coming in one by one as it is scrolled; u: the first screen's one spread opens out from a single page */
-const CMF = (pre, w, h, counts, u) => { let i = 0; return counts.map((c, q) => ({ lay: 'flats', u: !!u && q === 0, it: Array.from({ length: c }, () => CMI(pre + pad(++i), w, h)) })); };
+const CMF = (pre, w, h, n, brk) => Array.from({ length: n }, (_, k) => Object.assign(CMI(pre + pad(k + 1), w, h), k === 0 && brk ? { brk: true } : {}));
+const CMB = (u, ...groups) => ({ lay: 'flats', u: !!u, it: [].concat(...groups) });
 const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (lm.js), opened as the page scrolls
 const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
@@ -491,27 +492,28 @@ const SETS = { 'Compressed Modernity': [
   // the same width as the rows above
   { lay: 'sheets', it: [CMI('p0', 1556, 2200), CMI('p1', 1556, 2200), CMI('p2', 1556, 2200)] },
   { lay: 'wide', it: [CMI('p7w', 2200, 1556)] },
+  { lay: 'one', it: [CMV('v4')] },
+  // the door-book's structure as a model in lines: it opens, shuts again, and turns flat to the photograph of the
+  // green book shut on the grass, which comes up over it
+  { lay: 'model', it: [CMW('door')] },
   { lay: 'full', it: [CMI('g0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('g3', 2200, 1466), CMI('g4', 2200, 1466)] },
-  // the green book's inner pages, every spread, shadowed: one, then two, four, six at a time
-  ...CMF('gb', 2200, 390, [1, 2, 4, 6, 6, 6], true),
+  // each book's inner pages on one screen, all at one scale (a page is a page): the first spread opens out of a
+  // single page, then the rest come in one by one as the screen is scrolled, filling it around the text
+  CMB(true, CMF('gb', 2200, 390, 25)),
   { lay: 'full', it: [CMI('r0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('r1', 2200, 1467), CMI('r2', 2200, 1467)] },
-  // the blue book's inner pages, flat sheets (no shadow)
-  ...CMF('bb', 1100, 397, [1, 4, 6, 6, 9, 9, 9]),
+  CMB(false, CMF('bb', 1100, 397, 44)),
   { lay: 'full', it: [CMI('d0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('d1', 2200, 1327), CMI('d2', 2200, 1327)] },
-  // the red book: its first three spreads shadowed, then the rest of its pages as flat sheets
-  ...CMF('rs', 2200, 390, [1, 2], true),
-  ...CMF('rb', 1100, 397, [1, 3, 6, 9, 9, 9, 9]),
+  // the red book: its three shadowed spreads first, then (from a new row) the rest of its pages as flat sheets
+  CMB(true, CMF('rs', 2200, 390, 3), CMF('rb', 1100, 397, 46, true)),
   { lay: 'trio', it: [CMI('c0', 1998, 880), CMI('c1', 2200, 929), CMI('c2', 2137, 899)] },
-  // the three books photographed shut, half open and opened out, packed close together; they come in shortest first
+  // the three books photographed shut, half open and opened out, packed close over the whole screen; they come in
+  // shortest first
   { lay: 'pile', it: [[1541], [467], [829], [447], [1564], [442], [859], [886], [1529], [454], [474], [863], [1513], [879], [442],
     [1555], [484], [829], [455], [1518], [444], [859], [861], [1595], [835], [443], [1588], [858], [1576], [1529]].map(([w], q) => CMI('n' + pad(q + 1), w, 320)) },
-  { lay: 'one', it: [CMI('k0', 2200, 1467)] },
-  // the door-book's structure as a model in lines: shut, then its two leaves swing open on the pages inside
-  { lay: 'one', it: [CMW('door')] },
-  { lay: 'one', it: [CMV('v4')] },
+  { lay: 'full', it: [CMI('k0', 2200, 1467)] },
 ],
 /* Brick's, from its own folder: the factory (its walls of test cubes, scrap, pipes, the machines); the day's work in
    film (filling the moulds, the mould on the vibrating table, nails pressed into the wet cement, the round-head nails
@@ -1398,7 +1400,7 @@ function wcLayout(ch) {
   const w = ch.wc, n = w.S.length, sAR = vw / vh, mob = vw < 700;
   w.a = []; w.d = []; let acc = 0;
   w.S.forEach((s, k) => {
-    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : s.kind === 'set' && s.fl ? (s.lay === 'pile' ? 2 : s.u ? 1 : .6 + .07 * s.it.length) : s.kind === 'set' && s.w3 ? 2 : s.kind === 'set' && s.ln ? 1.5 : s.kind === 'set' && s.vids.length ? .95 : k === 0 && w.hosted ? WC_FIRST : WC_UNIT); w.d.push(d); acc += d;
+    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : s.kind === 'set' && s.fl ? (s.lay === 'pile' ? 2.4 : 1 + .05 * s.it.length) : s.kind === 'set' && s.w3 ? 2 : s.kind === 'set' && s.ln ? 1.5 : s.kind === 'set' && s.vids.length ? .95 : k === 0 && w.hosted ? WC_FIRST : WC_UNIT); w.d.push(d); acc += d;
     s.st = '';
   });
   w.L = acc - w.d[n - 1] * .5 + vh * WC_TAIL;
@@ -1461,56 +1463,55 @@ function lnFrame(w, yy, k) {
 /* flats: a book's pages at one scale for every screen of them: the scale is set so that six spreads (two to a row, three
    rows) fit the band with room around them, and a single page is half a spread. Pile: the photographs in justified
    rows packed close, the rows' height found so that they fill the band. */
-const FL_SPREAD = 1184 / 210;
+/* flats and pile: the pictures packed in rows over the whole frame, under the timeline and around the text (above
+   its top across the full width, beside it to its right below that): flats all at one height (one scale, so a page is
+   a page), the largest that lets them all in; the spare width of each full row goes into its gaps, the spare height
+   between the rows. A picture marked brk starts a new row (a book's second kind of page). */
+function flRegion(w, B) {
+  const cs = getComputedStyle(html), gut = parseFloat(cs.getPropertyValue('--gut')) || 20, m = parseFloat(cs.getPropertyValue('--m')) || 20, mob = vw < 700;
+  const W = B.clientWidth, H = B.clientHeight, t = w.txt;
+  const R = { x0: m, x1: W - m, y0: tlTrackY() + (mob ? 46 : 40), y1: H - m, ex: m, ey: 1e9, gut };
+  if (t) { const ty = t.offsetTop, tr = t.offsetLeft + t.offsetWidth; if (mob) R.y1 = ty - gut; else { R.ex = tr + gut * 2; R.ey = ty - gut; } }
+  return R;
+}
+function flPack(ar, brk, R, h, g, gv) {
+  const rows = []; let y = R.y0, cur = [], x = 0;
+  const span = yy => yy + h > R.ey ? [R.ex, R.x1] : [R.x0, R.x1];
+  let sp = span(y);
+  const close = () => { rows.push({ y, a: sp[0], b: sp[1], k: cur, w: x }); y += h + gv; sp = span(y); cur = []; x = 0; };
+  for (let k = 0; k < ar.length; k++) {
+    const wk = ar[k] * h;
+    if (cur.length && (brk[k] || x + g + wk > sp[1] - sp[0])) close();
+    if (wk > sp[1] - sp[0]) { if (!cur.length && sp[0] > R.x0) { y = Math.max(y, R.ey - h + 1); sp = [R.x0, R.x1]; } return null; }
+    cur.push(k); x += (cur.length > 1 ? g : 0) + wk;
+  }
+  if (cur.length) close();
+  return rows.length && rows[rows.length - 1].y + h <= R.y1 + .5 ? rows : null;
+}
 function flLayout(w) {
   const F = w.S.filter(s => s.fl); if (!F.length) return;
-  const B = F[0].m, W = B.clientWidth, H = B.clientHeight; if (!W || !H) return;
-  const gut = parseFloat(getComputedStyle(html).getPropertyValue('--gut')) || 20, mob = vw < 700;
-  const gx = mob ? gut : gut * 3, gy = mob ? gut : gut * 2;
-  const h = mob ? Math.min(W / FL_SPREAD, (W - gx) / 5.6, (H - 5 * gy) / 6) : Math.min((W - gx) / (2 * FL_SPREAD), (H - 2 * gy) / 3) * .86;
+  const B = F[0].m; if (!B.clientWidth || !B.clientHeight) return;
+  const R = flRegion(w, B);
   const place = (el, x, y, ww, hh) => { const st = el.style; st.left = x.toFixed(1) + 'px'; st.top = y.toFixed(1) + 'px'; st.width = ww.toFixed(1) + 'px'; st.height = hh.toFixed(1) + 'px'; };
   F.forEach(s => {
-    const fig = [...s.m.children], n = s.it.length; s.fp = -1;
-    if (s.lay === 'pile') { pileLayout(s, fig, W, H, mob ? gut * .5 : gut * .6, place); return; }
-    const iw = s.it.map(it => h * it.ar), cap = s.it[0].ar > 4 ? 2 : 3;
-    const c = Math.max(1, Math.min(cap, Math.floor((W + gx) / (iw[0] + gx)))), r = Math.ceil(n / c), base = Math.floor(n / r), ex = n % r;
-    const rows = []; let i = 0;
-    for (let q = 0; q < r; q++) { const m = base + (q < ex ? 1 : 0); rows.push(Array.from({ length: m }, (_, z) => i + z)); i += m; }
-    let y = (H - (r * h + (r - 1) * gy)) / 2;
-    rows.forEach(row => {
-      let x = (W - (row.reduce((a, k) => a + iw[k], 0) + (row.length - 1) * gx)) / 2;
-      row.forEach(k => { place(fig[k], x, y, iw[k], h); x += iw[k] + gx; });
-      y += h + gy;
+    const fig = [...s.m.children], ar = s.it.map(it => it.ar), brk = s.it.map(it => !!it.brk); s.fp = -1;
+    const g = s.lay === 'pile' ? R.gut * .5 : R.gut * .9;
+    let lo = 4, hi = R.y1 - R.y0;
+    for (let it = 0; it < 30; it++) { const mid = (lo + hi) / 2; if (flPack(ar, brk, R, mid, g, g)) lo = mid; else hi = mid; }
+    const h = lo; let gl = g, gh = g * 6;
+    for (let it = 0; it < 20; it++) { const mid = (gl + gh) / 2; if (flPack(ar, brk, R, h, g, mid)) gl = mid; else gh = mid; }
+    const rows = flPack(ar, brk, R, h, g, gl) || flPack(ar, brk, R, h, g, g) || [];
+    rows.forEach((r, ri) => {
+      const last = ri === rows.length - 1 || (rows[ri + 1] && brk[rows[ri + 1].k[0]]), spare = (r.b - r.a) - r.w;
+      const gx = !last && r.k.length > 1 ? g + Math.min(spare / (r.k.length - 1), g * 4) : g;
+      let x = r.a + (last ? 0 : Math.max(0, (spare - (gx - g) * (r.k.length - 1)) / 2));
+      r.k.forEach(k => { place(fig[k], x, r.y, ar[k] * h, h); x += ar[k] * h + gx; });
     });
-    s.ro = s.it.map((_, k) => k);
+    if (s.lay === 'pile') {                                 // shortest first, then the half-opened, then the opened-out
+      const kind = a => a < 2 ? 0 : a < 3.5 ? 1 : 2, rnd = q => ((q * 7919) % 31) / 31;
+      s.ro = ar.map((a, q) => q).sort((p, q) => kind(ar[p]) - kind(ar[q]) || rnd(p) - rnd(q));
+    } else s.ro = s.it.map((_, k) => k);
   });
-}
-function pileLayout(s, fig, W, H, g, place) {
-  const ar = s.it.map(it => it.ar), A = ar.reduce((a, b) => a + b, 0);
-  // rows broken greedily at a target height, each row then stretched to the full width; the target is tuned until the
-  // rows fill the band's height, and all is scaled down evenly if they still overrun it
-  const rowsAt = t => {
-    const rows = []; let cur = [], sum = 0;
-    ar.forEach((a, k) => {
-      if (cur.length && (sum + a) * t + cur.length * g > W && Math.abs(W - (sum * t + (cur.length - 1) * g)) < Math.abs((sum + a) * t + cur.length * g - W)) { rows.push(cur); cur = []; sum = 0; }
-      cur.push(k); sum += a;
-    });
-    if (cur.length) rows.push(cur);
-    return rows.map((r, q) => { const sa = r.reduce((x, k) => x + ar[k], 0), last = q === rows.length - 1; let h = (W - (r.length - 1) * g) / sa; if (last && h > t * 1.25) h = t; return { r, h }; });
-  };
-  let t = Math.sqrt(W * H / A), rows = rowsAt(t);
-  for (let it = 0; it < 24; it++) { const tot = rows.reduce((a, b) => a + b.h, 0) + (rows.length - 1) * g; const f = H / tot; if (Math.abs(f - 1) < .01) break; t *= Math.pow(f, .6); rows = rowsAt(t); }
-  const tot = rows.reduce((a, b) => a + b.h, 0) + (rows.length - 1) * g, k = Math.min(1, H / tot);
-  let y = (H - tot * k) / 2;
-  rows.forEach(({ r, h }) => {
-    const hh = h * k, rw = r.reduce((a, q) => a + ar[q] * hh, 0) + (r.length - 1) * g * k;
-    let x = (W - rw) / 2;
-    r.forEach(q => { place(fig[q], x, y, ar[q] * hh, hh); x += ar[q] * hh + g * k; });
-    y += hh + g * k;
-  });
-  // shortest come in first, then the half-opened, then the opened-out; within each, a fixed scatter
-  const kind = a => a < 2 ? 0 : a < 3.5 ? 1 : 2, rnd = q => ((q * 7919) % 31) / 31;
-  s.ro = ar.map((a, q) => q).sort((p, q) => kind(ar[p]) - kind(ar[q]) || rnd(p) - rnd(q));
 }
 function flFrame(w, yy) {
   w.S.forEach((s, j) => {
@@ -1521,16 +1522,17 @@ function flFrame(w, yy) {
     if (P === s.fp) return; s.fp = P;
     if (s.w3) { if (window.LM) s.xs.forEach((c, q) => window.LM.draw(c, P, s.it[q].id, w.lmOpt)); return; }
     const fig = s.m.children, n = s.it.length;
-    if (s.u) {   // one spread: at first only its left page, centred; it opens out to the whole spread
-      const e = easeInOut(clamp((P - .12) / .7, 0, 1)), f = fig[0].style;
+    let P0 = 0;
+    if (s.u) {   // the first spread: at first only its left page, in the middle of its place; it opens out to the whole spread
+      const e = easeInOut(clamp(P / .2, 0, 1)), f = fig[0].style;
       f.opacity = ''; f.clipPath = e >= 1 ? '' : `inset(0 ${(50 * (1 - e)).toFixed(3)}% 0 0)`; f.transform = e >= 1 ? '' : `translate3d(${(25 * (1 - e)).toFixed(3)}%,0,0)`;
-      return;
+      P0 = .2;
     }
-    const ro = s.ro || [], first = s.lay === 'flats' ? 1 : 0, m = n - first, span = s.lay === 'pile' ? .09 : .15;
+    const ro = s.ro || [], first = s.lay === 'flats' ? 1 : 0, m = n - first, span = s.lay === 'pile' ? .09 : Math.max(.06, Math.min(.15, 3 / m));
     ro.forEach((k, q) => {
       const st = fig[k].style;
-      if (q < first) { st.opacity = '1'; return; }
-      const s0 = (q - first) / Math.max(1, m) * (1 - span), e = clamp((P - s0) / span, 0, 1);
+      if (q < first) { if (!s.u) st.opacity = '1'; return; }
+      const s0 = P0 + (q - first) / Math.max(1, m) * (1 - span - P0), e = clamp((P - s0) / span, 0, 1);
       st.opacity = e >= 1 ? '1' : e.toFixed(3); st.transform = e >= 1 ? '' : `translate3d(0,${(10 * (1 - easeInOut(e))).toFixed(2)}px,0)`;
     });
   });

@@ -38,7 +38,7 @@
   const M = {};
 
   M.door = (() => {
-    const H = 1, W = .62, K = 5, SAG = .3 * W, DEP = .02, BACK = .3;
+    const H = 1, W = .39, K = 5, SAG = .3 * W, DEP = .014, BACK = .2;
     const FINAL = [150, 133, 116, 99, 82].map(a => a * D2R);
     const doorFace = (() => { const L = [];
       const posts = [.05, .12, .19, .26, .33, .40, .46];
@@ -59,15 +59,17 @@
       return L; })();
     const faces = [-1, 1].map(side => Array.from({ length: K }, (_, k) => ({ o: k === 0 ? doorFace : pageFace(11 + k * 3 + (side > 0 ? 50 : 0)), i: pageFace(97 + k * 5 + (side > 0 ? 50 : 0)) })));
     return {
-      ns: 30,
-      cam: P => ({ phi: -.62 + .5 * ease(clamp(P, 0, 1)), el: .3, R: 3.7, T: [0, .46, -.08] }),
-      fix: (cw, ch, o) => ({ F: Math.min(ch * 1.9, cw * 1.2) * (1.12 - .12 * ease(o)), cx: cw / 2, cy: ch * (.46 + .04 * ease(o)) }),
-      open: P => clamp((P - .3) / .66, 0, 1),
-      build(o) {
+      ns: 30, envelope: true,
+      cam: P => ({ phi: -.62 + .5 * ease(clamp(P / .7, 0, 1)), el: .3, R: 3.2, T: [0, .46, -.06] }),
+      // it opens, holds, and shuts again before the photograph of the book shut on the grass (g0), which it then
+      // turns to face, flat, its front on the cover in the photograph
+      open: P => P < .58 ? ease(clamp((P - .08) / .36, 0, 1)) : 1 - ease(clamp((P - .58) / .2, 0, 1)),
+      end: { img: [2200, 1467], anchor: [[[-W, H, 0], [.368, .202]], [[W, 0, 0], [.673, .789]]], cam: { phi: 0, el: 0, R: 40, T: [0, H / 2, 0], roll: .019 } },
+      build(o, e = 0) {
         const S = [];
         [-1, 1].forEach((side, si) => { for (let k = 0; k < K; k++) {
           const ok = ease(clamp((o - .1 * k) / .6, 0, 1)), th = ok * FINAL[k], c = Math.cos(th), sn = Math.sin(th), len = W * (1 - .03 * k), off = -k * DEP;
-          const pt = s => { const u = s * len, q = u / W, v = SAG * (2 * q - q * q) + off; return [side * (-W + u * c - v * sn), u * sn + v * c]; };
+          const pt = s => { const u = s * len, q = u / W, v = SAG * (1 - e) * (2 * q - q * q) + off; return [side * (-W + u * c - v * sn), u * sn + v * c]; };
           S.push({ B: s => { const p = pt(s); return [p[0], 0, p[1]]; }, T: s => { const p = pt(s); return [p[0], H, p[1]]; }, flip: side < 0, outer: faces[si][k].o, inner: faces[si][k].i });
         } });
         const bp = s => [-W + 2 * W * s, -BACK * Math.sin(Math.PI * s) - K * DEP];
