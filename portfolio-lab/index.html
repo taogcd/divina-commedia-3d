@@ -133,7 +133,14 @@ html.ready .mega .ln{overflow:visible}
 .dc-photo{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:fill;opacity:0}
 /* the work stages (Compressed Modernity, Fourteen Years): at the head of the chapter, a frame pinned for a stretch of
    scroll like the opening; the work's title is written on its line, as in the Index (cm/cm-stage.js, fy/fy-stage.js) */
-.ws{position:relative}
+.ws{position:relative;z-index:2}
+/* between one work and the next, a white page with the work's title, set and moved as TAO. is at the opening */
+.tp{position:relative;z-index:2}
+.tp-frame{position:relative;height:100vh;height:100lvh;overflow:hidden;background:var(--paper)}
+html:not(.smooth) .tp-frame{position:sticky;top:0}
+html.smooth .tp-frame{will-change:transform}
+.tp-cv{position:absolute;left:0;top:0;width:100%;height:100%}
+.tp-h{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .ws-frame{position:relative;height:100vh;height:100lvh;overflow:hidden}
 html:not(.smooth) .ws-frame{position:sticky;top:0}
 html.smooth .ws-frame{will-change:transform}
@@ -475,11 +482,10 @@ const SETS = { 'Compressed Modernity': [
   // the black-and-white scans, light to dark, in one row
   { lay: 'quad', it: [CMI('m0', 2200, 1556), CMI('m1', 2200, 1556), CMI('m2', 2200, 1556), CMI('m3', 2200, 1556)] },
   { lay: 'pair', it: [CMV('v2'), CMV('v3')] },
-  // the ink scans, sparse to saturated: two rows of three sheets, then the last turned on its side and laid across
+  // the ink scans: a row of three red sheets, then a green one turned on its side and laid across
   // the same width as the rows above
   { lay: 'sheets', it: [CMI('p0', 1556, 2200), CMI('p1', 1556, 2200), CMI('p2', 1556, 2200)] },
-  { lay: 'sheets', it: [CMI('p3', 1556, 2200), CMI('p4', 1556, 2200), CMI('p5', 1556, 2200)] },
-  { lay: 'wide', it: [CMI('p6w', 2200, 1556)] },
+  { lay: 'wide', it: [CMI('p7w', 2200, 1556)] },
   { lay: 'pair', it: [CML('e24', 3508, 2480), CML('e25', 3508, 2480)] },
   { lay: 'full', it: [CMI('g0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('g3', 2200, 1466), CMI('g4', 2200, 1466)] },
@@ -602,6 +608,13 @@ DATA.forEach((p, i) => {
     const frame = $('.ws-frame', sec);
     ch.ws = { k: wk, el: sec, frame, top: 0, L: 1, st: null, pin: '', hk: '' };
   }
+  if (i > 0) {
+    const tsec = document.createElement('section');
+    tsec.className = 'tp'; tsec.setAttribute('aria-label', p.t);
+    tsec.innerHTML = `<div class="tp-frame"><canvas class="tp-cv" aria-hidden="true"></canvas><h2 class="tp-h">${p.t}</h2></div>`;
+    el.prepend(tsec);
+    ch.tp = { el: tsec, frame: $('.tp-frame', tsec), cv: $('.tp-cv', tsec), lines: p.t.split(' '), top: 0, L: 1, pin: '', key: '', fit: null };
+  }
   ch.wc = buildWC(i, p, no, wk, links, i === 0 ? document.querySelector('.stage-frame') : ch.ws ? ch.ws.frame : null);
   if (!ch.wc.hosted) el.appendChild(ch.wc.el);
   chapters.push(ch);
@@ -617,7 +630,8 @@ const wsList = chapters.filter(ch => ch.ws);
    dissolve in step with the scroll, both ways, instead of one page pushing the other off the screen. */
 let BLK = [];
 function blocksLayout() {
-  BLK = [{ frame: stageFrameEl, top: 0, L: SD }].concat(chapters.slice(1).map(ch => ch.ws ? { frame: ch.ws.frame, top: ch.ws.top, L: ch.ws.L, ref: ch.ws } : { frame: ch.wc.frame, top: ch.wc.top, L: ch.wc.L, ref: ch.wc }));
+  BLK = [{ frame: stageFrameEl, top: 0, L: SD }].concat(...chapters.slice(1).map(ch => [ch.tp ? { frame: ch.tp.frame, top: ch.tp.top, L: ch.tp.L, ref: ch.tp } : null,
+    ch.ws ? { frame: ch.ws.frame, top: ch.ws.top, L: ch.ws.L, ref: ch.ws } : { frame: ch.wc.frame, top: ch.wc.top, L: ch.wc.L, ref: ch.wc }].filter(Boolean)));
   BLK.forEach((b, i) => {
     b.FH = b.frame.offsetHeight || vh; b.o = ''; b.next = null;
     const a = BLK[i - 1]; b.prev = a && Math.abs(a.top + a.FH + a.L - b.top) < 4 ? a : null;
@@ -989,10 +1003,18 @@ function introGeom(fs, base, bo, cap) {
   const D = Math.min(window.devicePixelRatio || 1, 2);
   IC.width = Math.round(vw * D); IC.height = Math.round(vh * D); ix.setTransform(D, 0, 0, D, 0, 0);
 }
-function outline(i, wdth, wght) {                          // contours as flat point lists, in font units (y up)
+function outline(i, wdth, wght) { return glyphOutline(HB.gids[i], wdth, wght); }
+const GO = new Map();
+function glyphOutlineC(gid, wdth, wght) {                    // the titles: the same, at instances rounded a little, kept
+  const key = gid + '|' + Math.round(wdth * 2) + '|' + Math.round(wght / 4);
+  let o = GO.get(key); if (o) return o;
+  if (GO.size > 2500) GO.clear();
+  o = glyphOutline(gid, Math.round(wdth * 2) / 2, Math.round(wght / 4) * 4); GO.set(key, o); return o;
+}
+function glyphOutline(gid, wdth, wght) {                   // contours as flat point lists, in font units (y up)
   const f = HB.font, hb = HB.hb;
   f.setVariations([new hb.Variation('wdth', wdth), new hb.Variation('wght', wght)]);
-  const cmds = f.glyphToJson(HB.gids[i]), adv = f.glyphHAdvance(HB.gids[i]), seg = HB.capH / 220, out = [];
+  const cmds = f.glyphToJson(gid), adv = f.glyphHAdvance(gid), seg = HB.capH / 220, out = [];
   let c = null, x = 0, y = 0;
   const pt = (nx, ny) => { c.push(nx, ny); x = nx; y = ny; };
   const line = (x1, y1) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x, y1 - y) / seg)), x0 = x, y0 = y; for (let k = 1; k <= n; k++) pt(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n); };
@@ -1036,6 +1058,98 @@ function drawIntro(t) {
     ix.fill('nonzero');
   });
 }
+/* ---------- the title pages ----------
+   Each work after the first opens on white with its title, one word to a line, set as TAO. is: Acumin Variable at
+   weight 900, at the width (wdth 50–115) and size that let the lines fill the width and the band under the nav, the
+   last line on TAO.'s baseline, ranged left on the margin. Coming in, it plays the opening's lens (the lines slide in
+   from above, magnified at their feet; the lens climbs through the letters as the axes run to the resting instance;
+   the lens relaxes and they settle), scrubbed by the scroll; going out, it does what TAO. does as the opening scrolls
+   on: pulled up and stretched from its baseline, thinning, out of the top, as the next work comes up over it. */
+const TPGAP = .2;
+function tpShape(text, wd) {
+  const f = HB.font, hb = HB.hb;
+  f.setVariations([new hb.Variation('wdth', wd), new hb.Variation('wght', 900)]);
+  const b = new hb.Buffer(); b.addText(text); b.guessSegmentProperties(); hb.shape(f, b);
+  const inf = b.getGlyphInfos(), pos = b.getGlyphPositions();
+  return inf.map((g, k) => ({ gid: g.codepoint, ax: pos[k].xAdvance, dx: pos[k].xOffset }));
+}
+function tpFit(t) {
+  const cs = getComputedStyle(html), m = parseFloat(cs.getPropertyValue('--m')) || 20, mob = vw < 700;
+  const W = t.frame.clientWidth || vw, H = t.frame.offsetHeight || vh, D = Math.min(window.devicePixelRatio || 1, 2);
+  t.cv.width = Math.round(W * D); t.cv.height = Math.round(H * D); t.g = t.cv.getContext('2d'); t.g.setTransform(D, 0, 0, D, 0, 0); t.cw = W; t.chh = H;
+  const avail = W - 2 * m, base = H - (mob ? 40 : 46), top = tlTrackY() + (mob ? 44 : 56), boxH = Math.max(40, base - top), n = t.lines.length;
+  if (HB) {
+    const upem = HB.upem, capU = HB.capH, fsH = boxH * upem / (capU * (n + TPGAP * (n - 1)));
+    const fsW = wd => avail * upem / Math.max(...t.lines.map(l => tpShape(l, wd).reduce((a, g) => a + g.ax, 0)));
+    let wd;
+    if (fsW(50) <= fsH) wd = 50; else if (fsW(115) >= fsH) wd = 115;
+    else { let lo = 50, hi = 115; for (let k = 0; k < 12; k++) { const mid = (lo + hi) / 2; if (fsW(mid) > fsH) lo = mid; else hi = mid; } wd = (lo + hi) / 2; }
+    const fs = Math.min(fsW(wd), fsH), sc = fs / upem, cap = capU * sc, pitch = cap * (1 + TPGAP);
+    t.fit = { wd, fs, sc, cap, pitch, base, m, N: 0, lines: t.lines.map((l, li) => {
+      let x = m; const G = tpShape(l, wd).map(g => { const o = { gid: g.gid, cx: x + (g.dx + g.ax / 2) * sc }; x += g.ax * sc; return o; });
+      return { G, yb: base - (n - 1 - li) * pitch, x0: m, x1: x };
+    }) };
+    t.fit.N = t.fit.lines.reduce((a, l) => a + l.G.length, 0);
+  } else {                                                 // before the font's outlines have come: the same lines as type
+    const fam = wsGeom().font, c = t.g; c.font = `900 100px ${fam}`;
+    const capR = (c.measureText('H').actualBoundingBoxAscent || 72) / 100, wmax = Math.max(...t.lines.map(l => c.measureText(l).width));
+    const fs = Math.min(avail * 100 / wmax, boxH / (capR * (n + TPGAP * (n - 1)))), cap = capR * fs, pitch = cap * (1 + TPGAP);
+    t.fit = { fb: true, fam, fs, cap, pitch, base, m, lines: t.lines.map((l, li) => ({ text: l, yb: base - (n - 1 - li) * pitch })) };
+  }
+  t.key = '';
+}
+function tpFrame(t) {
+  const y = cur - t.top;
+  if (y < -vh * 1.2 || y > t.L + vh * 1.2) return;
+  if (SMOOTH) { const s = blockPin(t.blk, y)[0].toFixed(2); if (s !== t.pin) { t.pin = s; t.frame.style.transform = `translate3d(0,${s}px,0)`; } }
+  const FH = t.chh || vh;
+  const tin = lerp(PH.appear[0], INTRO_END, clamp((y + .55 * FH) / (.55 * FH + .95 * vh), 0, 1));
+  const eo = clamp((y - (t.L - .45 * vh)) / (1.15 * vh), 0, 1);
+  const key = `${tin.toFixed(3)}|${eo.toFixed(3)}|${t.fit && t.fit.fb ? 0 : 1}`; if (key === t.key) return; t.key = key;
+  tpDraw(t, tin, eo);
+}
+function tpDraw(t, tin, eo) {
+  const F = t.fit, g = t.g; if (!F || !g) return;
+  g.clearRect(0, 0, t.cw, t.chh); g.fillStyle = '#111111';
+  const e2 = easeInOut(eo), sy = 1 + 1.6 * e2, YB = F.base - (F.base + 60) * Math.pow(e2, 1.25) * 1.15;   // the way out: up, stretched from the last baseline
+  const wOut = 900 - 800 * smt(0, .75, eo);
+  if (F.fb) {
+    const a = easeOut3(clamp((tin - PH.appear[0]) / (INTRO_END - PH.appear[0]), 0, 1));
+    g.font = `900 ${F.fs.toFixed(2)}px ${F.fam}`; g.textBaseline = 'alphabetic'; g.globalAlpha = a;
+    F.lines.forEach(ln => { const yr = ln.yb + (1 - a) * F.cap * .6; g.save(); g.translate(F.m, eo > 0 ? YB - (F.base - yr) * sy : yr); if (eo > 0) g.scale(1, sy); g.fillText(ln.text, 0, 0); g.restore(); });
+    g.globalAlpha = 1; return;
+  }
+  const n = F.lines.length, A0 = LA / Math.sqrt(n), fillH = t.chh + 2, capU = HB.capH, Hn = F.cap;
+  let gi = 0;
+  F.lines.forEach((ln, li) => {
+    const cxW = (ln.x0 + ln.x1) / 2, half = Math.max(1, (ln.x1 - ln.x0) / 2), off = (n - 1 - li) * F.pitch;
+    ln.G.forEach(G => {
+      const u = tin - .4 * gi / Math.max(1, F.N - 1); gi++;
+      let A, p, B, yb;
+      if (u < PH.appear[1]) { const e = expoOut(clamp((u - PH.appear[0]) / (PH.appear[1] - PH.appear[0]), 0, 1)); A = A0; p = .86; B = LB; yb = fillH * e - off; }
+      else if (u < PH.sweep[1]) { A = A0; p = .86 - .74 * qio((u - PH.sweep[0]) / (PH.sweep[1] - PH.sweep[0])); B = LB; yb = fillH - off; }
+      else { const e = expoIO(clamp((u - PH.collapse[0]) / (PH.collapse[1] - PH.collapse[0]), 0, 1)); A = A0 * (1 - e); p = .12; B = LB * (1 - e); yb = lerp(fillH - off, ln.yb, e); }
+      if (yb + off < 1) return;
+      const eg = qio(clamp((u - PH.sweep[0] + .1) / (PH.sweep[1] - PH.sweep[0]), 0, 1));
+      const { out, adv } = glyphOutlineC(G.gid, wPath(u, F.wd), Math.min(G0 + (G1 - G0) * eg, wOut));
+      const x0 = G.cx - adv * F.sc / 2, tb = Math.tanh((1 - p) / LR);
+      g.beginPath();
+      for (const c of out) {
+        for (let k = 0; k < c.length; k += 2) {
+          const xl = x0 + c[k] * F.sc, gg = 1 - c[k + 1] / capU, d = (gg - p) / LR, chh = Math.cosh(d), s = 1 / (chh * chh);
+          const dx = clamp((xl - cxW) / half, -1.3, 1.3), Ax = A * (1 - LC * dx * dx);
+          const X = cxW + (xl - cxW) * (1 + B * s);
+          let Y = yb - (1 - gg) * Hn + Ax * LR * Hn * (Math.tanh(d) - tb);
+          if (eo > 0) Y = YB - (F.base - Y) * sy;
+          if (k) g.lineTo(X, Y); else g.moveTo(X, Y);
+        }
+        g.closePath();
+      }
+      g.fill('nonzero');
+    });
+  });
+}
+hbReady.then(() => { if (HB) chapters.forEach(ch => { if (ch.tp) tpFit(ch.tp); }); });
 let introSkip = false;
 function introFrame(now) {
   if (!fontsReady) return;                                 // the screen stays empty until Gotham has arrived
@@ -1118,8 +1232,10 @@ function layout() {
     w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; w.frame.style.transform = ''; w.pin = ''; w.hk = '';
     if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: tlTrackY() + (vw < 700 ? 30 : 24) }, wg));   // under the timeline's labels
   });
+  chapters.forEach(ch => { const t = ch.tp; if (!t) return; t.L = vh * 2; t.el.style.height = ((t.frame.offsetHeight || vh) + t.L).toFixed(0) + 'px'; t.frame.style.transform = ''; t.pin = ''; t.key = ''; tpFit(t); });
   const sp = SMOOTH ? cur : scrollY;
   wsList.forEach(ch => { ch.ws.top = docTop(ch.ws.el); });
+  chapters.forEach(ch => { if (ch.tp) ch.tp.top = docTop(ch.tp.el); });
   chapters.forEach(ch => {
     ch.elTop = docTop(ch.el);
     const w = ch.wc;                                         // where the pictures begin (scroll px)
@@ -1255,7 +1371,7 @@ function tlIntro(q, u) {
 /* the full Index, from the nav */
 const ixo = $('#ixo'), ixoList = $('.ixo-list', ixo);
 DATA.forEach((p, i) => { const a = document.createElement('a'); a.href = '#'; a.dataset.wk = i; a.innerHTML = `<span>${pad(i + 1)}</span><span>${p.t}</span><span>${p.y}</span>`; ixoList.appendChild(a); });
-const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].ws ? chapters[i].ws.top : chapters[i].wc.top;
+const workStart = i => i === 0 ? SA + vh * DCT.in1 : chapters[i].tp ? chapters[i].tp.top + vh * 1.05 : chapters[i].ws ? chapters[i].ws.top : chapters[i].wc.top;
 /* ---------- the pictures: sizes, then every frame ---------- */
 function wcLayout(ch) {
   const w = ch.wc, n = w.S.length, sAR = vw / vh, mob = vw < 700;
@@ -1670,6 +1786,7 @@ function frame(now) {
   // hero letters stretch as they leave
   if (!introDone) introFrame(now);
   else if (cur < SD + vh * 1.5) stageFrame();
+  if (introDone) for (const ch of chapters) if (ch.tp) tpFrame(ch.tp);
   if (introDone) for (const ch of wsList) { ch.ws.dark = false; wsFrame(ch.ws); }
   if (introDone) for (const ch of chapters) wcFrame(ch.wc);
   setChrome(introDone && ((dcDk > .5 && cur < SD + vh * .5) || wsList.some(ch => ch.ws.dark) || chapters.some(ch => ch.wc.dark)));
