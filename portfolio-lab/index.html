@@ -381,8 +381,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 <script src="cm/cm-world.js?v=90"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
-<script src="tt/tt-data.js?v=92"></script>
-<script src="tt/tt-world.js?v=92"></script>
+<script src="tt/tt-data.js?v=93"></script>
+<script src="tt/tt-world.js?v=93"></script>
 <script>
 (() => {
 'use strict';
@@ -583,7 +583,7 @@ wsList.forEach(ch => {
       photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
     if (w.k === 'br' && window.BRStage) w.st = window.BRStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), photoW: im[2], photoH: im[3] });
     // the table re-set: scan, the 8 grid as scan and as print, the 20 and 32 grids (ink maps of the reader's own pictures)
-    if (w.k === 'tt' && window.TTStage && window.TT_DATA) w.st = window.TTStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), dir: 'tt/', v: '92' });
+    if (w.k === 'tt' && window.TTStage && window.TT_DATA) w.st = window.TTStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), dir: 'tt/', v: '93' });
   } catch (e) { console.warn('stage off:', e); w.st = null; }
 });
 

@@ -2,11 +2,18 @@
    The 1928 scan of Table 13 (after Kinross) is cut into its seven fields: title, table number, page, service,
    stations, time matrix, footnotes. The fields move, still as scan, into the 8 grid (4 × 2 fields), are typeset
    there as the modern print, then move into the 20 grid (5 × 4) and the 32 grid (8 × 4); each layout is the work's
-   own picture, cut at the fields' own rects. The page then opens into the 3D grid: its frame becomes the mouth of a
-   one-point corridor seen from the drawing's own eye (back wall at 0.179 of the front, as in the reader), the title
-   folds onto the left wall, the stations onto the right, the times onto floor and ceiling, page and service onto
-   the end wall; then the camera walks in, as in Space Walk. Every field keeps its picture while it moves; the
-   corridor's type is set at run time in the work's own faces (Adobe Fonts kit of the timetable site).
+   own picture, cut at the fields' own rects.
+   The page then opens into the reader's 3D Grid System, in its own composition: the drawing's one-point space is
+   built for real (front frame 1.1–98.9 × 2.6–97.2 % of the page, back rect at 0.18 of it, so the eye at 50.4 ×
+   57.2 %), and every glyph of the title, every station text, every time and every grid line the reader draws is cast
+   from that eye onto its wall, floor or ceiling, so that seen from the eye the space is the drawing. Title and
+   stations swing onto the walls like doors, the matrix falls back onto the floor, a ghost of it rises to the
+   ceiling, the service goes to the end wall.
+   Then Space Walk, as the work builds it: the open field between two tall walls of type (the titles left, the
+   stations right, each a 3 × 3 atlas of the work's own outlines, wilder with depth), the ground of times, the trench
+   that descends at 0.175 into the roofed tunnel with the times on its ceiling; its views (open field, tunnel
+   entrance, inside the tunnel) are the camera's stops. Its tunnel is 8 × 5.6 = the page, so it is laid on the page's
+   frame at 1 : 8 / 1.369.
    step(u): u = screen heights of scroll since the frame pinned. Needs THREE (r128) and window.TT_DATA. */
 window.TTStage = function (frame, opts) {
   'use strict';
@@ -18,12 +25,12 @@ window.TTStage = function (frame, opts) {
 
   // timeline (u)
   const IN = [0, .3], PARSE = [.42, 1.0], MOVES = { s8: [1.08, 1.88], g8: [1.96, 2.6], g20: [2.7, 3.45], g32: [3.55, 4.3] };
-  const FOLD = [4.42, 5.7], WALK = [5.7, 7.3], OUT = [7.22, 7.5], PH = [7.45, 7.95], END = 8.25;
+  const FOLD = [4.42, 5.75], SPACE = [6.05, 6.85], ENTER = [6.9, 7.45], DESC = [7.5, 8.5], OUT = [8.42, 8.68], PH = [8.62, 9.1], END = 9.4;
   const SEQ = ['s0', 's8', 'g8', 'g20', 'g32'];
-  // the page (height 1, width A) and the corridor of the 3D grid, from the reader's one-point drawing (in % of the page):
-  // front frame 1.1–98.9 × 2.6–97.2, back rect 41.67–59.13 × 47.37–64.4; so the eye at 50.48 × 57.2, the back at k = .1785
   const A = 1.4, XL = -A / 2 + .011 * A, XR = A / 2 - .011 * A, YT = .5 - .026, YB = .5 - .972, YC = (YT + YB) / 2;
-  const WC = XR - XL, HC = YT - YB, EX = -A / 2 + .5048 * A, EY = .5 - .572, KB = .1785, DEP = 7.2, DE = DEP * KB / (1 - KB);
+  const WC = XR - XL, HC = YT - YB, EX = -A / 2 + .504 * A, EY = .5 - .572, KB = .18, DEP = 7.2, DE = DEP * KB / (1 - KB);
+  // Space Walk (its own units): tunnel 8 wide, 5.6 high, falling 0.175, roofed from 34; outer walls at ±7, 64 high
+  const SW = { w: 8, h: 5.6, sl: .175, rs: 34, ow: 7, eye: 1.68, zf: 40, zb: -150 }, SK = WC / SW.w, SLL = Math.hypot(1, SW.sl);
   const GRIDS = {
     g8: { x: [25, 25.75, 50, 50.75, 75, 75.75], y: [50, 50.75] },
     g20: { x: [20, 20.85, 40, 40.85, 60, 60.85, 80, 80.85], y: [25, 25.85, 50, 50.85, 75, 75.85] },
@@ -35,8 +42,9 @@ window.TTStage = function (frame, opts) {
     [MOVES.g8[0], MOVES.g8[1] + .08, '03', 'Modern print: the same fields, typeset again', 'Modern print: typeset again'],
     [MOVES.g20[0], MOVES.g20[1] + .08, '04', 'Grid 20: 5 × 4 fields'],
     [MOVES.g32[0], MOVES.g32[1] + .1, '05', 'Grid 32: 8 × 4 fields'],
-    [FOLD[0], FOLD[1], '06', '3D grid: the page opened into one-point space', '3D grid: one-point space'],
-    [WALK[0], WALK[1] - .1, '07', 'Space walk'],
+    [FOLD[0], SPACE[0] + .2, '06', '3D Grid System: the page opened into one-point space', '3D Grid System'],
+    [SPACE[0] + .15, ENTER[1], '07', 'Space Walk: the open field, the tunnel entrance', 'Space Walk: open field'],
+    [DESC[0], DESC[1], '08', 'Space Walk: the descending tunnel', 'Space Walk: the tunnel'],
   ];
 
   frame.classList.add('tt');
@@ -46,16 +54,16 @@ window.TTStage = function (frame, opts) {
   frame.appendChild(cv); frame.appendChild(photo); frame.appendChild(ov);
   const ox = ov.getContext('2d');
   let T = null, R = null, scene, cam, vw = 1, vh = 1, dpr = 1, mobile = false, loaded = 0, key = '', built = false, font = '', fsz = 12;
-  let maxOK = true, nC = { x: 0, y: 0 }, hp = 1, pageS = { l: 0, t: 0 }, dF = 2.5, P11F = 3.73;
+  let maxOK = true, nC = { x: 0, y: 0 }, hp = 1, pageS = { l: 0, t: 0 }, dF = 2.5, P11F = 3.73, G0 = { headBottom: 60, m: 20 };
   const TX = {}, BL = [], LN = {};
-  let cells = null, wallsReady = false;
+  let g3 = null, g3L = null, swG = null, swN = null, ready3 = false, NOTE = null;
 
   function js(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); }); }
   function fonts() {
     if (!document.querySelector('link[href*="tvm5ist"]')) {
       const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://use.typekit.net/tvm5ist.css'; document.head.appendChild(l);
     }
-    const want = ['400 64px "league-gothic"', '700 64px "superclarendon"', '400 64px "clarendon-text-pro"', '700 64px "clarendon-text-pro"'];
+    const want = ['400 64px "league-gothic"', '700 64px "superclarendon"', '800 64px "superclarendon"', '700 64px "clarendon-text-pro"'];
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const tryAll = () => Promise.all(want.map(f => document.fonts.load(f, 'LIVERPOOL 10 46').catch(() => [])));
     // the kit's stylesheet may still be on its way: ask again until the faces are known, at most a few seconds
@@ -67,46 +75,86 @@ window.TTStage = function (frame, opts) {
     (window.THREE ? Promise.resolve() : js(opts.three)).then(() => { T = window.THREE; init(); key = ''; }).catch(e => console.warn('TIMETABLE world off:', e));
   }
 
-  /* ---------- shaders: everything is ink (light) on black, laid over each other by max, so a field and its page,
-     or two pictures crossing, never add up ---------- */
+  /* ---------- shaders. The page, its fields, the 3D grid: ink (light) on black, laid over each other by max, so a field
+     and its page, or two pictures crossing, never add up. Space Walk: opaque surfaces with depth, drawn first. ---------- */
   const FOG = `uniform float uF0, uF1; varying float vD;`;
+  const FOGF = `(1. - smoothstep(uF0, uF1, vD) * .9)`;
   const BVS = `varying vec2 vUv; varying float vD;
     void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(position, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
   const BFS = `uniform sampler2D tA, tB; uniform vec4 rA, rB; uniform float uM, uA; uniform vec3 uC; varying vec2 vUv; ${FOG}
     float ink(sampler2D t, vec4 r){ vec2 p = r.xy + vUv * r.zw; if (p.x < 0. || p.y < 0. || p.x > 1. || p.y > 1.) return 0.; return texture2D(t, p).r; }
     void main(){
       float a = uM < .001 ? ink(tA, rA) : uM > .999 ? ink(tB, rB) : mix(ink(tA, rA), ink(tB, rB), uM);
-      float f = 1. - smoothstep(uF0, uF1, vD) * .9;
-      gl_FragColor = vec4(uC * a * uA * f, 1.);
+      gl_FragColor = vec4(uC * a * uA * ${FOGF}, 1.);
     }`;
-  const CVS = `attribute float aS; uniform float uIn; varying vec2 vUv; varying float vA, vD;
-    void main(){ vUv = uv; vA = smoothstep(aS, aS + .1, uIn * 1.12); vec4 mv = modelViewMatrix * vec4(position, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
-  const CFS = `uniform sampler2D tA; uniform float uA; uniform vec3 uC; varying vec2 vUv; varying float vA; ${FOG}
-    void main(){ float f = 1. - smoothstep(uF0, uF1, vD) * .92; gl_FragColor = vec4(uC * texture2D(tA, vUv).r * vA * uA * f, 1.); }`;
   // lines that draw themselves: aT runs 0 → 1 along each line, aD staggers them
   const LVS = `attribute float aT, aD; uniform float uDraw; varying float vT, vP, vD;
     void main(){ vT = aT; vP = clamp((uDraw * 1.5 - aD) / .5, 0., 1.); vec4 mv = modelViewMatrix * vec4(position, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
   const LFS = `uniform float uA; uniform vec3 uC; varying float vT, vP; ${FOG}
-    void main(){ if (vT > vP + .0001 || vP <= 0.) discard; float f = 1. - smoothstep(uF0, uF1, vD) * .9; gl_FragColor = vec4(uC * uA * f, 1.); }`;
-  // the corridor: long lines run from the front frame to z = -depth · aT · uExt; rings (aL = 0) sit at depth aT and
-  // show once the extrusion has passed them
-  const KVS = `attribute float aT, aL; uniform float uExt, uDp; varying float vA, vD;
-    void main(){ vec3 p = position; p.z = -uDp * aT * (aL > .5 ? uExt : 1.); vA = aL > .5 ? 1. : smoothstep(aT - .02, aT, uExt);
-      vec4 mv = modelViewMatrix * vec4(p, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
-  const KFS = `uniform float uA; uniform vec3 uC; varying float vA; ${FOG}
-    void main(){ float f = 1. - smoothstep(uF0, uF1, vD) * .94; gl_FragColor = vec4(uC * uA * vA * f, 1.); }`;
+    void main(){ if (vT > vP + .0001 || vP <= 0.) discard; gl_FragColor = vec4(uC * uA * ${FOGF}, 1.); }`;
+  // the 3D grid: each face comes in from the mouth to the back (uR per face against the vertex's depth aZ); anything the
+  // reader's drawing lets spill past a face is cut at the corridor's walls, as the drawing cuts it at the face's edges
+  const GVS = `attribute float aI, aZ, aF; uniform vec4 uR; uniform float uR4; varying vec2 vUv; varying float vA, vD; varying vec3 vW;
+    void main(){ vUv = uv; float r = aF < .5 ? uR.x : aF < 1.5 ? uR.y : aF < 2.5 ? uR.z : aF < 3.5 ? uR.w : uR4;
+      vA = aI * smoothstep(aZ - .06, aZ + .001, r * 1.08); vW = position;
+      vec4 mv = modelViewMatrix * vec4(position, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
+  const GFS = `uniform sampler2D tA; uniform float uA; uniform vec3 uC, uB0, uB1; varying vec2 vUv; varying float vA; varying vec3 vW; ${FOG}
+    void main(){ if (any(lessThan(vW, uB0)) || any(greaterThan(vW, uB1))) discard;
+      gl_FragColor = vec4(uC * texture2D(tA, vUv).r * vA * uA * ${FOGF}, 1.); }`;
+  const GLVS = `attribute float aI, aZ; uniform float uExt; varying float vA, vZ, vD; varying vec3 vW;
+    void main(){ vA = aI; vZ = aZ; vW = position; vec4 mv = modelViewMatrix * vec4(position, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
+  const GLFS = `uniform float uA, uExt; uniform vec3 uC, uB0, uB1; varying float vA, vZ; varying vec3 vW; ${FOG}
+    void main(){ if (vZ > uExt * 1.04 || any(lessThan(vW, uB0)) || any(greaterThan(vW, uB1))) discard; gl_FragColor = vec4(uC * vA * uA * ${FOGF}, 1.); }`;
+  // Space Walk's surfaces (its own units in position; fog as the work's, 44 → 88 of its units, to black instead of white)
+  const SVS = `varying vec2 vUv; varying float vH, vD;
+    void main(){ vUv = uv; vH = position.y; vec4 mv = modelViewMatrix * vec4(position, 1.); vD = length(mv.xyz); gl_Position = projectionMatrix * mv; }`;
+  const SFOG = `uniform float uA, uF0, uF1, uRise; uniform vec3 uC; varying vec2 vUv; varying float vH, vD;
+    float fogK(){ return clamp((uF1 - vD) / (uF1 - uF0), 0., 1.); }`;
+  // the walls: in each 12 × 12 cell one of the atlas's three columns at random, its row by depth (wilder further in);
+  // the outer walls fade out upwards (as the work's fade to white)
+  const SWALL = `uniform sampler2D map; uniform float uHf; ${SFOG}
+    void main(){
+      if (vH > uRise) discard;
+      vec2 cell = floor(vUv); float depth = abs(cell.x) * 12.;
+      float dis = clamp(floor(max(depth - 12., 0.) / 48.), 0., 2.);
+      float pick = floor(fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5453) * 3.);
+      vec2 local = clamp(fract(vUv), vec2(.0025), vec2(.9975)); vec2 at = (vec2(pick, 2. - dis) + local) / 3.;
+      #ifdef WGL2
+      float ink = textureGrad(map, at, dFdx(vUv) / 3., dFdy(vUv) / 3.).r;
+      #else
+      float ink = texture2D(map, at).r;
+      #endif
+      ink *= fogK() * (1. - uHf * smoothstep(5., 60., vH));
+      gl_FragColor = vec4(uC * ink * uA, 1.);
+    }`;
+  const STIME = `uniform sampler2D map; ${SFOG}
+    void main(){ gl_FragColor = vec4(uC * texture2D(map, vUv).r * fogK() * uA, 1.); }`;
+  // the tunnel's ceiling: a grid, nine columns across, one row per unit of depth
+  const SCEIL = `${SFOG}
+    void main(){ vec2 d = abs(fract(vUv - .5) - .5) / max(fwidth(vUv), vec2(.00001)); vec2 l = 1. - clamp(d, 0., 1.);
+      gl_FragColor = vec4(uC * max(l.x * .22, l.y * .1) * fogK() * uA, 1.); }`;
+  const SNUM = `uniform sampler2D map; ${SFOG}
+    void main(){ gl_FragColor = vec4(uC * texture2D(map, vUv).r * fogK() * uA, 1.); }`;
 
   function mat(vs, fs, u) {
-    const m = new T.ShaderMaterial({ vertexShader: vs, fragmentShader: fs, uniforms: Object.assign({ uF0: { value: 3 }, uF1: { value: 12 }, uC: { value: new T.Color(0xe9e7e2) }, uA: { value: 1 } }, u),
+    const m = new T.ShaderMaterial({ vertexShader: vs, fragmentShader: fs, uniforms: Object.assign({ uF0: { value: 30 }, uF1: { value: 60 }, uC: { value: new T.Color(0xe9e7e2) }, uA: { value: 1 } }, u),
       transparent: true, depthTest: false, depthWrite: false, side: T.DoubleSide });
     if (maxOK) { m.blending = T.CustomBlending; m.blendEquation = T.MaxEquation; m.blendSrc = T.OneFactor; m.blendDst = T.OneFactor; }
     else m.blending = T.AdditiveBlending;
     return m;
   }
-  function tex(src) {
+  function smat(fs, u) {
+    const m = new T.ShaderMaterial({ vertexShader: SVS, fragmentShader: fs, side: T.DoubleSide, depthTest: true, depthWrite: true,
+      uniforms: Object.assign({ uA: { value: 0 }, uF0: { value: 44 * SK }, uF1: { value: 88 * SK }, uRise: { value: 1e3 }, uC: { value: new T.Color(0xe9e7e2) } }, u) });
+    m.extensions = { derivatives: true };
+    if (R.capabilities.isWebGL2) m.defines = { WGL2: 1 };
+    return m;
+  }
+  function tex(src, rep) {
     const t = new T.TextureLoader().load(src, () => { key = ''; });
     t.format = T.LuminanceFormat; t.generateMipmaps = R.capabilities.isWebGL2;
-    t.minFilter = t.generateMipmaps ? T.LinearMipmapLinearFilter : T.LinearFilter; t.anisotropy = Math.min(4, R.capabilities.getMaxAnisotropy());
+    t.minFilter = t.generateMipmaps ? T.LinearMipmapLinearFilter : T.LinearFilter; t.anisotropy = Math.min(rep ? 16 : 4, R.capabilities.getMaxAnisotropy());
+    if (rep) t.wrapS = t.wrapT = T.RepeatWrapping;
     return t;
   }
   function init() {
@@ -114,11 +162,12 @@ window.TTStage = function (frame, opts) {
     R.setClearColor(0x000000, 1);
     maxOK = R.capabilities.isWebGL2 || !!R.extensions.get('EXT_blend_minmax');
     scene = new T.Scene();
-    cam = new T.PerspectiveCamera(30, 1, .02, 60); cam.matrixAutoUpdate = true;
+    cam = new T.PerspectiveCamera(30, 1, .02, 80);
     const s = mobile ? '-s' : '';
     SEQ.forEach(k => { TX[k] = tex(`${opts.dir}${k}${s}.jpg?v=${opts.v}`); });
-    build(); size();
-    fonts().then(walls).catch(() => walls());
+    ['titles', 'stations', 'times'].forEach(k => { TX['w' + k] = tex(`${opts.dir}w-${k}${s}.png?v=${opts.v}`, 1); });
+    build(); swBuild(); size();
+    fonts().then(type3d).catch(() => type3d());
   }
 
   /* ---------- the page and its seven fields ---------- */
@@ -132,7 +181,7 @@ window.TTStage = function (frame, opts) {
     g.setAttribute('aT', new T.Float32BufferAttribute([0, 0, 0, 0], 1)); g.setAttribute('aD', new T.Float32BufferAttribute([0, 0, 0, 0], 1));
     const l = new T.LineLoop(g, material); l.matrixAutoUpdate = false; l.frustumCulled = false; scene.add(l); return l;
   }
-  function lineObj(pts, kind) {      // pts: [x0,y0,z0, x1,y1,z1, aT0, aT1, aD]
+  function lineObj(pts) {      // pts: [x0,y0,z0, x1,y1,z1, aT0, aT1, aD]
     const P = [], AT = [], AD = [];
     pts.forEach(p => { P.push(p[0], p[1], p[2], p[3], p[4], p[5]); AT.push(p[6], p[7]); AD.push(p[8], p[8]); });
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3));
@@ -158,100 +207,157 @@ window.TTStage = function (frame, opts) {
       g.y.forEach((y, j) => { const Y = .5 - y / 100; pts.push([-A / 2, Y, .002, A / 2, Y, .002, 0, 1, .35 + .35 * j / Math.max(1, g.y.length - 1)]); });
       LN[k] = lineObj(pts); LN[k].material.uniforms.uC.value = new T.Color(0x9c9994);
     });
-    // the page frame, drawn round; it narrows to the corridor's mouth as the page opens
+    // the page frame, drawn round; it narrows to the 3D grid's front frame as the page opens
     LN.frame = lineObj([[0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 1, .25], [0, 0, 0, 0, 0, 0, 0, 1, .5], [0, 0, 0, 0, 0, 0, 0, 1, .75]]);
     LN.frame.material.uniforms.uC.value = new T.Color(0xcfccc6);
-    // the corridor: four edges, the floor's and ceiling's ten column lines, rings at the six groups of stations, the back
-    {
-      const P = [], AT = [], AL = [];
-      const long = (x, y) => { P.push(x, y, 0, x, y, 0); AT.push(0, 1); AL.push(1, 1); };
-      const seg = (x0, y0, x1, y1, t) => { P.push(x0, y0, 0, x1, y1, 0); AT.push(t, t); AL.push(0, 0); };
-      long(XL, YT); long(XR, YT); long(XL, YB); long(XR, YB);
-      for (let j = 1; j < 9; j++) { const x = XL + WC * j / 9; long(x, YB); long(x, YT); }
-      for (let j = 0; j <= 6; j++) {
-        const t = j === 6 ? 1 : .03 + .94 * j / 6;
-        seg(XL, YT, XR, YT, t); seg(XR, YT, XR, YB, t); seg(XR, YB, XL, YB, t); seg(XL, YB, XL, YT, t);
-      }
-      const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3));
-      g.setAttribute('aT', new T.Float32BufferAttribute(AT, 1)); g.setAttribute('aL', new T.Float32BufferAttribute(AL, 1));
-      const m = mat(KVS, KFS, { uExt: { value: 0 }, uDp: { value: DEP } }); m.uniforms.uA.value = 0; m.uniforms.uC.value = new T.Color(0xa7a49e);
-      LN.cor = new T.LineSegments(g, m); LN.cor.frustumCulled = false; scene.add(LN.cor);
-    }
     built = true;
   }
 
-  /* ---------- the corridor's type, set in the timetable's own faces once they have arrived ---------- */
-  const FACE = { title: '"league-gothic", "League Gothic", "Arial Narrow", sans-serif', bold: '"superclarendon", "Clarendon", Georgia, serif', body: '"clarendon-text-pro", "Clarendon", Georgia, serif' };
-  function canvasTex(c) {
-    const t = new T.CanvasTexture(c); t.format = T.LuminanceFormat; t.generateMipmaps = R.capabilities.isWebGL2;
-    t.minFilter = t.generateMipmaps ? T.LinearMipmapLinearFilter : T.LinearFilter; t.anisotropy = R.capabilities.getMaxAnisotropy(); return t;
+  /* ---------- the 3D Grid System, from the reader's own drawing ---------- */
+  const FACES = ['left', 'right', 'floor', 'ceiling', 'back'];
+  function cast(px, py, face) {         // a point of the drawing (px of the 1223 × 875 stage), from the eye onto a face
+    const G = D_.g3, X = -A / 2 + px / G.W * A, Y = .5 - py / G.H, dx = X - EX, dy = Y - EY;
+    let t;
+    if (face === 'left') t = (XL - EX) / dx; else if (face === 'right') t = (XR - EX) / dx;
+    else if (face === 'floor') t = (YB - EY) / dy; else if (face === 'ceiling') t = (YT - EY) / dy; else t = (DE + DEP) / DE;
+    if (!isFinite(t) || t <= 0) t = 40; t = Math.min(t, 40);
+    return [EX + dx * t, EY + dy * t, DE - DE * t];
   }
-  function walls() {
-    if (!R) return;
-    const S = mobile ? 2048 : 4096, H = Math.round(S * HC / DEP);
-    // left wall: the title as the 32 grid sets it, two lines in League Gothic, read from the mouth inwards
-    {
-      const c = document.createElement('canvas'); c.width = S; c.height = H; const x = c.getContext('2d');
-      x.fillStyle = '#000'; x.fillRect(0, 0, S, H); x.fillStyle = '#fff'; x.textBaseline = 'alphabetic';
-      let f = H * .5; x.font = `400 ${f}px ${FACE.title}`;
-      const w0 = Math.max(...D_.title.map(l => x.measureText(l).width)); if (w0 > S * .985) f *= S * .985 / w0;
-      x.font = `400 ${f}px ${FACE.title}`;
-      const cap = x.measureText('H').actualBoundingBoxAscent || f * .74;
-      D_.title.forEach((l, i) => x.fillText(l, S * .008, H * (i + .5) / 2 + cap / 2));
-      TX.tw = canvasTex(c);
-    }
-    // right wall: the stations in their six groups, one band per group, the first nearest the mouth (the text runs
-    // towards the mouth, so the first group sits at the canvas's right end)
-    {
-      const c = document.createElement('canvas'); c.width = S; c.height = H; const x = c.getContext('2d');
-      x.fillStyle = '#000'; x.fillRect(0, 0, S, H); x.fillStyle = '#fff'; x.textBaseline = 'middle';
-      const G = D_.groups, bw = S * .94 / 6;
-      for (let g = 0; g < 6; g++) {
-        const rows = D_.stations.slice(G[g], G[g + 1]), k = rows.length, lh = H * .9 / Math.max(k, 2), x0 = S * .03 + (5 - g) * bw + bw * .04;
-        rows.forEach(([t, head], j) => {
-          const fam = head ? `700 ${lh * .62}px ${FACE.bold}` : `400 ${lh * .66}px ${FACE.body}`; x.font = fam;
-          const w = x.measureText(t).width, sc = Math.min(1, bw * .9 / w);
-          x.save(); x.translate(x0, H * .05 + lh * (j + .5) + (H * .9 - lh * k) / 2); x.scale(sc, sc); x.fillText(t, 0, 0); x.restore();
-        });
+  function faceOf(px, py) {
+    const e = .015;
+    for (const f of FACES.slice(0, 4)) { const p = cast(px, py, f); if (p[2] <= e && p[2] >= -DEP - e && p[0] >= XL - e && p[0] <= XR + e && p[1] >= YB - e && p[1] <= YT + e) return f; }
+    return 'back';
+  }
+  function type3d() {
+    if (!R || g3) return;
+    const G = D_.g3;
+    // every unit: its text and face, set once at a reference size into one atlas, and its parallelogram on the drawing
+    const U = [];
+    G.glyphs.forEach(g => U.push({ t: g[0], f: `${g[3]} ${g[2]} REFpx ${g[1]}`, ref: mobile ? 150 : 300, face: 'left', p: [g[4], g[5], g[6], g[7], g[8], g[9]], n: 4, i: 1 }));
+    G.st.forEach(s => U.push({ t: s[0], f: `normal ${s[2]} REFpx ${s[1]}`, ref: mobile ? 34 : 64, face: 'right', p: [s[3], s[4], s[5], s[6], s[7], s[8]], n: 3, i: 1 }));
+    G.words.forEach(w => U.push({ t: w[0], f: `${w[3]} ${w[2]} REFpx ${w[1]}`, ref: mobile ? 26 : 44, face: w[4], p: [w[5], w[6], w[5] + w[7], w[6], w[5], w[6] + w[8]], n: 1, i: w[9] }));
+    const sc = document.createElement('canvas').getContext('2d'), E = new Map(), pad = 3;
+    U.forEach(u => {
+      const k = u.t + '|' + u.f + '|' + u.ref; u.k = k; if (E.has(k)) return;
+      const f = u.f.replace('REF', u.ref); sc.font = f; const m = sc.measureText(u.t);
+      const asc = m.fontBoundingBoxAscent || u.ref * .8, des = m.fontBoundingBoxDescent || u.ref * .2;
+      E.set(k, { t: u.t, f, w: Math.ceil(m.width) + 2 * pad, h: Math.ceil(asc + des) + 2 * pad, iw: m.width, ih: asc + des, asc });
+    });
+    // shelf packing
+    const AW = mobile ? 2048 : 4096, list = [...E.values()].sort((a, b) => b.h - a.h);
+    let x = 0, y = 0, rowH = 0;
+    list.forEach(e => { if (x + e.w > AW) { x = 0; y += rowH; rowH = 0; } e.x = x; e.y = y; x += e.w; rowH = Math.max(rowH, e.h); });
+    const AH = y + rowH, c = document.createElement('canvas'); c.width = AW; c.height = AH; const cx = c.getContext('2d');
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, AW, AH); cx.fillStyle = '#fff'; cx.textBaseline = 'alphabetic';
+    list.forEach(e => { cx.font = e.f; cx.fillText(e.t, e.x + pad, e.y + pad + e.asc); });
+    const at = new T.CanvasTexture(c); at.format = T.LuminanceFormat; at.generateMipmaps = R.capabilities.isWebGL2;
+    at.minFilter = at.generateMipmaps ? T.LinearMipmapLinearFilter : T.LinearFilter; at.anisotropy = R.capabilities.getMaxAnisotropy();
+    // the mesh: each parallelogram subdivided on the drawing and cast point by point, so that from the eye it is the
+    // drawing exactly, and from anywhere else type painted on the surfaces
+    const P = [], UV = [], AI = [], AZ = [], AF = [], IX = [];
+    U.forEach(u => {
+      const e = E.get(u.k), [x0, y0, x1, y1, x2, y2] = u.p, n = u.n, base = P.length / 3, fi = FACES.indexOf(u.face);
+      const u0 = (e.x + pad) / AW, u1 = (e.x + pad + e.iw) / AW, v0 = 1 - (e.y + pad) / AH, v1 = 1 - (e.y + pad + e.ih) / AH;
+      for (let j = 0; j <= n; j++) for (let i = 0; i <= n; i++) {
+        const a = i / n, b = j / n, q = cast(x0 + (x1 - x0) * a + (x2 - x0) * b, y0 + (y1 - y0) * a + (y2 - y0) * b, u.face);
+        P.push(q[0], q[1], q[2]); UV.push(lerp(u0, u1, a), lerp(v0, v1, b)); AI.push(u.i); AZ.push(clamp(-q[2] / DEP, 0, 1)); AF.push(fi);
       }
-      TX.sw = canvasTex(c);
-    }
-    // floor and ceiling: every time in the table (columns 0–8 on the floor, right to left; 9–17 on the ceiling, left to
-    // right, as the reader lays them), one atlas of the strings that occur
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const p = base + j * (n + 1) + i; IX.push(p, p + 1, p + n + 2, p, p + n + 2, p + n + 1); }
+    });
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(UV, 2));
+    g.setAttribute('aI', new T.Float32BufferAttribute(AI, 1)); g.setAttribute('aZ', new T.Float32BufferAttribute(AZ, 1)); g.setAttribute('aF', new T.Float32BufferAttribute(AF, 1)); g.setIndex(IX);
+    const B0 = new T.Vector3(XL - .003, YB - .003, -DEP - .003), B1 = new T.Vector3(XR + .003, YT + .003, .003);
+    g3 = new T.Mesh(g, mat(GVS, GFS, { tA: { value: at }, uR: { value: new T.Vector4() }, uR4: { value: 0 }, uB0: { value: B0 }, uB1: { value: B1 } }));
+    g3.frustumCulled = false; scene.add(g3);
+    // the perspective grid and the radiating rules, cast the same way
     {
-      const strs = [...new Set(D_.cells.flat().concat(D_.heads).filter(Boolean))], cw = mobile ? 128 : 256, ch = cw * .3125, per = Math.floor(S / cw);
-      const c = document.createElement('canvas'); c.width = S; c.height = Math.ceil(strs.length / per) * ch; const x = c.getContext('2d');
-      x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const at = {};
-      strs.forEach((s, i) => {
-        const cx = (i % per) * cw, cy = Math.floor(i / per) * ch, head = /m\.$/.test(s);
-        x.font = head ? `700 ${ch * .5}px ${FACE.bold}` : `700 ${ch * .66}px ${FACE.body}`;
-        const w = x.measureText(s).width, sc = Math.min(1, cw * .92 / w);
-        x.save(); x.translate(cx + cw / 2, cy + ch * .54); x.scale(sc, sc); x.fillText(s, 0, 0); x.restore();
-        at[s] = [cx / S, 1 - (cy + ch) / c.height, cw / S, ch / c.height];
-      });
-      const t = canvasTex(c);
-      const P = [], UV = [], SS = [], IX = [];
-      const G = D_.groups, rowS = r => { let g = 5; for (let j = 0; j < 6; j++) if (r >= G[j] && r < G[j + 1]) { g = j; break; } return (g + (r - G[g] + .5) / (G[g + 1] - G[g])) / 6; };
-      const colW = WC / 9, qw = colW * .9, qh = qw * .3125;
-      const add = (s, cx, z, ceil, sIn) => {
-        const r = at[s]; if (!r) return; const n = P.length / 3, y = ceil ? YT - .002 : YB + .002, dz = ceil ? -qh / 2 : qh / 2;
-        // floor: the text's top points into the corridor; ceiling: towards the mouth (both read upright from inside)
-        P.push(cx - qw / 2, y, z + dz, cx + qw / 2, y, z + dz, cx + qw / 2, y, z - dz, cx - qw / 2, y, z - dz);
-        UV.push(r[0], r[1], r[0] + r[2], r[1], r[0] + r[2], r[1] + r[3], r[0], r[1] + r[3]);
-        SS.push(sIn, sIn, sIn, sIn); IX.push(n, n + 1, n + 2, n, n + 2, n + 3);
+      const P = [], AI = [], AZ = [];
+      const seg = (x0, y0, x1, y1, w, face) => {
+        const f = face || faceOf((x0 + x1) / 2, (y0 + y1) / 2), a = cast(x0, y0, f), b = cast(x1, y1, f);
+        P.push(...a, ...b); AI.push(w, w); AZ.push(clamp(-a[2] / DEP, 0, 1), clamp(-b[2] / DEP, 0, 1));
       };
-      for (let c0 = 0; c0 < 18; c0++) {
-        const ceil = c0 >= 9, cx = ceil ? XL + WC * (c0 - 9 + .5) / 9 : XL + WC * (1 - (c0 + .5) / 9);
-        add(D_.heads[c0], cx, -.012 * DEP, ceil, 0);
-        for (let r = 0; r < 25; r++) { const s = rowS(r); add(D_.cells[r][c0], cx, -(.03 + .94 * s) * DEP, ceil, s); }
-      }
-      const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(P, 3));
-      g.setAttribute('uv', new T.Float32BufferAttribute(UV, 2)); g.setAttribute('aS', new T.Float32BufferAttribute(SS, 1)); g.setIndex(IX);
-      const m = mat(CVS, CFS, { tA: { value: t }, uIn: { value: 0 } }); m.uniforms.uA.value = 0;
-      cells = new T.Mesh(g, m); cells.frustumCulled = false; scene.add(cells);
+      G.lines.forEach(l => seg(l[0], l[1], l[2], l[3], l[4]));
+      G.rules.forEach(r => seg(r[1], r[2], r[3], r[4], .45 * r[5], r[0]));
+      const lg = new T.BufferGeometry(); lg.setAttribute('position', new T.Float32BufferAttribute(P, 3));
+      lg.setAttribute('aI', new T.Float32BufferAttribute(AI, 1)); lg.setAttribute('aZ', new T.Float32BufferAttribute(AZ, 1));
+      g3L = new T.LineSegments(lg, mat(GLVS, GLFS, { uExt: { value: 0 }, uB0: { value: B0 }, uB1: { value: B1 } }));
+      g3L.material.uniforms.uC.value = new T.Color(0xd8d5cf); g3L.frustumCulled = false; scene.add(g3L);
     }
-    wallsReady = true; key = '';
+    // the service note's place on the end wall, for the field that goes there
+    { const w = G.words.filter(w => w[4] === 'back'); const xs = w.flatMap(w => [w[5], w[5] + w[7]]), ys = w.flatMap(w => [w[6], w[6] + w[8]]);
+      const a = cast(Math.min(...xs), Math.min(...ys), 'back'), b = cast(Math.max(...xs), Math.max(...ys), 'back');
+      NOTE = { c: new T.Vector3((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, -DEP), w: Math.abs(b[0] - a[0]), h: Math.abs(b[1] - a[1]) }; }
+    swNumbers();
+    ready3 = true; key = '';
+  }
+
+  /* ---------- Space Walk ---------- */
+  function swMesh(pos, uv, idx, material) {
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+    g.setIndex(idx || [0, 1, 2, 0, 2, 3]);
+    const m = new T.Mesh(g, material); m.frustumCulled = false; m.renderOrder = -10; swG.add(m); return m;
+  }
+  function swBuild() {
+    swG = new T.Group(); swG.position.set(0, YB, 0); swG.scale.setScalar(SK); swG.visible = false; scene.add(swG);
+    const { w, h, sl, rs, ow, zf, zb } = SW, a2 = w / 2, dm = -zb;
+    const M = {
+      titles: smat(SWALL, { map: { value: TX.wtitles }, uHf: { value: 1 } }), stations: smat(SWALL, { map: { value: TX.wstations }, uHf: { value: 1 } }),
+      titlesT: smat(SWALL, { map: { value: TX.wtitles }, uHf: { value: 0 } }), stationsT: smat(SWALL, { map: { value: TX.wstations }, uHf: { value: 0 } }),
+      times: smat(STIME, { map: { value: TX.wtimes } }), ceil: smat(SCEIL, {}),
+    };
+    swG.userData.M = M;
+    // the outer walls: titles on the left, stations on the right, the 12-unit cells running with depth
+    for (const B of [-1, 1]) {
+      const x = B * ow, Z = [zf, zb], m = B < 0 ? M.titles : M.stations;
+      swMesh([x, 0, zf, x, 0, zb, x, 64, zb, x, 64, zf], [B * Z[0] / 12, 0, B * Z[1] / 12, 0, B * Z[1] / 12, 64 / 12, B * Z[0] / 12, 64 / 12], null, m);
+    }
+    // the ground of times: either side of the tunnel all along, in its middle before the mouth and after the roof starts
+    const ground = (x0, x1, z0, z1) => swMesh([x0, 0, z0, x1, 0, z0, x1, 0, z1, x0, 0, z1], [(x0 + a2) / 16, -z0 / 12, (x1 + a2) / 16, -z0 / 12, (x1 + a2) / 16, -z1 / 12, (x0 + a2) / 16, -z1 / 12], null, M.times);
+    ground(-ow, -a2, zf, zb); ground(a2, ow, zf, zb); ground(-a2, a2, zf, 0); ground(-a2, a2, -rs, zb);
+    // the lip where the roof begins
+    { const H = h - rs * sl; swMesh([-a2, 0, -rs, a2, 0, -rs, a2, H, -rs, -a2, H, -rs], [0, 0, .5, 0, .5, H / 12, 0, H / 12], null, M.times); }
+    // the tunnel floor, falling with the slope
+    swMesh([-a2, 0, 0, a2, 0, 0, a2, -dm * sl, -dm, -a2, -dm * sl, -dm], [0, 0, w / 16, 0, w / 16, dm * SLL / 12, 0, dm * SLL / 12], null, M.times);
+    // its walls: open to the ground up to the roof, then 5.6 high; the cells laid along the slope
+    for (const B of [-1, 1]) {
+      const x = B * a2, m = B < 0 ? M.titlesT : M.stationsT, uv = (D, Y) => [-B * (D - sl * Y) / (12 * SLL), (Y + sl * D) / (12 * SLL)];
+      const pts = [[0, 0], [rs, -rs * sl], [rs, 0]];   // the open part: a triangle from the mouth to the roof
+      swMesh(pts.flatMap(([D, Y]) => [x, Y, -D]), pts.flatMap(([D, Y]) => uv(D, Y)), [0, 1, 2], m);
+      const q = [[rs, -rs * sl], [dm, -dm * sl], [dm, -dm * sl + h], [rs, -rs * sl + h]];
+      swMesh(q.flatMap(([D, Y]) => [x, Y, -D]), q.flatMap(([D, Y]) => uv(D, Y)), null, m);
+    }
+    // the ceiling, from the roof on
+    swMesh([-a2, h - rs * sl, -rs, a2, h - rs * sl, -rs, a2, h - dm * sl, -dm, -a2, h - dm * sl, -dm], [0, rs, 9, rs, 9, dm, 0, dm], null, M.ceil);
+  }
+  // the times on the ceiling: the work's nine columns, one row per unit of depth, all at the size at which the widest
+  // fits 0.82 of its column
+  function swNumbers() {
+    const cols = D_.sw.cols, strs = [...new Set(cols.flat())], ref = mobile ? 48 : 80, f = `700 ${ref}px "clarendon-text-pro", "Clarendon", Georgia, serif`;
+    const sc = document.createElement('canvas').getContext('2d'); sc.font = f;
+    const E = {}; let mw = 0, mh = 0;
+    strs.forEach(s => { const m = sc.measureText(s); const l = m.actualBoundingBoxLeft || 0, r = m.actualBoundingBoxRight || m.width, u = m.actualBoundingBoxAscent || ref * .7, d = m.actualBoundingBoxDescent || 0;
+      E[s] = { l, r, u, d, w: l + r, h: u + d }; mw = Math.max(mw, l + r); mh = Math.max(mh, u + d); });
+    const cw = Math.ceil(mw) + 8, ch = Math.ceil(mh) + 8, per = Math.floor(2048 / cw), c = document.createElement('canvas');
+    c.width = 2048; c.height = Math.ceil(strs.length / per) * ch; const cx = c.getContext('2d');
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, c.width, c.height); cx.fillStyle = '#fff'; cx.font = f; cx.textBaseline = 'alphabetic';
+    strs.forEach((s, i) => { const e = E[s], x0 = (i % per) * cw + 4, y0 = Math.floor(i / per) * ch + 4; cx.fillText(s, x0 + e.l, y0 + e.u);
+      e.uv = [x0 / c.width, 1 - (y0 + e.h) / c.height, (x0 + e.w) / c.width, 1 - y0 / c.height]; });
+    const t = new T.CanvasTexture(c); t.format = T.LuminanceFormat; t.generateMipmaps = R.capabilities.isWebGL2;
+    t.minFilter = t.generateMipmaps ? T.LinearMipmapLinearFilter : T.LinearFilter; t.anisotropy = R.capabilities.getMaxAnisotropy();
+    const { w, h, sl, rs } = SW, ci = w / cols.length, r = Math.min(ci * .82 / mw, .28 / mh), P = [], UV = [], IX = [];
+    for (let n = rs; n < -SW.zb - 1; n++) {
+      const row = n % 26;
+      cols.forEach((col, x) => {
+        const s = col[row], e = s && E[s]; if (!e) return;
+        const xc = -w / 2 + (x + .5) * ci, hw = e.w * r / 2, hh = e.h * r / 2, D0 = n + .5 - hh, D1 = n + .5 + hh, k = P.length / 3;
+        // the glyphs' up runs into the depth, as the work lays them
+        [[xc - hw, D0], [xc + hw, D0], [xc + hw, D1], [xc - hw, D1]].forEach(([X, D]) => P.push(X, h - sl * D - .008, -D));
+        UV.push(e.uv[0], e.uv[1], e.uv[2], e.uv[1], e.uv[2], e.uv[3], e.uv[0], e.uv[3]);
+        IX.push(k, k + 1, k + 2, k, k + 2, k + 3);
+      });
+    }
+    swN = swMesh(P, UV, IX, smat(SNUM, { map: { value: t } }));
+    swN.material.polygonOffset = true; swN.material.polygonOffsetFactor = -1; swN.material.polygonOffsetUnits = -1;
   }
 
   function size() {
@@ -261,7 +367,6 @@ window.TTStage = function (frame, opts) {
     ov.width = Math.round(vw * dpr); ov.height = Math.round(vh * dpr);
     key = '';
   }
-  let G0 = { headBottom: 60, m: 20 };
   function layout(w, h, g) {
     vw = w; vh = h; mobile = vw < 700; G0 = g; fsz = g.t; font = `400 ${g.t}px ${g.font}`;
     // the page's place on screen: under the timeline's labels, room above it for the caption
@@ -287,11 +392,17 @@ window.TTStage = function (frame, opts) {
   function aim(p, t) { const o = aimer.o || (aimer.o = new T.PerspectiveCamera()); o.position.copy(p); o.up.set(0, 1, 0); o.lookAt(t); return o; }   // a camera looks down its -z
   function orbit(yaw, pitch) {
     const p = V3(0, 0, dF).applyEuler(new T.Euler(-pitch, yaw, 0, 'YXZ'));
-    const o = aim(p, V3(0, 0, 0));
-    return { p, q: o.quaternion.clone(), tg: V3(0, 0, 0), P11: P11F, e8: -nC.x, e9: -nC.y };
+    return { p, q: aim(p, V3(0, 0, 0)).quaternion.clone(), tg: V3(0, 0, 0), P11: P11F, e8: -nC.x, e9: -nC.y };
   }
-  function look(p, t, P11, e8, e9) { const o = aim(p, t); return { p, q: o.quaternion.clone(), tg: t, P11, e8, e9 }; }
   function mix(a, b, t) { return { p: a.p.clone().lerp(b.p, t), q: a.q.clone().slerp(b.q, t), tg: a.tg.clone().lerp(b.tg, t), P11: lerp(a.P11, b.P11, t), e8: lerp(a.e8, b.e8, t), e9: lerp(a.e9, b.e9, t) }; }
+  // Space Walk's views, in its units: open field (z 9, looking down 0.14), tunnel entrance (z 1.8, 0.25), inside
+  // (z -48, along the slope); its lens is 50° high
+  function swPose(z, pitch) {
+    const y = SW.eye + Math.min(z, 0) * SW.sl, p = V3(0, YB + y * SK, z * SK), d = V3(0, Math.sin(pitch), -Math.cos(pitch));
+    const P11 = vw > vh ? 1 / Math.tan(25 * Math.PI / 180) : Math.max(1, Math.min(2.14, (vw / vh) / Math.tan(32 * Math.PI / 180)));
+    const tg = p.clone().addScaledVector(d, 2);
+    return { p, q: aim(p, tg).quaternion.clone(), tg, P11, e8: 0, e9: 0 };
+  }
   function camAt(u) {
     if (u < FOLD[0]) {
       // the fields lift a little as they move; the view turns off the page just enough to see it
@@ -299,12 +410,13 @@ window.TTStage = function (frame, opts) {
       const pitch = .075 * smt(1.0, 1.65, u) * (1 - smt(4.05, FOLD[0] + .02, u));
       return orbit(yaw, pitch);
     }
-    if (u < WALK[0]) { const t = eio(smt(FOLD[0] + .05, FOLD[0] + .8, u)); return reg(lerp(0, EX, t), lerp(0, EY, t), lerp(dF, DE, t)); }
-    const eye = reg(EX, EY, DE), t1 = eio(smt(WALK[0], 6.55, u)), t2 = eio(smt(6.35, WALK[1], u));
-    const P11W = vw > vh ? 1.6 : 1.0, ncx = -nC.x * .4, ncy = -nC.y * .4;
-    const w1 = look(V3(.02, -.1, -.55), V3(.02, -.24, -6.5), P11W, ncx, ncy);
-    const w2 = look(V3(-.04, -.2, -.5 * DEP), V3(.06, -.27, -DEP), P11W * 1.05, ncx * .5, ncy * .5);
-    return mix(mix(eye, w1, t1), w2, t2);
+    const eye = () => { const t = eio(smt(FOLD[0] + .05, FOLD[0] + .8, u)); return reg(lerp(0, EX, t), lerp(0, EY, t), lerp(dF, DE, t)); };
+    if (u < SPACE[0]) return eye();
+    const over = swPose(9, -.14);
+    if (u < ENTER[0]) return mix(reg(EX, EY, DE), over, eio(smt(SPACE[0], SPACE[1], u)));
+    if (u < DESC[0]) return mix(over, swPose(1.8, -.25), eio(smt(ENTER[0], ENTER[1], u)));
+    const t = eio(smt(DESC[0], DESC[1], u)), z = lerp(1.8, -48, t);
+    return swPose(z, lerp(-.25, -Math.atan(SW.sl), smt(0, .35, t)));
   }
   // the pointer turns the view a little, as in the Commedia
   const sw = { x: 0, y: 0, t: 0 };
@@ -326,10 +438,10 @@ window.TTStage = function (frame, opts) {
 
   /* ---------- the fields: where each stands at u ---------- */
   function seg(u) {           // which two layouts u lies between, and how far (0 holding on a, 1 arrived at b)
-    let a = 's0', b = 's0', t = 0, mv = 0;
+    let a = 's0', b = 's0', t = 0;
     for (let i = 1; i < SEQ.length; i++) {
       const m = MOVES[SEQ[i]];
-      if (u >= m[0]) { a = SEQ[i - 1]; b = SEQ[i]; t = clamp((u - m[0]) / (m[1] - m[0]), 0, 1); mv = i; }
+      if (u >= m[0]) { a = SEQ[i - 1]; b = SEQ[i]; t = clamp((u - m[0]) / (m[1] - m[0]), 0, 1); }
     }
     if (t >= 1) { a = b; t = 0; }
     return { a, b, t };
@@ -337,10 +449,10 @@ window.TTStage = function (frame, opts) {
   const QY = a => new T.Quaternion().setFromAxisAngle(V3(0, 1, 0), a), QX = a => new T.Quaternion().setFromAxisAngle(V3(1, 0, 0), a);
   /* the fold: the page opens like a box. Title and stations swing on the frame's sides like doors into the depth (the
      title hinged at its left edge onto the left wall, the stations at their right edge onto the right), the time
-     matrix falls back on the bottom edge to the floor and a ghost of it rises on the top edge to the ceiling; page and
-     service go straight back to the end wall; table number and footnotes fall away into the dark. Nothing passes in
-     front of the page. */
-  const FOLDT = [[.14, .66], [.05, .42], [.32, .8], [.32, .8], [.2, .7], [.26, .76], [.05, .42], [.3, .8]];
+     matrix falls back on the bottom edge to the floor and a ghost of it rises on the top edge to the ceiling; the
+     service goes straight back to where the drawing writes it on the end wall; page, table number and footnotes fall
+     away into the dark. Nothing passes in front of the page. Each lands as the drawing's own type on its face. */
+  const FOLDT = [[.12, .6], [.05, .42], [.05, .42], [.3, .78], [.18, .66], [.24, .72], [.05, .42], [.3, .78]];
   function foldPose(b, t, r) {
     const th = Math.PI / 2 * t, grow = smt(.25, 1, t), c = Math.cos(th), sn = Math.sin(th);
     switch (b.ghost ? 7 : b.i) {
@@ -352,27 +464,28 @@ window.TTStage = function (frame, opts) {
         return { pos: P.add(V3(0, c, -sn).multiplyScalar(H / 2)), q: QX(-th), w, h: H }; }
       case 7: { const H = lerp(r.h, DEP, grow), w = lerp(r.w, WC, t), P = V3(lerp(r.x, (XL + XR) / 2, t), lerp(r.y + r.h / 2, YT, t), 0);
         return { pos: P.sub(V3(0, c, sn).multiplyScalar(H / 2)), q: QX(th), w, h: H }; }
-      case 2: { const h = lerp(r.h, .5, t), w = h * r.w / r.h; return { pos: V3(lerp(r.x, 0, t), lerp(r.y, YC - .06, t), -DEP * eio(t)), q: new T.Quaternion(), w, h }; }
-      case 3: { const w = lerp(r.w, WC * .86, t), h = w * r.h / r.w; return { pos: V3(lerp(r.x, 0, t), lerp(r.y, YT - .1, t), -DEP * eio(t)), q: new T.Quaternion(), w, h }; }
+      case 3: { const N = NOTE || { c: V3(0, YC, -DEP), w: WC * .2, h: .03 }, w = lerp(r.w, N.w, t), h = lerp(r.h, N.h, t);
+        return { pos: V3(lerp(r.x, N.c.x, t), lerp(r.y, N.c.y, t), -DEP * eio(t)), q: new T.Quaternion(), w, h }; }
       default: return { pos: V3(r.x, r.y, -1.4 * t), q: new T.Quaternion(), w: r.w, h: r.h };
     }
   }
+  const LAND = [0, 4, 5, 7, 3];   // the field that lands on each face: left, right, floor, ceiling, back
 
   function step(u) {
     if (u > -1.8) load();
     photo.style.opacity = smt(PH[0], PH[1], u).toFixed(3);
     if (!R || !built) return 1;
-    const k0 = `${u.toFixed(4)}|${vw}|${vh}|${wallsReady}` + swayEase();
+    const k0 = `${u.toFixed(4)}|${vw}|${vh}|${ready3}` + swayEase();
     if (k0 === key) return 1;
     key = k0;
     const out = 1 - smt(OUT[0], OUT[1], u), fin = smt(IN[0], IN[1], u);
-    const c = camAt(u); apply(c, (1 - smt(OUT[0] - .3, OUT[1], u)) * (u < FOLD[0] ? 1 : u < WALK[0] ? .4 : .8));
-    const fog0 = u < FOLD[0] ? 30 : lerp(30, 2.2, smt(FOLD[0], FOLD[0] + .6, u)), fog1 = u < FOLD[0] ? 60 : lerp(60, DEP * 1.25, smt(FOLD[0], FOLD[0] + .6, u));
-    const fp = clamp((u - FOLD[0]) / (FOLD[1] - FOLD[0]), 0, 1);
+    const c = camAt(u); apply(c, (1 - smt(OUT[0] - .3, OUT[1], u)) * (u < FOLD[0] ? 1 : u < SPACE[1] ? .35 : .7));
+    const fp = clamp((u - FOLD[0]) / (FOLD[1] - FOLD[0]), 0, 1), sp = clamp((u - SPACE[0]) / (SPACE[1] - SPACE[0]), 0, 1);
+    const g3a = (1 - smt(.05, .6, sp)) * out;      // the 3D grid, until the field of Space Walk takes over
+    const fog0 = 30, fog1 = 60;
 
     // pages: each layout's whole picture shows while it holds, dims while its fields move away
-    const S = seg(u);
-    const parseDim = smt(PARSE[0], PARSE[0] + .35, u);
+    const S = seg(u), parseDim = smt(PARSE[0], PARSE[0] + .35, u);
     PAGES.forEach(q => {
       let a = 0;
       if (q.k === S.a) a = 1 - smt(0, .18, S.t);
@@ -380,26 +493,24 @@ window.TTStage = function (frame, opts) {
       if (q.k === 's0') a *= lerp(1, .2, parseDim);
       if (q.k === 'g32') a *= 1 - smt(FOLD[0], FOLD[0] + .1, u);
       const r = pageRect(FULL); q.matrix.compose(V3(r.x, r.y, 0), new T.Quaternion(), V3(r.w, r.h, 1)); q.matrixWorldNeedsUpdate = true;
-      const U = q.material.uniforms; U.uA.value = a * fin * out; U.uF0.value = fog0; U.uF1.value = fog1; q.visible = U.uA.value > .002;
+      const U = q.material.uniforms; U.uA.value = a * fin * out; q.visible = U.uA.value > .002;
     });
 
     // the fields
+    const landT = [];
     BL.forEach(b => {
       const lay = k => D_.blocks[k][b.i];
       const k0 = S.a, k1 = S.b, st = b.i * .05, t = S.t > 0 ? eio(clamp((S.t - st) / (1 - .3), 0, 1)) : 0;
       const ra = pageRect(lay(k0)), rb = pageRect(lay(k1));
       let pos = V3(lerp(ra.x, rb.x, t), lerp(ra.y, rb.y, t), .045 * Math.sin(Math.PI * t) * (1 + b.i * .12)), q = new T.Quaternion(), w = lerp(ra.w, rb.w, t), h = lerp(ra.h, rb.h, t);
-      let tA = TX[k0], tB = TX[k1], rA = uvRect(lay(k0)), rB = uvRect(lay(k1)), m = smt(.25, .75, t), a = 1;
-      if (b.ghost) a = 0;
-      // into the corridor
+      let tA = TX[k0], tB = TX[k1], rA = uvRect(lay(k0)), rB = uvRect(lay(k1)), m = smt(.25, .75, t), a = b.ghost ? 0 : 1;
       if (u > FOLD[0]) {
-        const r32 = pageRect(lay('g32')), f = FOLDT[b.ghost ? 7 : b.i], tt = clamp((fp - f[0]) / (f[1] - f[0]), 0, 1), fpz = foldPose(b, eio(tt), r32);
+        const r32 = pageRect(lay('g32')), kk = b.ghost ? 7 : b.i, f = FOLDT[kk], tt = clamp((fp - f[0]) / (f[1] - f[0]), 0, 1), fpz = foldPose(b, eio(tt), r32);
         pos = fpz.pos; q = fpz.q; w = fpz.w; h = fpz.h; tA = TX.g32; rA = uvRect(lay('g32')); tB = TX.g32; rB = rA; m = 0;
-        const k = b.ghost ? 7 : b.i, wall = k === 0 ? 'tw' : k === 4 ? 'sw' : '';
-        if (wall && TX[wall]) { tB = TX[wall]; rB = new T.Vector4(0, 0, 1, 1); m = smt(.7, 1, tt); }
-        if (k === 5) a = 1 - smt(.6, .95, fp) * (wallsReady ? 1 : .5);
-        else if (k === 7) a = smt(0, .25, tt) * .7 * (1 - smt(.6, .95, fp));
-        else if (k === 1 || k === 6) a = 1 - eio(tt);
+        landT[kk] = tt;
+        // landed, the field gives way to the drawing's own type on that face
+        if (LAND.includes(kk)) a = (kk === 7 ? smt(0, .25, tt) * .7 : 1) * (1 - smt(.72, 1, tt) * (ready3 ? 1 : .4));
+        else a = 1 - eio(tt);
       }
       b.m.compose(pos, q, V3(Math.max(w, 1e-4), Math.max(h, 1e-4), 1));
       b.q.matrix.copy(b.m); b.q.matrixWorldNeedsUpdate = true; b.o.matrix.copy(b.m); b.o.matrixWorldNeedsUpdate = true;
@@ -407,44 +518,51 @@ window.TTStage = function (frame, opts) {
       U.tA.value = tA; U.tB.value = tB; U.rA.value = rA; U.rB.value = rB; U.uM.value = m;
       U.uA.value = a * (u < PARSE[0] ? smt(PARSE[0] - .05, PARSE[0] + .05, u) : 1) * out; U.uF0.value = fog0; U.uF1.value = fog1;
       b.q.visible = U.uA.value > .002;
-      // the field's outline: drawn as the scan is parsed, strongest while fields move, faint while a layout holds
       const moving = S.t > 0 && S.t < 1 ? Math.sin(Math.PI * S.t) : 0;
       let oa = smt(PARSE[0] + b.i * .05, PARSE[0] + .2 + b.i * .05, u) * (u < MOVES.s8[0] ? .6 : .2 + .45 * moving);
-      if (u > FOLD[0]) oa = .32 * (1 - smt(.7, 1, fp));
+      if (u > FOLD[0]) oa = .3 * (1 - smt(.6, .9, fp));
       if (b.ghost && u <= FOLD[0]) oa = 0;
-      b.o.material.uniforms.uA.value = oa * a * out; b.o.material.uniforms.uF0.value = fog0; b.o.material.uniforms.uF1.value = fog1;
+      b.o.material.uniforms.uA.value = oa * a * out;
       b.o.visible = b.o.material.uniforms.uA.value > .002;
     });
 
     // grids: drawn in as the fields head for them, gone once the next one comes
-    const gA = (k, a0, a1) => smt(a0, a0 + .25, u) * (1 - smt(a1, a1 + .25, u));
-    const gD = (k, a0) => smt(a0, a0 + .45, u);
     [['g8', MOVES.s8[0], MOVES.g20[0]], ['g20', MOVES.g20[0], MOVES.g32[0]], ['g32', MOVES.g32[0], FOLD[0]]].forEach(([k, a0, a1]) => {
-      const U = LN[k].material.uniforms; U.uA.value = gA(k, a0, a1) * .55 * out; U.uDraw.value = gD(k, a0); LN[k].visible = U.uA.value > .002;
+      const U = LN[k].material.uniforms; U.uA.value = smt(a0, a0 + .25, u) * (1 - smt(a1, a1 + .25, u)) * .55 * out; U.uDraw.value = smt(a0, a0 + .45, u); LN[k].visible = U.uA.value > .002;
     });
-    // the frame: the page's edge, then the corridor's mouth
+    // the frame: the page's edge, then the 3D grid's front frame
     {
       const tf = eio(smt(FOLD[0] + .1, FOLD[0] + .7, u)), x0 = lerp(-A / 2, XL, tf), x1 = lerp(A / 2, XR, tf), y0 = lerp(.5, YT, tf), y1 = lerp(-.5, YB, tf);
       const p = LN.frame.geometry.attributes.position, s = [[x0, y0, x1, y0], [x1, y0, x1, y1], [x1, y1, x0, y1], [x0, y1, x0, y0]];
       s.forEach((l, i) => { p.setXYZ(2 * i, l[0], l[1], 0); p.setXYZ(2 * i + 1, l[2], l[3], 0); }); p.needsUpdate = true;
-      const U = LN.frame.material.uniforms; U.uDraw.value = smt(IN[0] + .05, IN[1] + .2, u); U.uA.value = .55 * out * (1 - .5 * smt(WALK[0], WALK[0] + .5, u)); U.uF0.value = fog0; U.uF1.value = fog1;
+      const U = LN.frame.material.uniforms; U.uDraw.value = smt(IN[0] + .05, IN[1] + .2, u); U.uA.value = .55 * out * (1 - smt(SPACE[0], SPACE[0] + .3, u)); LN.frame.visible = U.uA.value > .002;
     }
-    // the corridor and its type
-    {
-      const U = LN.cor.material.uniforms; U.uExt.value = eio(smt(.1, .72, fp)); U.uA.value = smt(.05, .2, fp) * .5 * out; U.uF0.value = fog0; U.uF1.value = fog1;
-      LN.cor.visible = U.uA.value > .002;
-      if (cells) { const C = cells.material.uniforms; C.uIn.value = smt(.58, 1, fp); C.uA.value = out; C.uF0.value = fog0; C.uF1.value = fog1; cells.visible = fp > .5; }
+    // the 3D Grid System: its lines run back as the page opens, each face's type comes in from the mouth as its field lands
+    if (g3) {
+      const ln = (kk, a0) => smt(a0, 1, landT[kk] || 0);
+      const U = g3.material.uniforms; U.uR.value.set(ln(0, .5), ln(4, .5), ln(5, .55), ln(7, .55)); U.uR4.value = ln(3, .6);
+      U.uA.value = g3a; g3.visible = u > FOLD[0] && g3a > .002;
+      const L = g3L.material.uniforms; L.uExt.value = eio(smt(.06, .7, fp)); L.uA.value = smt(.04, .2, fp) * .55 * g3a; g3L.visible = L.uA.value > .002;
+    }
+    // Space Walk: comes up round the 3D grid, the outer walls rising out of the ground
+    if (swG) {
+      const sa = smt(.15, .8, sp) * out; swG.visible = sa > .002;
+      if (swG.visible) {
+        const M = swG.userData.M, rise = 64 * eio(smt(.1, .95, sp));
+        Object.values(M).forEach(m => { m.uniforms.uA.value = sa; m.uniforms.uRise.value = 1e3; });
+        M.titles.uniforms.uRise.value = M.stations.uniforms.uRise.value = rise;
+        if (swN) swN.material.uniforms.uA.value = sa;
+      }
     }
     R.render(scene, cam);
     labels(u, fp, out);
     return 1;
   }
 
-  /* ---------- words: the layout's name above the page, the fields' names as the scan is parsed, the walls' as they fold ---------- */
+  /* ---------- words: the layout's name above the page, the fields' names as the scan is parsed, the faces' as they fold ---------- */
   function labels(u, fp, out) {
     ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, ov.width, ov.height);
     ox.setTransform(dpr, 0, 0, dpr, 0, 0); ox.font = font; ox.textBaseline = 'alphabetic';
-    // caption
     for (const [a0, a1, no, long, short] of CAP) {
       const al = smt(a0, a0 + .14, u) * (1 - smt(a1 - .14, a1, u)) * out;
       if (al <= .01) continue;
@@ -466,14 +584,6 @@ window.TTStage = function (frame, opts) {
     // the seven fields, named while the scan is cut into them
     const a = smt(PARSE[0] + .1, PARSE[0] + .3, u) * (1 - smt(MOVES.s8[0] + .2, MOVES.s8[0] + .45, u)) * out;
     if (a > .01) BL.forEach(b => { if (b.ghost) return; pin(V3(-.5, .5, 0).applyMatrix4(b.m), D_.names[b.i], a * smt(PARSE[0] + .1 + b.i * .05, PARSE[0] + .3 + b.i * .05, u)); });
-    // the corridor's surfaces, named as the fields land on them
-    const f = smt(.66, .8, fp) * (1 - smt(WALK[0] + .15, WALK[0] + .45, u)) * out;
-    if (f > .01) {
-      pin(V3(XL, YT - .08, -.7), 'Title, left wall', f, 1);
-      pin(V3(XR, YB + .1, -.7), 'Stations, right wall', f, -1);
-      pin(V3(XL + WC * .3, YB, -.45), 'Times, floor and ceiling', f, 1);
-      pin(V3(.12, YC + .2, -DEP), 'Page and service, end wall', f, 1);
-    }
     ox.globalAlpha = 1;
   }
   return { load, layout, step, END, PHOTO: PH[1] + .05 };
