@@ -128,9 +128,14 @@
     const F = [finger(-34, -2, 52, 16, -.08), finger(-15, -10, 70, 18, -.03), finger(5, -12, 78, 19), finger(25, -8, 70, 18, .04)];
     pl([[-36, 175], [-38, 120], [-43, 60], [-43, 20], F[0][0]]);
     F.forEach((f, i) => { pl(f); if (i < F.length - 1) pl([f[f.length - 1], [ (f[f.length - 1][0] + F[i + 1][0][0]) / 2, f[f.length - 1][1] + 3 ], F[i + 1][0]]); });
-    const th = [[34, -8], [42, 25], [50, 40]];                  // the thumb, out to the side and up
-    for (let i = 0; i <= 12; i++) { const a = -Math.PI / 2 - .6 + i / 12 * Math.PI; th.push([84 + 11 * Math.cos(a + 1.2), 22 + 11 * Math.sin(a + 1.2)]); }
-    th.push([60, 70], [50, 105], [44, 135], [40, 175]); pl(th);
+    // the thumb: down the side of the palm into its crotch, out along its inner edge (tapering), round its tip, back
+    // along its outer edge and down the heel of the hand to the wrist
+    const th = [[34, -8], [36, 14], [38, 34], [40, 46]], TB = [48, 64], TL = 60, ta = -.83, td = [Math.cos(ta), Math.sin(ta)], tn = [-td[1], td[0]], rb = 12, rt = 9.5;
+    const tc = t => [TB[0] + td[0] * t * (TL - rt), TB[1] + td[1] * t * (TL - rt)], tr = t => rb + (rt - rb) * t;
+    for (let i = 0; i <= 10; i++) { const t = i / 10, c = tc(t), r = tr(t); th.push([c[0] - tn[0] * r, c[1] - tn[1] * r]); }
+    { const c = tc(1); for (let i = 1; i < 16; i++) { const a = i / 16 * Math.PI; th.push([c[0] + rt * (-tn[0] * Math.cos(a) + td[0] * Math.sin(a)), c[1] + rt * (-tn[1] * Math.cos(a) + td[1] * Math.sin(a))]); } }
+    for (let i = 10; i >= 0; i--) { const t = i / 10, c = tc(t), r = tr(t); th.push([c[0] + tn[0] * r, c[1] + tn[1] * r]); }
+    th.push([58, 95], [53, 125], [46, 152], [40, 175]); pl(th);
     pl([[-40, 22], [-20, 26], [0, 22], [18, 14]]);               // the lines of the palm
     pl([[-42, 46], [-15, 44], [10, 40], [30, 32]]);
     pl([[30, 34], [18, 60], [12, 95], [16, 128]]);
@@ -209,7 +214,15 @@
       ns: 10, layered: true,
       cam: P => ({ phi: lerp(-.35, .2, ease(P)), el: .42, R: 4200, T: [lerp(150, L / 2, ease(P)), H * .4, 0] }),
       open: P => clamp((P - .28) / .42, 0, 1),
-      end: { img: [2880, 1920], rect: [0, .08, 1, .93], fit: 'h', cam: { phi: -.35, el: .05, R: 900, T: [L * .35, H / 2, 0] } },
+      end: { img: [2880, 1920], rect: [0, .08, 1, .93], fit: 'h', cam: { phi: -.35, el: .05, R: 900, T: [L * .35, H / 2, 0] },
+        // dc-17h: the strips' edges run across it a little closer together to the right; the paper's top falls in a
+        // curve (measured on the photograph), its foot almost level
+        warp: q => {
+          const XA = X0 + STEP * 10, XB = X0 + STEP * 48, k = .35, v = (q[0] - XA) / (XB - XA), fx = v * (1 + k) / (1 + k * v);
+          const TOP = [.071, .106, .149, .185, .216, .241, .265, .285, .306, .324, .341, .352, .36], ti = clamp(fx * 12, 0, 11.999), i = Math.floor(ti);
+          const yt = (fx < 0 ? TOP[0] + (TOP[0] - TOP[1]) * -fx * 12 : fx > 1 ? TOP[12] : lerp(TOP[i], TOP[i + 1], ti - i)), yb = .932 - .03 * fx;
+          return [fx, lerp(yb, yt, q[1] / H)];
+        } },
       build(o) {
         const S = [], lines = [], u = 60 + (L - 60) * o, r0 = 70, r = Math.max(9, r0 * Math.sqrt(1 - .92 * o));
         // the base sheet, unrolled as far as u
@@ -267,7 +280,7 @@
     });
     const lv = lines.map(([a, b]) => [view(a), view(b)]);
     // the scale: fixed by the model, or fitted to what is drawn now
-    let F, cx, cy;
+    let F, cx, cy, RW = null;
     if (m.fix) ({ F, cx, cy } = m.fix(cw, ch, o));
     else {
       let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
@@ -286,6 +299,7 @@
         let R;
         if (ih > iw) { const H = ch - top - bot, k = Math.min(H / ih, cw / iw); R = { x: (cw - iw * k) / 2, y: top + (H - ih * k) / 2, w: iw * k, h: ih * k }; }
         else { const k = Math.max(cw / iw, ch / ih); R = { x: (cw - iw * k) / 2, y: (ch - ih * k) / 2, w: iw * k, h: ih * k }; }
+        RW = R;
         let FB, cxB, cyB;
         if (m.end.anchor) {
           const [[wa, fa], [wb, fb]] = m.end.anchor, va = view(wa), vb = view(wb);
@@ -299,9 +313,13 @@
       }
     }
     const scr = p => [cx + F * p[0], cy - F * p[1], p[2]];
+    // a model may give, for its end, where each of its points lies in the photograph (warp: world point -> 0..1 of the
+    // photograph); its drawing is then drawn over to there, so that it lies on the photograph's own bend
+    const WP = e > 0 && m.end.warp && RW ? m.end.warp : null;
+    const S2 = q => { const v = scr(view(q)); if (!WP) return v; const f = WP(q); return [lerp(v[0], RW.x + f[0] * RW.w, e), lerp(v[1], RW.y + f[1] * RW.h, e), v[2]]; };
     const items = [];
     surf.forEach(({ sf, ns, Bv, Tv, Bw, Tw }) => {
-      const Bs = Bv.map(scr), Ts = Tv.map(scr);
+      const Bs = WP ? Bw.map(S2) : Bv.map(scr), Ts = WP ? Tw.map(S2) : Tv.map(scr);
       // which face looks at the eye, strip by strip
       const vis = [];
       for (let i = 0; i < ns; i++) {
@@ -311,7 +329,7 @@
         vis.push(n[0] * (E[0] - c[0]) + n[1] * (E[1] - c[1]) + n[2] * (E[2] - c[2]) > 0);
       }
       const segs = Array.from({ length: ns }, () => []);
-      const at = (s, t) => { const b = sf.B(s), tt = sf.T(s); return scr(view([lerp(b[0], tt[0], t), lerp(b[1], tt[1], t), lerp(b[2], tt[2], t)])); };
+      const at = (s, t) => { const b = sf.B(s), tt = sf.T(s); return S2([lerp(b[0], tt[0], t), lerp(b[1], tt[1], t), lerp(b[2], tt[2], t)]); };
       const cut = (Lst, want) => (Lst || []).forEach(([s0, y0, s1, y1]) => {
         const lo = Math.min(s0, s1), hi = Math.max(s0, s1), cuts = [s0];
         for (let i = Math.ceil(lo * ns + 1e-9); i <= Math.floor(hi * ns - 1e-9); i++) cuts.push(i / ns);
@@ -329,7 +347,7 @@
         items.push({ pri: sf.pri || 0, z: (q[0][2] + q[1][2] + q[2][2] + q[3][2]) / 4, q, segs: segs[i], e0: (i === 0 && !sf.noEnds) || (i > 0 && vis[i] !== vis[i - 1]), e1: (i === ns - 1 && !sf.noEnds) || (i < ns - 1 && vis[i] !== vis[i + 1]) });
       }
     });
-    lv.forEach(([a, b]) => { const A = scr(a), Bq = scr(b); items.push({ pri: m.layered ? 2000 : 0, z: (A[2] + Bq[2]) / 2 - 1e-6, line: [A, Bq] }); });
+    lines.forEach(([a, b]) => { const A = S2(a), Bq = S2(b); items.push({ pri: m.layered ? 2000 : 0, z: (A[2] + Bq[2]) / 2 - 1e-6, line: [A, Bq] }); });
     items.sort((a, b) => (m.layered ? a.pri - b.pri : 0) || b.z - a.z);
     g.lineJoin = 'round'; g.lineCap = 'round';
     items.forEach(it => {

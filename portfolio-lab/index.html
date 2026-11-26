@@ -407,7 +407,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script src="cm/lines.js?v=96"></script>
-<script src="lm.js?v=101"></script>
+<script src="lm.js?v=104"></script>
 <script src="tt/tt-data.js?v=93"></script>
 <script src="tt/tt-world.js?v=93"></script>
 <script>
@@ -417,7 +417,7 @@ const DATA = window.TAO_DATA || [];
 const html = document.documentElement;
 const LOCAL = html.dataset.img === 'local';
 const CDN = 'https://freight.cargo.site';
-const url = (im, w) => im[0].startsWith('dc-') ? `dc/${im[0]}${w <= 1000 ? '-s' : ''}.jpg` : LOCAL ? `img/${im[0]}-${w}.jpg` : `${CDN}/w/${w}/i/${im[0]}/${encodeURIComponent(im[1])}`;
+const url = (im, w) => im[0].startsWith('dc-') ? `dc/${im[0]}${w <= 1000 ? '-s' : ''}.jpg?v=104` : LOCAL ? `img/${im[0]}-${w}.jpg` : `${CDN}/w/${w}/i/${im[0]}/${encodeURIComponent(im[1])}`;
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -472,9 +472,11 @@ const ADD = { 'La Divina Commedia': [
   { before: 'dc-12', im: ['dc-t2', 'dc-t2.jpg', 2400, 1600] },
   { before: 'dc-12', im: ['dc-t3', 'dc-t3.jpg', 2400, 1600] },
   { before: 'dc-12', im: ['dc-curl', 'dc-curl.jpg', 2400, 1600] },
-  { before: 'dc-13', s: { lay: 'model', it: [CMW('pocket')] } },
-  { before: 'dc-13', im: ['dc-palm', 'dc-palm.jpg', 1800, 2538] },
-  { before: 'dc-13', s: { lay: 'model', it: [CMW('big')] } },
+  { before: 'dc-14', s: { lay: 'model', it: [CMW('pocket')] } },
+  { before: 'dc-14', im: ['dc-palm', 'dc-palm.jpg', 1800, 2538] },
+  // the big book and the photograph it opens into come early, before the book is seen standing open
+  { before: 'dc-04', s: { lay: 'model', it: [CMW('big')] } },
+  { before: 'dc-04', move: 'dc-13' },
   { before: 'dc-17h', s: { lay: 'model', it: [CMW('dragon')] } },
 ] }, FULLW = { 'La Divina Commedia': 1 };
 const SETS = { 'Compressed Modernity': [
@@ -537,7 +539,11 @@ function buildWC(i, p, no, wk, links, host) {
   const S = (SET ? [first] : [first].concat(p.i.map((_, j) => j).filter(j => j !== first))).map(j => ({ kind: 'img', im: p.i[j], j }))
     .concat(SET ? SET.map((x, q) => Object.assign({ kind: 'set', j: q + 1 }, x)) : []);
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
-  (ADD[p.t] || []).forEach(a => { const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k >= 0) S.splice(k, 0, a.im ? { kind: 'img', im: a.im, j: k } : Object.assign({ kind: 'set', j: k }, a.s)); });
+  (ADD[p.t] || []).forEach(a => {
+    let mv = null; if (a.move) { const q = S.findIndex(s => s.kind === 'img' && s.im[0] === a.move); if (q >= 0) mv = S.splice(q, 1)[0]; }
+    const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k < 0) return;
+    S.splice(k, 0, mv || (a.im ? { kind: 'img', im: a.im, j: k } : Object.assign({ kind: 'set', j: k }, a.s)));
+  });
   // a picture after a model dissolves in over it, rather than rising from below
   S.forEach((s, k) => { s.xf = k > 0 && S[k - 1].lay === 'model'; });
   // full screen (the Commedia: upright pictures whole between the bar and the foot) or in the band above the text
