@@ -141,6 +141,7 @@ html.smooth .ws-frame{will-change:transform}
 .ws-photo{position:absolute;left:0;top:0;width:100%;height:var(--vhp,100%);opacity:0;pointer-events:none;object-fit:cover}
 .cm.ws-frame{background:#000}
 .br.ws-frame{background:#000}
+.tt.ws-frame{background:#000}
 .ws .ws-head .ix-rule{transform-origin:0 50%}
 /* the works timeline, under the nav: a tick where each work begins; the red line runs from the work being looked at
    toward the next one (how far there is still to go); the works already passed stay drawn */
@@ -380,6 +381,8 @@ html:not(.gl) .tile:hover .tile-im img{filter:none;transition:filter .6s}
 <script src="cm/cm-world.js?v=90"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
+<script src="tt/tt-data.js?v=92"></script>
+<script src="tt/tt-world.js?v=92"></script>
 <script>
 (() => {
 'use strict';
@@ -408,7 +411,7 @@ let total = 0;
 /* ---------- build ---------- */
 const chapters = [], tiles = [];
 const VAR = [1, 1, .74, 1, .62, 1, .86, 1, .7];
-const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy', 'Brick': 'br' }, WS_PHOTO = { cm: 0, fy: 11, br: 9 }, WSV = '73';
+const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy', 'Brick': 'br', 'Timetable Resolution Study': 'tt' }, WS_PHOTO = { cm: 0, fy: 11, br: 9, tt: 0 }, WSV = '73';
 /* ---------- a work's pictures: one full screen, pinned; scrolling lifts each picture into the next from below ----------
    A work with a stage keeps the same pinned frame: the pictures are a layer in the stage's own frame and the frame
    simply stays pinned longer, so model, photograph and pictures are one page. Their first picture is the one the
@@ -579,6 +582,8 @@ wsList.forEach(ch => {
     if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, { three: '../three.min.js',
       photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
     if (w.k === 'br' && window.BRStage) w.st = window.BRStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), photoW: im[2], photoH: im[3] });
+    // the table re-set: scan, the 8 grid as scan and as print, the 20 and 32 grids (ink maps of the reader's own pictures)
+    if (w.k === 'tt' && window.TTStage && window.TT_DATA) w.st = window.TTStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), dir: 'tt/', v: '92' });
   } catch (e) { console.warn('stage off:', e); w.st = null; }
 });
 
@@ -1268,7 +1273,7 @@ function wsFrame(w) {
   if (SMOOTH) { const s = blockPin(w.blk, y)[0].toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const u = y / vh, dk = w.st && y <= w.L0 + vh * .25 ? w.st.step(u) || 0 : w.dk0 || 0;
   w.dk0 = dk;
-  w.dark = (w.k === 'fy' || w.k === 'br' || w.k === 'cm') && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
+  w.dark = (w.k === 'fy' || w.k === 'br' || w.k === 'cm' || w.k === 'tt') && dk > .5 && y > -vh * .5 && y < w.L + vh * .5;
 }
 function ixoOpen(on) { ixo.classList.toggle('open', on); html.classList.toggle('lock', on || !!vt); }
 ixo.addEventListener('click', e => { const a = e.target.closest('a[data-wk]'); if (!a) return; e.preventDefault(); ixoOpen(false); goTo(workStart(+a.dataset.wk)); });
