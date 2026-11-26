@@ -381,6 +381,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <script src="cm/cm-world.js?v=90"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
+<script src="cm/lines.js?v=96"></script>
 <script src="tt/tt-data.js?v=93"></script>
 <script src="tt/tt-world.js?v=93"></script>
 <script>
@@ -425,6 +426,7 @@ const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', post
    studio, their long folds and their frayed edges; the door-book (a halftone: its renders are small); the exhibition;
    last, shadows passing over the printed paper. */
 const CMI = (id, w, h) => ({ t: 'i', src: `cm/x/${id}.jpg?v=89`, srcS: `cm/x/${id}-s.jpg?v=89`, ar: w / h });
+const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=88`, srcS: `cm/x/${id}-s.mp4?v=88`, poster: `cm/x/${id}.jpg?v=89`, ar: 16 / 9 });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
@@ -436,9 +438,9 @@ const SETS = { 'Compressed Modernity': [
   { lay: 'sheets', it: [CMI('p0', 1556, 2200), CMI('p1', 1556, 2200), CMI('p2', 1556, 2200)] },
   { lay: 'sheets', it: [CMI('p3', 1556, 2200), CMI('p4', 1556, 2200), CMI('p5', 1556, 2200)] },
   { lay: 'wide', it: [CMI('p6w', 2200, 1556)] },
-  { lay: 'pair', it: [CMI('e24', 2200, 1555), CMI('e25', 2200, 1555)] },
+  { lay: 'pair', it: [CML('e24', 3508, 2480), CML('e25', 3508, 2480)] },
   { lay: 'full', it: [CMI('g0', 2200, 1467)] },
-  { lay: 'pair', it: [CMI('g1', 2200, 1467), CMI('g2', 2200, 1467)] },
+  { lay: 'pair', it: [CMI('g3', 2200, 1466), CMI('g4', 2200, 1466)] },
   { lay: 'full', it: [CMI('r0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('r1', 2200, 1467), CMI('r2', 2200, 1467)] },
   { lay: 'full', it: [CMI('d0', 2200, 1467)] },
@@ -486,7 +488,7 @@ function buildWC(i, p, no, wk, links, host) {
   const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span></p>${body}${links ? `<p class="wc-links">${links}</p>` : ''}</div>`;
   const setHTML = s => s.lay === 'full' ? `<img class="wc-m" alt="${p.t}, picture ${s.j + 1}" decoding="async">`
     : `<div class="wc-m wc-set lay-${s.lay}">${s.it.map(it => `<figure class="wc-it" style="--ar:${it.ar.toFixed(4)};--iar:${(1 / it.ar).toFixed(4)}">${it.t === 'v'
-      ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
+      ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
   const inner = `${S.map((s, k) => `<div class="wc-s">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : s.kind === 'set' ? setHTML(s)
@@ -498,7 +500,7 @@ function buildWC(i, p, no, wk, links, host) {
   if (host) host.appendChild(sec);
   const frame = host || $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
   S.forEach((s, k) => { s.el = els[k]; s.m = $('.wc-m', els[k]); s.dim = $('.wc-dim', els[k]); s.src = ''; s.st = '';
-    if (s.kind === 'set') { s.xs = [...els[k].querySelectorAll('.wc-x')]; if (!s.xs.length) s.xs = [s.m]; s.vids = s.xs.filter(x => x.tagName === 'VIDEO'); s.playing = false; } });
+    if (s.kind === 'set') { s.xs = [...els[k].querySelectorAll('.wc-x')]; if (!s.xs.length) s.xs = [s.m]; s.vids = s.xs.filter(x => x.tagName === 'VIDEO'); s.playing = false; s.ln = s.it.some(it => it.t === 'l'); s.lp = -1; } });
   const w = { i, p, no, el: sec, frame, S, after, hosted: !!host, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
     txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), full: $('.wc-full', sec), open: false, ot: 0, c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '', sets: !!SET };
   /* the whole introduction: the pointer resting on the text (or a click / tap) opens it in full; leaving closes it */
@@ -1190,7 +1192,7 @@ function wcLayout(ch) {
   const w = ch.wc, n = w.S.length, sAR = vw / vh, mob = vw < 700;
   w.a = []; w.d = []; let acc = 0;
   w.S.forEach((s, k) => {
-    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : s.kind === 'set' && s.vids.length ? .95 : k === 0 && w.hosted ? WC_FIRST : WC_UNIT); w.d.push(d); acc += d;
+    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : s.kind === 'set' && s.ln ? 1.5 : s.kind === 'set' && s.vids.length ? .95 : k === 0 && w.hosted ? WC_FIRST : WC_UNIT); w.d.push(d); acc += d;
     s.st = '';
   });
   w.L = acc - w.d[n - 1] * .5 + vh * WC_TAIL;
@@ -1203,7 +1205,7 @@ function wcLoad(w, s) {
   if (s.src) return;
   if (s.kind === 'set') {
     s.src = 1;
-    s.it.forEach((it, q) => { const x = s.xs[q]; if (it.t === 'v') { x.poster = it.poster; x.preload = 'auto'; } x.src = w.mob ? it.srcS : it.src; });
+    s.it.forEach((it, q) => { const x = s.xs[q]; if (it.t === 'l') { lnBuild(x, it); return; } if (it.t === 'v') { x.poster = it.poster; x.preload = 'auto'; } x.src = w.mob ? it.srcS : it.src; });
     return;
   }
   if (s.kind === 'film') { const f = FILM[w.i]; s.src = w.mob ? f.srcS : f.src; s.m.poster = w.mob ? f.posterS : f.poster; s.m.preload = 'auto'; s.m.src = s.src; return; }
@@ -1222,6 +1224,30 @@ function setsPlay(w, k, t, on) {
     s.vids.forEach(v => { if (vis) { const pr = v.play(); if (pr) pr.catch(() => {}); } else v.pause(); });
   });
 }
+/* a drawing as line data: one path per stroke, each drawn by its dash (pathLength 1). The strokes come in left to
+   right as the set rises into view and are all down before it leaves; scrolling back takes them up again. */
+function lnBuild(svg, it) {
+  const D = (window.CM_LINES || {})[it.id]; if (!D || svg._ln) return;
+  const NS = 'http://www.w3.org/2000/svg', g = document.createElementNS(NS, 'g');
+  g.setAttribute('fill', 'none'); g.setAttribute('stroke', '#ececec'); g.setAttribute('stroke-linecap', 'round'); g.setAttribute('stroke-linejoin', 'round');
+  svg._ln = D.p.map(a => {
+    const el = document.createElementNS(NS, 'path'); let d = 'M' + a[1] + ' ' + a[2], x0 = a[1];
+    for (let i = 3; i < a.length; i += 2) { d += 'L' + a[i] + ' ' + a[i + 1]; x0 = Math.min(x0, a[i]); }
+    el.setAttribute('d', d); el.setAttribute('stroke-width', Math.max(2.2, a[0]).toFixed(1)); el.setAttribute('pathLength', '1');
+    el.style.strokeDasharray = '1 1'; el.style.strokeDashoffset = '1'; g.appendChild(el);
+    return { el, s: .8 * x0 / D.W, p: -1 };
+  });
+  svg.appendChild(g);
+}
+function lnFrame(w, yy, k) {
+  w.S.forEach((s, j) => {
+    if (!s.ln || j === 0) return;
+    const prev = w.d[j - 1], y0 = w.a[j] - .45 * (1 - WC_HOLD) * prev, y1 = w.a[j] + .55 * w.d[j];
+    const P = Math.round(clamp((yy - y0) / (y1 - y0), 0, 1) * 1000) / 1000;
+    if (P === s.lp) return; s.lp = P;
+    s.xs.forEach(x => (x._ln || []).forEach(L => { const q = clamp((P - L.s) / .2, 0, 1); if (q !== L.p) { L.p = q; L.el.style.strokeDashoffset = (1 - q).toFixed(4); } }));
+  });
+}
 function wcFrame(w) {
   const y = cur - w.top, n = w.S.length;
   w.dark = false;
@@ -1232,7 +1258,7 @@ function wcFrame(w) {
   if (SMOOTH && !w.hosted) { const s = blockPin(w.blk, y)[0].toFixed(2); if (s !== w.pin) { w.pin = s; w.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const yy = clamp(y, 0, w.L);
   let k = 0; while (k < n - 1 && yy >= w.a[k + 1]) k++;
-  const hold = k === 0 && w.hosted ? .1 : WC_HOLD;
+  const hold = k === 0 && w.hosted ? .1 : w.S[k].ln ? .6 : WC_HOLD;
   const t = k < n - 1 ? easeInOut(clamp((yy - w.a[k] - hold * w.d[k]) / ((1 - hold) * w.d[k]), 0, 1)) : 0;
   for (let j = Math.max(0, k - 1); j <= Math.min(n - 1, k + 3); j++) wcLoad(w, w.S[j]);
   // this picture rises a little and dims; the next comes up over it from below
@@ -1249,7 +1275,7 @@ function wcFrame(w) {
       s.el.style.clipPath = `inset(${((1 - t) * 100).toFixed(3)}% 0 0 0)`; s.m.style.transform = `scale(${(1 + .08 * (1 - t)).toFixed(4)})`;
     }
   });
-  if (w.sets) setsPlay(w, k, t, on);
+  if (w.sets) { setsPlay(w, k, t, on); lnFrame(w, yy, k); }
   if (w.film >= 0) {
     const vis = on && ((k === w.film && t < .85) || (k + 1 === w.film && t > .25));
     wcPlay(w, vis); if (w.snd.hidden === vis) w.snd.hidden = !vis;
