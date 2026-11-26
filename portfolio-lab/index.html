@@ -128,7 +128,9 @@ html.ready .mega .ln{overflow:visible}
 .dc-dark{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 .dc-layer{position:absolute;left:0;top:0;right:0;height:var(--vhp,100%);opacity:0;pointer-events:none;visibility:hidden}
 .dc-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
-.dc-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
+/* the photograph of the book, placed (dcRect) so that the whole book shows below the bar, on its own grey */
+.dc-photo-bg{position:absolute;inset:0;background:#dadada;opacity:0}
+.dc-photo{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:fill;opacity:0}
 /* the work stages (Compressed Modernity, Fourteen Years): at the head of the chapter, a frame pinned for a stretch of
    scroll like the opening; the work's title is written on its line, as in the Index (cm/cm-stage.js, fy/fy-stage.js) */
 .ws{position:relative}
@@ -187,6 +189,9 @@ html.smooth .wc-frame{will-change:transform}
 .wc-s.v{visibility:inherit}
 .wc-m{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;transform-origin:50% 100%}
 .wc-dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+/* a single picture or the film: whole, in the band above the text, on black (as the sets are), not filling the screen;
+   only a stage's own last photograph still fills it */
+.wc-s.band .wc-m{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);object-fit:contain;transform-origin:50% 50%}
 /* a set: one to three pictures or film loops in a band above the text, side by side, each whole (contained) */
 .wc-set{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);
   display:flex;gap:calc(var(--gut) * 1.5);align-items:stretch;justify-content:center;object-fit:unset}
@@ -233,6 +238,7 @@ html.smooth .wc-frame{will-change:transform}
 @media (max-width:699px){ .wc-txt{width:calc(100% - 2 * var(--m));height:22vh;top:calc(var(--vhp,100vh) - var(--m) - 22vh)} .wc-n{top:calc(var(--navh) + 34px)}
   .wc-full{width:calc(100% - 2 * var(--m));clip-path:inset(calc(100% - 22vh) 0 0 0)}
   .wc-set{top:calc(var(--navh) + 34px + 2.4em);height:calc(var(--vhp,100vh) - var(--navh) - 34px - 2.4em - 22vh - var(--m) - 14px);flex-direction:column;gap:var(--gut)}
+  .wc-s.band .wc-m{top:calc(var(--navh) + 34px + 2.4em);height:calc(var(--vhp,100vh) - var(--navh) - 34px - 2.4em - 22vh - var(--m) - 14px)}
   .wc-it{flex:var(--iar) 1 0} }
 .ch-head{padding-top:6vh}
 .ch-num{border-top:1px solid var(--ink);padding-top:8px}
@@ -343,7 +349,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
         </div>
         <figure class="ix-img" aria-hidden="true"><img alt=""></figure>
       </section>
-      <div class="dc-layer" aria-hidden="true"><canvas class="dc-cv"></canvas><img class="dc-photo" src="dc/dc-01.jpg" alt="" decoding="async"></div>
+      <div class="dc-layer" aria-hidden="true"><canvas class="dc-cv"></canvas><i class="dc-photo-bg"></i><img class="dc-photo" src="dc/dc-01.jpg" alt="" decoding="async"></div>
     </div>
   </section>
 
@@ -381,13 +387,13 @@ html:not(.gl) .tile-im{background:var(--ph)}
   <div class="v-bar grid mono"><span class="v-t"></span><span class="v-c"></span><span class="v-n"><button class="pv" type="button">← Prev</button><button class="nx" type="button">Next →</button></span></div>
 </div>
 
-<script src="data.js?v=67"></script>
+<script src="data.js?v=98"></script>
 <script src="texts.js?v=67"></script>
 <script src="cm/cm-world.js?v=90"></script>
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script src="cm/lines.js?v=96"></script>
-<script src="cm/door.js?v=97"></script>
+<script src="cm/door.js?v=98"></script>
 <script src="tt/tt-data.js?v=93"></script>
 <script src="tt/tt-world.js?v=93"></script>
 <script>
@@ -512,7 +518,7 @@ function buildWC(i, p, no, wk, links, host) {
   const setHTML = s => s.lay === 'full' ? `<img class="wc-m" alt="${p.t}, picture ${s.j + 1}" decoding="async">`
     : `<div class="wc-m wc-set lay-${s.lay}">${s.it.map(it => `<figure class="wc-it" style="--ar:${it.ar.toFixed(4)};--iar:${(1 / it.ar).toFixed(4)}">${it.t === 'v'
       ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
-  const inner = `${S.map((s, k) => `<div class="wc-s">${s.kind === 'film'
+  const inner = `${S.map((s, k) => `<div class="wc-s${(s.kind === 'img' || s.kind === 'film') && !(host && k === 0) ? ' band' : ''}">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : s.kind === 'set' ? setHTML(s)
       : `<img class="wc-m" alt="${p.t}, image ${s.j + 1} of ${p.i.length}" decoding="async">`}<i class="wc-dim"></i></div>`).join('')}
@@ -1077,6 +1083,8 @@ function layout() {
   const FH = stageFrameEl.offsetHeight || vh;               // the frame's own height (the large viewport on a phone)
   stageEl.style.height = (FH + SD).toFixed(0) + 'px';
   if (dc) dcFit();
+  dcPlace(dcPhoto);
+  { const s0 = chapters[0].wc.S[0]; if (s0 && s0.kind === 'img' && s0.j === 0) { s0.el.style.background = '#dadada'; s0.m.style.objectFit = 'fill'; dcPlace(s0.m); } }
   const wg = wsGeom();
   wsList.forEach(ch => {
     const w = ch.ws; w.L0 = vh * (w.st ? w.st.PHOTO || w.st.END : 3); w.L = w.L0 + (ch.wc.hosted ? ch.wc.L : 0);
@@ -1113,7 +1121,7 @@ function docTop(el) { let y = 0; for (let e = el; e && e !== main; e = e.offsetP
 // as the text world comes up (DCT.in0–in1); then p 0–1 over DCU screen heights: down through the Inferno, over at the
 // centre of the earth, up the mountain and the heavens, back out; every letter flies into the two volumes
 // (dc/dc3d.js), and the model gives way to the photograph of the book
-const dcDark = $('.dc-dark'), dcLayer = $('.dc-layer'), dcCv = $('.dc-cv'), dcPhoto = $('.dc-photo');
+const dcDark = $('.dc-dark'), dcLayer = $('.dc-layer'), dcCv = $('.dc-cv'), dcPhoto = $('.dc-photo'), dcPhotoBg = $('.dc-photo-bg');
 const DCV = '57';                                         // bump with every change to dc/dc3d.js (the browser keeps it otherwise)
 const DCT = { dark0: .2, dark1: .62, out0: .75, out1: 1.15, in0: .45, in1: .9 };
 let dc = null, dcState = 0, dcIdle = 0, DCU = 8.5, TLS = [], dcKey = '', dcMoving = false, dcSt = '';
@@ -1126,9 +1134,19 @@ function dcLoad() {
     .then(() => { dc = DC3D(dcCv, window.DC_TEXT, THREE, { width: vw, height: vh }); dcFit(); dcState = 2; })
     .catch(err => { console.warn('Commedia 3D off:', err); dcState = -1; });
 }
-function dcFit() {                                          // the book's front in the photograph, as shown (full screen)
+/* the photograph (2880 x 1920, the book's front at 794,424 1254 x 1348 on an even grey): as large as filling the
+   screen would make it, but never so large that the book is cut: the whole book stays between the bar and the foot,
+   centred there, and the grey runs on past the photograph's edges */
+function dcRect() {
+  const cs = getComputedStyle(html), navh = parseFloat(cs.getPropertyValue('--navh')) || 44, m = parseFloat(cs.getPropertyValue('--m')) || 20;
+  const top = navh + 40, bot = m + 18;
+  const s = Math.min(Math.max(vw / 2880, vh / 1920), (vw - 2 * m) / 1254, (vh - top - bot) / 1348);
+  return { s, ox: vw / 2 - 1421 * s, oy: (top + vh - bot) / 2 - 1098 * s };
+}
+function dcPlace(img) { const { s, ox, oy } = dcRect(), st = img.style; st.left = ox.toFixed(1) + 'px'; st.top = oy.toFixed(1) + 'px'; st.width = (2880 * s).toFixed(1) + 'px'; st.height = (1920 * s).toFixed(1) + 'px'; }
+function dcFit() {                                          // the book's front in the photograph, as shown
   dc.resize(vw, vh);
-  const s = Math.max(vw / 2880, vh / 1920), ox = (vw - 2880 * s) / 2, oy = (vh - 1920 * s) / 2;
+  const { s, ox, oy } = dcRect();
   dc.fitTo({ x: ox + 794 * s, y: oy + 424 * s, w: 1254 * s, h: 1348 * s }, vw, vh);
 }
 const smt = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -1160,7 +1178,7 @@ function dcStep(u) {
     const key = `${p.toFixed(5)}|${mx}|${my}`;
     if (key !== dcKey || dcMoving || dc.dirty) { dcKey = key; dcMoving = dc.render(p, mx >= 0 ? mx / vw * 2 - 1 : null, my >= 0 ? my / vh * 2 - 1 : null, DT / 1000); }
   }
-  dcPhoto.style.opacity = smt(.91, .95, p).toFixed(3);
+  dcPhoto.style.opacity = dcPhotoBg.style.opacity = smt(.91, .95, p).toFixed(3);
 }
 /* the works timeline (see CSS): segment 0 is the opening, then one per work */
 const tlEl = $('#tl'), tlK = $('.tl-k', tlEl), tlDone = $('.tl-done', tlEl), tlFillEl = $('#tlf .tl-fill'), NS = DATA.length + 1;
@@ -1225,6 +1243,7 @@ function wcLayout(ch) {
   w.wh = w.txt.clientHeight; w.th = w.txtIn.offsetHeight; w.lh = parseFloat(getComputedStyle(w.txt).lineHeight) || 14;
   w.mob = mob;
   if (w.p.t === 'Compressed Modernity') window.__cmY = (k, fr) => w.top + w.a[k] + fr * w.d[k];
+  (window.__wc = window.__wc || {})[w.i] = w;
   if (w.sets) { flLayout(w); w.S.forEach(s => { if (s.w3) s.fp = -1; }); }
 }
 function wcLoad(w, s) {
