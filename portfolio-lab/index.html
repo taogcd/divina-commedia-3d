@@ -47,7 +47,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 
 /* fixed layers */
 #lines{position:fixed;inset:0;z-index:0;pointer-events:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:var(--gut);padding-inline:var(--m)}
-#lines span{border-left:1px solid var(--rule);height:100%;transform:scaleY(0);transform-origin:50% 0;will-change:transform}
+#lines{visibility:hidden}
+#lines span{height:100%}
 #lines span:last-child{border-right:1px solid var(--rule)}
 #gl{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
 #main{position:relative;z-index:2}
@@ -620,7 +621,7 @@ DATA.forEach((p, i) => {
     tsec.className = 'tp'; tsec.setAttribute('aria-label', p.t);
     tsec.innerHTML = `<div class="tp-frame"><canvas class="tp-cv" aria-hidden="true"></canvas><h2 class="tp-h">${p.t}</h2></div>`;
     el.prepend(tsec);
-    ch.tp = { i, el: tsec, frame: $('.tp-frame', tsec), cv: $('.tp-cv', tsec), lines: ttWords(p.t), top: 0, L: 1, pin: '', key: '', fit: null };
+    ch.tp = { i, el: tsec, frame: $('.tp-frame', tsec), cv: $('.tp-cv', tsec), lines: ttWords(p.t.toUpperCase()), top: 0, L: 1, pin: '', key: '', fit: null };
   }
   ch.wc = buildWC(i, p, no, wk, links, i === 0 ? document.querySelector('.stage-frame') : ch.ws ? ch.ws.frame : null);
   if (!ch.wc.hosted) el.appendChild(ch.wc.el);
@@ -1064,7 +1065,8 @@ function drawIntro(t) {
    line on TAO.'s baseline, ranged left on the margin; nothing else on the page. It is brought down from the timeline:
    a hairline drops from the work's tick past the lines' baselines and runs out along each as a rule; the letters
    stand up out of the rules (each glyph from flat to full height, outward from where the hairline came down) while
-   the hairline draws back up into the timeline. Going out, the same backwards. All of it scrubbed by the scroll. The
+   the hairline draws back up into the timeline. Going out, the letters rise, line by line, and are pressed flat
+   against the timeline until they are one with its track. All of it scrubbed by the scroll. The
    Commedia's title is drawn the same way in the opening's own frame, once the timeline has formed. */
 const TTW = 100, TTGAP = .16;
 function ttWords(t) { const w = t.split(' '), o = []; for (let i = 0; i < w.length; i++) { if (w[i].length <= 3 && i + 1 < w.length) { o.push(w[i] + ' ' + w[i + 1]); i++; } else o.push(w[i]); } return o; }
@@ -1110,9 +1112,10 @@ function ttFit(t) {
   }
   t.key = '';
 }
-function ttDraw(t, st) {
+function ttDraw(t, st, so = 0) {
   const F = t.fit, g = t.g; if (!F || !g) return;
   g.clearRect(0, 0, t.cw, t.chh); if (st <= 0) return;
+  if (so > 0) { ttOut(t, so); return; }
   const n = F.lines.length, tx = t.tx, ty = t.ty, yLow = F.lines[n - 1].yb, seg = (a, b) => clamp((st - a) / (b - a), 0, 1);
   g.fillStyle = g.strokeStyle = '#111111'; g.lineWidth = 1;
   // the hairline from the tick: down past the baselines, then back up into the timeline
@@ -1135,21 +1138,35 @@ function ttDraw(t, st) {
     });
   });
 }
+function ttOut(t, so) {                                   // the way out: each line rises and is pressed into the track
+  const F = t.fit, g = t.g, n = F.lines.length, ty = t.ty;
+  g.fillStyle = '#111111';
+  F.lines.forEach((ln, li) => {
+    const lag = n > 1 ? .28 * li / (n - 1) : 0;
+    const put = (x0, draw, k) => {
+      const E = easeInOut(clamp((so - lag - .1 * k) / .62, 0, 1)); if (E >= 1) return;
+      const yb = lerp(ln.yb, ty, E), sy = Math.max(1 - E, .004);
+      g.globalAlpha = 1 - smt(.78, 1, E); g.save(); g.translate(x0, yb); g.scale(1, sy); draw(); g.restore(); g.globalAlpha = 1;
+    };
+    if (F.fb) { put(F.m, () => { g.font = `100 ${F.fs.toFixed(2)}px ${F.fam}`; g.textBaseline = 'alphabetic'; g.fillText(ln.text, 0, 0); }, 0); return; }
+    ln.G.forEach(G => put(0, () => g.fill(G.P), G.dn));
+  });
+}
 function tpFrame(t) {
   const y = cur - t.top;
   if (y < -vh * 1.2 || y > t.L + vh * 1.2) return;
   if (SMOOTH) { const s = blockPin(t.blk, y)[0].toFixed(2); if (s !== t.pin) { t.pin = s; t.frame.style.transform = `translate3d(0,${s}px,0)`; } }
   const FH = t.chh || vh, pin = clamp((y + .35 * FH) / (.35 * FH + .9 * vh), 0, 1), pout = clamp((y - (t.L - .3 * vh)) / (.3 * vh + .4 * FH), 0, 1);
-  const st = Math.min(pin, 1 - pout), key = st.toFixed(4) + (t.fit && t.fit.fb ? 'f' : '');
-  if (key === t.key) return; t.key = key; ttDraw(t, st);
+  const key = pin.toFixed(4) + '|' + pout.toFixed(4) + (t.fit && t.fit.fb ? 'f' : '');
+  if (key === t.key) return; t.key = key; ttDraw(t, pin, pout);
 }
 // the Commedia's title, in the opening's frame: once the timeline has formed (u screen heights after it)
 const DCTT = { in0: .3, in1: 1.2, out0: 1.6, out1: 2.2 };
 let dcTT = null;
 function dcTitle(u) {
   const t = dcTT; if (!t) return;
-  const st = u < 0 ? 0 : Math.min(clamp((u - DCTT.in0) / (DCTT.in1 - DCTT.in0), 0, 1), 1 - clamp((u - DCTT.out0) / (DCTT.out1 - DCTT.out0), 0, 1));
-  const key = st.toFixed(4) + (t.fit && t.fit.fb ? 'f' : ''); if (key === t.key) return; t.key = key; ttDraw(t, st);
+  const st = u < 0 ? 0 : clamp((u - DCTT.in0) / (DCTT.in1 - DCTT.in0), 0, 1), so = u < 0 ? 0 : clamp((u - DCTT.out0) / (DCTT.out1 - DCTT.out0), 0, 1);
+  const key = st.toFixed(4) + '|' + so.toFixed(4) + (t.fit && t.fit.fb ? 'f' : ''); if (key === t.key) return; t.key = key; ttDraw(t, st, so);
 }
 hbReady.then(() => { if (HB) { chapters.forEach(ch => { if (ch.tp) ttFit(ch.tp); }); if (dcTT) ttFit(dcTT); } });
 let introSkip = false;
@@ -1235,7 +1252,7 @@ function layout() {
     if (w.st) w.st.layout(vw, vh, Object.assign({ headBottom: tlTrackY() + (vw < 700 ? 30 : 24) }, wg));   // under the timeline's labels
   });
   chapters.forEach(ch => { const t = ch.tp; if (!t) return; t.L = vh * 1.8; t.el.style.height = ((t.frame.offsetHeight || vh) + t.L).toFixed(0) + 'px'; t.frame.style.transform = ''; t.pin = ''; t.key = ''; ttFit(t); });
-  if (!dcTT) dcTT = { i: 0, cv: $('.dc-tt'), frame: stageFrameEl, lines: ttWords(DATA[0].t), key: '', fit: null };
+  if (!dcTT) dcTT = { i: 0, cv: $('.dc-tt'), frame: stageFrameEl, lines: ttWords(DATA[0].t.toUpperCase()), key: '', fit: null };
   ttFit(dcTT);
   const sp = SMOOTH ? cur : scrollY;
   wsList.forEach(ch => { ch.ws.top = docTop(ch.ws.el); });
