@@ -232,6 +232,9 @@ html.smooth .wc-frame{will-change:transform}
 .txt-open .wc-full-in{transform:none}
 .txt-open .wc-txt{opacity:0}
 .wc-links a{pointer-events:auto;margin-right:1.2em;border-bottom:1px solid currentColor}
+/* the work's links (its film, its site): held in the bottom row beside the count, there from the first picture to the last */
+.wc-lk{pointer-events:auto}
+.wc-lk a:last-child{margin-right:0}
 .wc-n{position:absolute;right:var(--m);top:calc(var(--vhp,100vh) - var(--m) - var(--L));z-index:5;color:#fff;mix-blend-mode:difference;display:flex;gap:1.6em;white-space:pre;font-variant-numeric:tabular-nums}
 .wc-c{opacity:.7}
 .wc-snd{pointer-events:auto;font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;border-bottom:1px solid currentColor}
@@ -393,7 +396,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script src="cm/lines.js?v=96"></script>
-<script src="cm/door.js?v=98"></script>
+<script src="lm.js?v=98"></script>
 <script src="tt/tt-data.js?v=93"></script>
 <script src="tt/tt-world.js?v=93"></script>
 <script>
@@ -443,11 +446,24 @@ const CMI = (id, w, h) => ({ t: 'i', src: `cm/x/${id}.jpg?v=97`, srcS: `cm/x/${i
 /* a book's inner pages as flat sheets, all at one scale (a page is a page): screens holding more and more of them, each
    screen's sheets coming in one by one as it is scrolled; u: the first screen's one spread opens out from a single page */
 const CMF = (pre, w, h, counts, u) => { let i = 0; return counts.map((c, q) => ({ lay: 'flats', u: !!u && q === 0, it: Array.from({ length: c }, () => CMI(pre + pad(++i), w, h)) })); };
-const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (cm/door.js), opened as the page scrolls
+const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (lm.js), opened as the page scrolls
 const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
+/* the Commedia's pictures stay as they are, with these set in among them: each of the four book structures as a model
+   in lines, opening, just before the photographs of that book; the thread-bound book's long pages and the curl of its
+   paper; the pocket book cut from its ground and laid on a hand, for its size */
+const DCI = (id, w, h) => ({ t: 'i', src: `dc/${id}.jpg?v=98`, srcS: `dc/${id}-s.jpg?v=98`, ar: w / h });
+const ADD = { 'La Divina Commedia': [
+  { before: 'dc-02', s: { lay: 'one', it: [CMW('big')] } },
+  { before: 'dc-11', s: { lay: 'one', it: [CMW('thread')] } },
+  { before: 'dc-12', s: { lay: 'trio', it: [DCI('dc-t1', 2400, 1600), DCI('dc-t2', 2400, 1600), DCI('dc-t3', 2400, 1600)] } },
+  { before: 'dc-12', s: { lay: 'one', it: [DCI('dc-curl', 2400, 1600)] } },
+  { before: 'dc-13', s: { lay: 'one', it: [CMW('pocket')] } },
+  { before: 'dc-13', s: { lay: 'one', it: [DCI('dc-palm', 1800, 2538)] } },
+  { before: 'dc-17', s: { lay: 'one', it: [CMW('dragon')] } },
+] };
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
   // the black-and-white scans, light to dark, in one row
@@ -510,11 +526,12 @@ function buildWC(i, p, no, wk, links, host) {
   const S = (SET ? [first] : [first].concat(p.i.map((_, j) => j).filter(j => j !== first))).map(j => ({ kind: 'img', im: p.i[j], j }))
     .concat(SET ? SET.map((x, q) => Object.assign({ kind: 'set', j: q + 1 }, x)) : []);
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
+  (ADD[p.t] || []).forEach(a => { const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k >= 0) S.splice(k, 0, Object.assign({ kind: 'set', j: k }, a.s)); });
   const sec = document.createElement(host ? 'div' : 'section');
   sec.className = host ? 'wc wc-in' : 'wc'; sec.setAttribute('aria-label', `${p.t}: pictures`);
   const TX = (window.TAO_TEXT || {})[p.t] || [['p', p.l]];
   const body = TX.map(([k, v]) => k === 'h' ? `<p class="wc-h">${v}</p>` : k === 's' ? `<p class="wc-sh">${v}</p>` : `<p class="wc-l">${v}</p>`).join('');
-  const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span></p>${body}${links ? `<p class="wc-links">${links}</p>` : ''}</div>`;
+  const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span></p>${body}</div>`;
   const setHTML = s => s.lay === 'full' ? `<img class="wc-m" alt="${p.t}, picture ${s.j + 1}" decoding="async">`
     : `<div class="wc-m wc-set lay-${s.lay}">${s.it.map(it => `<figure class="wc-it" style="--ar:${it.ar.toFixed(4)};--iar:${(1 / it.ar).toFixed(4)}">${it.t === 'v'
       ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
@@ -524,7 +541,7 @@ function buildWC(i, p, no, wk, links, host) {
       : `<img class="wc-m" alt="${p.t}, image ${s.j + 1} of ${p.i.length}" decoding="async">`}<i class="wc-dim"></i></div>`).join('')}
     <aside class="wc-txt" aria-hidden="true"><div class="wc-txt-in">${block(true)}</div></aside>
     <aside class="wc-full" aria-label="${p.t}: introduction"><div class="wc-full-in">${block(false)}</div></aside>
-    <div class="wc-n mono" aria-hidden="true"><button class="wc-snd" type="button" hidden>Sound off</button><span class="wc-c"></span></div>`;
+    <div class="wc-n mono">${links ? `<span class="wc-lk wc-links">${links}</span>` : ''}<button class="wc-snd" type="button" hidden>Sound off</button><span class="wc-c" aria-hidden="true"></span></div>`;
   sec.innerHTML = host ? inner : `<div class="wc-frame">${inner}</div>`;
   if (host) host.appendChild(sec);
   const frame = host || $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
@@ -532,7 +549,7 @@ function buildWC(i, p, no, wk, links, host) {
     if (s.kind === 'set') { s.xs = [...els[k].querySelectorAll('.wc-x')]; if (!s.xs.length) s.xs = [s.m]; s.vids = s.xs.filter(x => x.tagName === 'VIDEO'); s.playing = false; s.ln = s.it.some(it => it.t === 'l'); s.lp = -1;
       s.fl = s.lay === 'flats' || s.lay === 'pile'; s.w3 = s.it.some(it => it.t === 'w'); s.fp = -1; } });
   const w = { i, p, no, el: sec, frame, S, after, hosted: !!host, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
-    txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), full: $('.wc-full', sec), open: false, ot: 0, c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '', sets: !!SET };
+    txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), full: $('.wc-full', sec), open: false, ot: 0, c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '', sets: !!SET || !!ADD[p.t] };
   /* the whole introduction: the pointer resting on the text (or a click / tap) opens it in full; leaving closes it */
   const setOpen = on => {
     clearTimeout(w.ot); if (on === w.open) return; w.open = on;
@@ -1354,7 +1371,7 @@ function flFrame(w, yy) {
     const y0 = w.a[j] - .5 * (1 - hp) * w.d[j - 1], y1 = w.a[j] + .58 * w.d[j];
     const P = Math.round(clamp((yy - y0) / (y1 - y0), 0, 1) * 1000) / 1000;
     if (P === s.fp) return; s.fp = P;
-    if (s.w3) { if (window.CM_DOOR) s.xs.forEach(c => window.CM_DOOR.draw(c, P)); return; }
+    if (s.w3) { if (window.LM) s.xs.forEach((c, q) => window.LM.draw(c, P, s.it[q].id)); return; }
     const fig = s.m.children, n = s.it.length;
     if (s.u) {   // one spread: at first only its left page, centred; it opens out to the whole spread
       const e = easeInOut(clamp((P - .12) / .7, 0, 1)), f = fig[0].style;
