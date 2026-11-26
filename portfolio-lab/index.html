@@ -191,6 +191,10 @@ html.smooth .wc-frame{will-change:transform}
 .wc-dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
 /* a single picture or the film: whole, in the band above the text, on black (as the sets are), not filling the screen;
    only a stage's own last photograph still fills it */
+.wc-s.tall .wc-m{top:calc(var(--navh) + 28px);height:calc(var(--vhp,100vh) - var(--navh) - 28px - var(--m));object-fit:contain}
+/* a model in lines across the whole screen */
+.wc-set.lay-model{left:0;top:0;width:100%;height:100%;display:block}
+.lay-model .wc-it{position:absolute;inset:0;flex:none}
 .wc-s.band .wc-m{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);object-fit:contain;transform-origin:50% 50%}
 /* a set: one to three pictures or film loops in a band above the text, side by side, each whole (contained) */
 .wc-set{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);
@@ -396,7 +400,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
 <script src="fy/fy-world.js?v=75"></script>
 <script src="br/br-world.js?v=75"></script>
 <script src="cm/lines.js?v=96"></script>
-<script src="lm.js?v=98"></script>
+<script src="lm.js?v=100"></script>
 <script src="tt/tt-data.js?v=93"></script>
 <script src="tt/tt-world.js?v=93"></script>
 <script>
@@ -451,19 +455,21 @@ const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing a
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
-/* the Commedia's pictures stay as they are, with these set in among them: each of the four book structures as a model
-   in lines, opening, just before the photographs of that book; the thread-bound book's long pages and the curl of its
-   paper; the pocket book cut from its ground and laid on a hand, for its size */
-const DCI = (id, w, h) => ({ t: 'i', src: `dc/${id}.jpg?v=98`, srcS: `dc/${id}-s.jpg?v=98`, ar: w / h });
+/* the Commedia's pictures stay as they are, full screen (upright ones whole between the bar and the foot), with these set
+   in among them: each of the four book structures as a model in lines, opening, just before the photograph of that
+   book, into which it dissolves (its eye and its place move to the photograph's at the end); the thread-bound book's
+   long pages and the curl of its paper; the pocket book cut from its ground and laid on a hand, for its size */
 const ADD = { 'La Divina Commedia': [
-  { before: 'dc-02', s: { lay: 'one', it: [CMW('big')] } },
-  { before: 'dc-11', s: { lay: 'one', it: [CMW('thread')] } },
-  { before: 'dc-12', s: { lay: 'trio', it: [DCI('dc-t1', 2400, 1600), DCI('dc-t2', 2400, 1600), DCI('dc-t3', 2400, 1600)] } },
-  { before: 'dc-12', s: { lay: 'one', it: [DCI('dc-curl', 2400, 1600)] } },
-  { before: 'dc-13', s: { lay: 'one', it: [CMW('pocket')] } },
-  { before: 'dc-13', s: { lay: 'one', it: [DCI('dc-palm', 1800, 2538)] } },
-  { before: 'dc-17', s: { lay: 'one', it: [CMW('dragon')] } },
-] };
+  { before: 'dc-04', s: { lay: 'model', it: [CMW('big')] } },
+  { before: 'dc-11', s: { lay: 'model', it: [CMW('thread')] } },
+  { before: 'dc-12', im: ['dc-t1', 'dc-t1.jpg', 2400, 1600] },
+  { before: 'dc-12', im: ['dc-t2', 'dc-t2.jpg', 2400, 1600] },
+  { before: 'dc-12', im: ['dc-t3', 'dc-t3.jpg', 2400, 1600] },
+  { before: 'dc-12', im: ['dc-curl', 'dc-curl.jpg', 2400, 1600] },
+  { before: 'dc-13', s: { lay: 'model', it: [CMW('pocket')] } },
+  { before: 'dc-13', im: ['dc-palm', 'dc-palm.jpg', 1800, 2538] },
+  { before: 'dc-17', s: { lay: 'model', it: [CMW('dragon')] } },
+] }, FULLW = { 'La Divina Commedia': 1 };
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
   // the black-and-white scans, light to dark, in one row
@@ -526,7 +532,11 @@ function buildWC(i, p, no, wk, links, host) {
   const S = (SET ? [first] : [first].concat(p.i.map((_, j) => j).filter(j => j !== first))).map(j => ({ kind: 'img', im: p.i[j], j }))
     .concat(SET ? SET.map((x, q) => Object.assign({ kind: 'set', j: q + 1 }, x)) : []);
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
-  (ADD[p.t] || []).forEach(a => { const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k >= 0) S.splice(k, 0, Object.assign({ kind: 'set', j: k }, a.s)); });
+  (ADD[p.t] || []).forEach(a => { const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k >= 0) S.splice(k, 0, a.im ? { kind: 'img', im: a.im, j: k } : Object.assign({ kind: 'set', j: k }, a.s)); });
+  // a picture after a model dissolves in over it, rather than rising from below
+  S.forEach((s, k) => { s.xf = k > 0 && S[k - 1].lay === 'model'; });
+  // full screen (the Commedia: upright pictures whole between the bar and the foot) or in the band above the text
+  const FULL = !!FULLW[p.t], cls = (s, k) => host && k === 0 ? '' : FULL ? (s.kind === 'img' && s.im[3] > s.im[2] ? ' tall' : '') : s.kind === 'img' || s.kind === 'film' ? ' band' : '';
   const sec = document.createElement(host ? 'div' : 'section');
   sec.className = host ? 'wc wc-in' : 'wc'; sec.setAttribute('aria-label', `${p.t}: pictures`);
   const TX = (window.TAO_TEXT || {})[p.t] || [['p', p.l]];
@@ -535,7 +545,7 @@ function buildWC(i, p, no, wk, links, host) {
   const setHTML = s => s.lay === 'full' ? `<img class="wc-m" alt="${p.t}, picture ${s.j + 1}" decoding="async">`
     : `<div class="wc-m wc-set lay-${s.lay}">${s.it.map(it => `<figure class="wc-it" style="--ar:${it.ar.toFixed(4)};--iar:${(1 / it.ar).toFixed(4)}">${it.t === 'v'
       ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
-  const inner = `${S.map((s, k) => `<div class="wc-s${(s.kind === 'img' || s.kind === 'film') && !(host && k === 0) ? ' band' : ''}">${s.kind === 'film'
+  const inner = `${S.map((s, k) => `<div class="wc-s${cls(s, k)}">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : s.kind === 'set' ? setHTML(s)
       : `<img class="wc-m" alt="${p.t}, image ${s.j + 1} of ${p.i.length}" decoding="async">`}<i class="wc-dim"></i></div>`).join('')}
@@ -1259,6 +1269,7 @@ function wcLayout(ch) {
   if (!w.hosted) { w.frame.style.transform = ''; w.el.style.height = ((w.frame.offsetHeight || vh) + w.L).toFixed(0) + 'px'; }
   w.wh = w.txt.clientHeight; w.th = w.txtIn.offsetHeight; w.lh = parseFloat(getComputedStyle(w.txt).lineHeight) || 14;
   w.mob = mob;
+  { const cs = getComputedStyle(html); w.lmOpt = { top: (parseFloat(cs.getPropertyValue('--navh')) || 44) + 28, bot: parseFloat(cs.getPropertyValue('--m')) || 20 }; }
   if (w.p.t === 'Compressed Modernity') window.__cmY = (k, fr) => w.top + w.a[k] + fr * w.d[k];
   (window.__wc = window.__wc || {})[w.i] = w;
   if (w.sets) { flLayout(w); w.S.forEach(s => { if (s.w3) s.fp = -1; }); }
@@ -1371,7 +1382,7 @@ function flFrame(w, yy) {
     const y0 = w.a[j] - .5 * (1 - hp) * w.d[j - 1], y1 = w.a[j] + .58 * w.d[j];
     const P = Math.round(clamp((yy - y0) / (y1 - y0), 0, 1) * 1000) / 1000;
     if (P === s.fp) return; s.fp = P;
-    if (s.w3) { if (window.LM) s.xs.forEach((c, q) => window.LM.draw(c, P, s.it[q].id)); return; }
+    if (s.w3) { if (window.LM) s.xs.forEach((c, q) => window.LM.draw(c, P, s.it[q].id, w.lmOpt)); return; }
     const fig = s.m.children, n = s.it.length;
     if (s.u) {   // one spread: at first only its left page, centred; it opens out to the whole spread
       const e = easeInOut(clamp((P - .12) / .7, 0, 1)), f = fig[0].style;
@@ -1407,10 +1418,14 @@ function wcFrame(w) {
     if (st === 'h') { s.el.classList.remove('v'); return; }
     s.el.classList.add('v');
     if (j === k) {
-      s.el.style.zIndex = 1; s.el.style.clipPath = ''; s.m.style.transform = '';
-      s.el.style.transform = t > 0 ? `translate3d(0,${(-7 * t).toFixed(3)}%,0)` : ''; s.dim.style.opacity = (t * .6).toFixed(3);
+      const xf = k + 1 < n && w.S[k + 1].xf;                 // a model holds still while its photograph comes up over it
+      s.el.style.zIndex = 1; s.el.style.clipPath = ''; s.el.style.opacity = ''; s.m.style.transform = '';
+      s.el.style.transform = t > 0 && !xf ? `translate3d(0,${(-7 * t).toFixed(3)}%,0)` : ''; s.dim.style.opacity = xf ? '0' : (t * .6).toFixed(3);
+    } else if (s.xf) {
+      s.el.style.zIndex = 2; s.el.style.transform = ''; s.dim.style.opacity = '0'; s.el.style.clipPath = ''; s.m.style.transform = '';
+      s.el.style.opacity = t.toFixed(4);
     } else {
-      s.el.style.zIndex = 2; s.el.style.transform = ''; s.dim.style.opacity = '0';
+      s.el.style.zIndex = 2; s.el.style.transform = ''; s.dim.style.opacity = '0'; s.el.style.opacity = '';
       s.el.style.clipPath = `inset(${((1 - t) * 100).toFixed(3)}% 0 0 0)`; s.m.style.transform = `scale(${(1 + .08 * (1 - t)).toFixed(4)})`;
     }
   });
