@@ -1461,8 +1461,9 @@ function lnFrame(w, yy, k) {
 /* flats: a book's pages at one scale for every screen of them: the scale is set so that six spreads (two to a row, three
    rows) fit the band with room around them, and a single page is half a spread. Pile: the photographs in justified
    rows packed close, the rows' height found so that they fill the band. */
-/* flats and pile: the pictures in justified rows in one block, under the timeline and beside the text, never round it
-   (desktop: the column right of the text, the full height; phone: above the text): flats all at one height (one scale,
+/* flats and pile: the pictures in justified rows in one block, under the timeline, never round the text (desktop: the
+   whole frame from margin to margin, as the book's contact sheet; the text lies over it, as over the Commedia's full
+   pictures, in difference; phone: above the text): flats all at one height (one scale,
    so a page is a page), the largest that lets them all in, on the fewest rows; the breaks chosen so that the spare
    width is shared as evenly as can be, and every row runs from the block's left edge to its right; the spare height
    between the rows. A picture marked brk starts a new row (a book's second kind of page). */
@@ -1470,7 +1471,7 @@ function flRegion(w, B) {
   const cs = getComputedStyle(html), gut = parseFloat(cs.getPropertyValue('--gut')) || 20, m = parseFloat(cs.getPropertyValue('--m')) || 20, mob = vw < 700;
   const W = B.clientWidth, H = B.clientHeight, t = w.txt;
   const R = { x0: m, x1: W - m, y0: tlTrackY() + (mob ? 46 : 40), y1: H - m, gut };
-  if (t) { if (mob) R.y1 = t.offsetTop - gut; else R.x0 = t.offsetLeft + t.offsetWidth + gut * 2; }
+  if (t && mob) R.y1 = t.offsetTop - gut;
   return R;
 }
 function flPack(ar, brk, R, h, g) {
