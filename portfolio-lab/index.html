@@ -1461,49 +1461,51 @@ function lnFrame(w, yy, k) {
 /* flats: a book's pages at one scale for every screen of them: the scale is set so that six spreads (two to a row, three
    rows) fit the band with room around them, and a single page is half a spread. Pile: the photographs in justified
    rows packed close, the rows' height found so that they fill the band. */
-/* flats and pile: the pictures packed in rows over the whole frame, under the timeline and around the text (above
-   its top across the full width, beside it to its right below that): flats all at one height (one scale, so a page is
-   a page), the largest that lets them all in; the spare width of each full row goes into its gaps, the spare height
+/* flats and pile: the pictures in justified rows in one block, under the timeline and beside the text, never round it
+   (desktop: the column right of the text, the full height; phone: above the text): flats all at one height (one scale,
+   so a page is a page), the largest that lets them all in, on the fewest rows; the breaks chosen so that the spare
+   width is shared as evenly as can be, and every row runs from the block's left edge to its right; the spare height
    between the rows. A picture marked brk starts a new row (a book's second kind of page). */
 function flRegion(w, B) {
   const cs = getComputedStyle(html), gut = parseFloat(cs.getPropertyValue('--gut')) || 20, m = parseFloat(cs.getPropertyValue('--m')) || 20, mob = vw < 700;
   const W = B.clientWidth, H = B.clientHeight, t = w.txt;
-  const R = { x0: m, x1: W - m, y0: tlTrackY() + (mob ? 46 : 40), y1: H - m, ex: m, ey: 1e9, gut };
-  if (t) { const ty = t.offsetTop, tr = t.offsetLeft + t.offsetWidth; if (mob) R.y1 = ty - gut; else { R.ex = tr + gut * 2; R.ey = ty - gut; } }
+  const R = { x0: m, x1: W - m, y0: tlTrackY() + (mob ? 46 : 40), y1: H - m, gut };
+  if (t) { if (mob) R.y1 = t.offsetTop - gut; else R.x0 = t.offsetLeft + t.offsetWidth + gut * 2; }
   return R;
 }
-function flPack(ar, brk, R, h, g, gv) {
-  const rows = []; let y = R.y0, cur = [], x = 0;
-  const span = yy => yy + h > R.ey ? [R.ex, R.x1] : [R.x0, R.x1];
-  let sp = span(y);
-  const close = () => { rows.push({ y, a: sp[0], b: sp[1], k: cur, w: x }); y += h + gv; sp = span(y); cur = []; x = 0; };
-  for (let k = 0; k < ar.length; k++) {
-    const wk = ar[k] * h;
-    if (cur.length && (brk[k] || x + g + wk > sp[1] - sp[0])) close();
-    if (wk > sp[1] - sp[0]) { if (!cur.length && sp[0] > R.x0) { y = Math.max(y, R.ey - h + 1); sp = [R.x0, R.x1]; } return null; }
-    cur.push(k); x += (cur.length > 1 ? g : 0) + wk;
-  }
-  if (cur.length) close();
-  return rows.length && rows[rows.length - 1].y + h <= R.y1 + .5 ? rows : null;
+function flPack(ar, brk, R, h, g) {
+  const W = R.x1 - R.x0, n = ar.length, wd = ar.map(a => a * h);
+  if (!n || wd.some(x => x > W + .5)) return null;
+  let nr = 0;
+  for (let k = 0, x = -1; k < n; k++) { if (x < 0 || brk[k] || x + g + wd[k] > W) { nr++; x = wd[k]; } else x += g + wd[k]; }
+  if (nr * h + (nr - 1) * g > R.y1 - R.y0 + .5) return null;
+  // items i … j-1 on a row: the extra in each gap, squared (a lone picture: its spare)
+  const seg = (i, j) => { let x = (j - i - 1) * g; for (let q = i; q < j; q++) { if (q > i && brk[q]) return -1; x += wd[q]; } if (x > W + .5) return -1; const sp = W - x; return j - i > 1 ? (sp / (j - i - 1)) ** 2 : sp * sp; };
+  const C = [[0]], Bk = [[]];
+  for (let r = 1; r <= nr; r++) { C[r] = []; Bk[r] = []; for (let j = 1; j <= n; j++) { let best = Infinity, bi = -1;
+    for (let i = r - 1; i < j; i++) { const c0 = C[r - 1][i]; if (c0 === undefined || c0 === Infinity) continue; const c = seg(i, j); if (c < 0) continue; if (c0 + c < best) { best = c0 + c; bi = i; } }
+    C[r][j] = best; Bk[r][j] = bi; } }
+  if (!(C[nr][n] < Infinity)) return null;
+  const rows = []; for (let r = nr, j = n; r > 0; r--) { const i = Bk[r][j]; rows.unshift({ k: Array.from({ length: j - i }, (_, q) => i + q) }); j = i; }
+  rows.forEach(r => { r.w = r.k.reduce((x, k) => x + wd[k], 0) + (r.k.length - 1) * g; });
+  return rows;
 }
 function flLayout(w) {
   const F = w.S.filter(s => s.fl); if (!F.length) return;
   const B = F[0].m; if (!B.clientWidth || !B.clientHeight) return;
-  const R = flRegion(w, B);
+  const R = flRegion(w, B), W = R.x1 - R.x0, H = R.y1 - R.y0;
   const place = (el, x, y, ww, hh) => { const st = el.style; st.left = x.toFixed(1) + 'px'; st.top = y.toFixed(1) + 'px'; st.width = ww.toFixed(1) + 'px'; st.height = hh.toFixed(1) + 'px'; };
   F.forEach(s => {
     const fig = [...s.m.children], ar = s.it.map(it => it.ar), brk = s.it.map(it => !!it.brk); s.fp = -1;
     const g = s.lay === 'pile' ? R.gut * .5 : R.gut * .9;
-    let lo = 4, hi = R.y1 - R.y0;
-    for (let it = 0; it < 30; it++) { const mid = (lo + hi) / 2; if (flPack(ar, brk, R, mid, g, g)) lo = mid; else hi = mid; }
-    const h = lo; let gl = g, gh = g * 6;
-    for (let it = 0; it < 20; it++) { const mid = (gl + gh) / 2; if (flPack(ar, brk, R, h, g, mid)) gl = mid; else gh = mid; }
-    const rows = flPack(ar, brk, R, h, g, gl) || flPack(ar, brk, R, h, g, g) || [];
+    let lo = 4, hi = H;
+    for (let it = 0; it < 30; it++) { const mid = (lo + hi) / 2; if (flPack(ar, brk, R, mid, g)) lo = mid; else hi = mid; }
+    const h = lo, rows = flPack(ar, brk, R, h, g) || [], nr = rows.length;
+    const gv = nr > 1 ? Math.min(g * 6, Math.max(g, (H - nr * h) / (nr - 1))) : 0;
     rows.forEach((r, ri) => {
-      const last = ri === rows.length - 1 || (rows[ri + 1] && brk[rows[ri + 1].k[0]]), spare = (r.b - r.a) - r.w;
-      const gx = !last && r.k.length > 1 ? g + Math.min(spare / (r.k.length - 1), g * 4) : g;
-      let x = r.a + (last ? 0 : Math.max(0, (spare - (gx - g) * (r.k.length - 1)) / 2));
-      r.k.forEach(k => { place(fig[k], x, r.y, ar[k] * h, h); x += ar[k] * h + gx; });
+      const c = r.k.length, spare = W - r.w, gx = c > 1 ? g + spare / (c - 1) : 0, y = R.y0 + ri * (h + gv);
+      let x = R.x0 + (c > 1 ? 0 : spare / 2);
+      r.k.forEach(k => { place(fig[k], x, y, ar[k] * h, h); x += ar[k] * h + gx; });
     });
     if (s.lay === 'pile') {                                 // shortest first, then the half-opened, then the opened-out
       const kind = a => a < 2 ? 0 : a < 3.5 ? 1 : 2, rnd = q => ((q * 7919) % 31) / 31;
