@@ -209,10 +209,12 @@ html.smooth .wc-frame{will-change:transform}
 .wc-set{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);
   display:flex;gap:calc(var(--gut) * 1.5);align-items:stretch;justify-content:center;object-fit:unset}
 .wc-set.lay-rows,.wc-set.lay-stack{flex-direction:column}
-/* fit: one picture, whole, as large as the frame below the timeline allows (the text over it); stack: pictures one above the other, each across the whole width from margin to margin, down to the foot of the
+/* duo: two pictures side by side, each filling its half of the frame; fit: one picture, whole, as large as the frame below the timeline allows (the text over it); stack: pictures one above the other, each across the whole width from margin to margin, down to the foot of the
    frame (the text over them), each cut to its share of the height */
-@media (min-width:700px){ .wc-set.lay-stack,.wc-set.lay-fit{height:calc(var(--vhp,100vh) - var(--navh) - 40px - var(--m))}
-  .wc-set.lay-stack{gap:calc(var(--gut) * .9)}
+@media (min-width:700px){ .wc-set.lay-stack,.wc-set.lay-fit,.wc-set.lay-duo{height:calc(var(--vhp,100vh) - var(--navh) - 40px - var(--m))}
+  .wc-set.lay-stack,.wc-set.lay-duo{gap:calc(var(--gut) * .9)}
+  .lay-duo .wc-it{flex:1 1 0}
+  .lay-duo .wc-x{object-fit:cover}
   .lay-stack .wc-it{flex:1 1 0}
   .lay-stack .wc-x{object-fit:cover}
   .lay-stack .wc-it:first-child .wc-x{object-position:50% 28%}
@@ -413,7 +415,7 @@ html:not(.gl) .tile-im{background:var(--ph)}
   <div class="v-bar grid mono"><span class="v-t"></span><span class="v-c"></span><span class="v-n"><button class="pv" type="button">← Prev</button><button class="nx" type="button">Next →</button></span></div>
 </div>
 
-<script src="data.js?v=101"></script>
+<script src="data.js?v=115"></script>
 <script src="texts.js?v=67"></script>
 <script src="cm/cm-world.js?v=90"></script>
 <script src="fy/fy-world.js?v=108"></script>
@@ -429,7 +431,7 @@ const DATA = window.TAO_DATA || [];
 const html = document.documentElement;
 const LOCAL = html.dataset.img === 'local';
 const CDN = 'https://freight.cargo.site';
-const url = (im, w) => im[0].startsWith('dc-') ? `dc/${im[0]}${w <= 1000 ? '-s' : ''}.jpg?v=104` : LOCAL ? `img/${im[0]}-${w}.jpg` : `${CDN}/w/${w}/i/${im[0]}/${encodeURIComponent(im[1])}`;
+const url = (im, w) => im[0].startsWith('fy-') ? `fy/x/${im[0].slice(3)}${w <= 1000 ? '-s' : ''}.jpg?v=115` : im[0].startsWith('dc-') ? `dc/${im[0]}${w <= 1000 ? '-s' : ''}.jpg?v=104` : LOCAL ? `img/${im[0]}-${w}.jpg` : `${CDN}/w/${w}/i/${im[0]}/${encodeURIComponent(im[1])}`;
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -473,7 +475,7 @@ const CMB = (u, ...groups) => ({ lay: 'flats', u: !!u, it: [].concat(...groups) 
 const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (lm.js), opened as the page scrolls
 const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
-const FYI = (id, w, h, pos) => ({ t: 'i', src: `fy/x/${id}.jpg?v=114`, srcS: `fy/x/${id}-s.jpg?v=114`, ar: w / h, pos });
+const FYI = (id, w, h, pos) => ({ t: 'i', src: `fy/x/${id}.jpg?v=115`, srcS: `fy/x/${id}-s.jpg?v=115`, ar: w / h, pos });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
 /* the Commedia's pictures stay as they are, full screen (upright ones whole between the bar and the foot), with these set
@@ -509,6 +511,25 @@ const ADD = { 'La Divina Commedia': [
   // the J and the R: the book's pages cut from their ground, laid on the black, large in the middle of the frame
   { before: 'C2897593352518410091031590916782', s: { lay: 'fit', it: [FYI('jr', 2800, 1346)] } },
   { drop: 'C2897593352518410091031590916782' },
+  // the banners on the roof, in colour, each across the whole width (the duplicates of the same views left out)
+  { before: 'U2897593352573750323252719571630', s: { lay: 'stack', it: [FYI('r20', 2400, 1600, '50% 50%')] } },
+  { drop: 'U2897593352573750323252719571630' },
+  { before: 'O2956211199846925473502189638318', s: { lay: 'stack', it: [FYI('r21', 2400, 1600, '50% 45%')] } },
+  { drop: 'O2956211199846925473502189638318' },
+  { before: 'A2897593352592197067326429123246', s: { lay: 'stack', it: [FYI('r24', 2400, 1600, '50% 52%')] } },
+  { drop: 'A2897593352592197067326429123246' },
+  { before: 'U2897593352610643811400138674862', s: { lay: 'duo', it: [FYI('r22', 2400, 1600, '35% 50%'), FYI('r23', 2400, 1600)] } },
+  { drop: 'U2897593352610643811400138674862' }, { drop: 'G2956211351331587806805027508910' },
+  { drop: 'G2897593352629090555473848226478' }, { drop: 'X2897593352647537299547557778094' },
+  /* the book in the hand, in black and white: two photographs to a screen, filling it (they take the places of the
+     two pictures of hands holding the book, and follow them) */
+  { before: 'S2956232580969919220253309850286', s: { lay: 'duo', it: [FYI('bw02', 2000, 1333), FYI('bw03', 2000, 1333)] } },
+  { drop: 'S2956232580969919220253309850286' },
+  { before: 'F2956232896003414511065032348334', s: { lay: 'duo', it: [FYI('bw13', 2000, 1333, '70% 50%'), FYI('bw14', 2000, 1333, '45% 50%')] } },
+  { drop: 'F2956232896003414511065032348334' },
+  { end: 1, s: { lay: 'duo', it: [FYI('bw06', 2000, 1333, '55% 50%'), FYI('bw05', 2000, 1333, '60% 50%')] } },
+  { end: 1, s: { lay: 'duo', it: [FYI('bw09', 2000, 1333, '45% 50%'), FYI('bw10', 2000, 1333, '65% 50%')] } },
+  { end: 1, s: { lay: 'duo', it: [FYI('bw11', 2000, 1333), FYI('bw12', 2000, 1333, '55% 50%')] } },
 ] }, FULLW = { 'La Divina Commedia': 1 };
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
@@ -571,6 +592,7 @@ function buildWC(i, p, no, wk, links, host) {
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
   (ADD[p.t] || []).forEach(a => {
     if (a.drop) { const q = S.findIndex(s => s.kind === 'img' && s.im[0] === a.drop); if (q >= 0) S.splice(q, 1); return; }
+    if (a.end) { S.push(Object.assign({ kind: 'set', j: S.length }, a.s)); return; }
     let mv = null; if (a.move) { const q = S.findIndex(s => s.kind === 'img' && s.im[0] === a.move); if (q >= 0) mv = S.splice(q, 1)[0]; }
     const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k < 0) return;
     S.splice(k, 0, mv || (a.im ? { kind: 'img', im: a.im, j: k } : Object.assign({ kind: 'set', j: k }, a.s)));
@@ -693,7 +715,7 @@ wsList.forEach(ch => {
       // _0013, _0014, _0015, _0018, _0019, _0020, _0021, IMG_20240829_0008), cut back into tiles a sheet wide
       tiles: [...Array(13)].map((_, k) => { const n = String(k).padStart(2, '0'); return { lo: `cm/t/m${n}.jpg?v=84`, hi: `cm/t/h${n}.jpg?v=84` }; }) });
     if (w.k === 'fy' && window.FYStage) w.st = window.FYStage(w.frame, { three: '../three.min.js',
-      photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, films: 'fy/films.jpg?v=108', reg: { pw: 1600, ph: 711, tx: 737, ty: 404, a: -15.25, s: 1.0634 } });
+      photo: url(im, 2400), glyphs: 'fy/fy-glyphs.js?v=' + WSV, films: 'fy/films.jpg?v=108', reg: { pw: 1600, ph: 1066.67, tx: 797.36, ty: 604.98, a: -16.29, s: 1.3237 } });
     if (w.k === 'br' && window.BRStage) w.st = window.BRStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), photoW: im[2], photoH: im[3] });
     // the table re-set: scan, the 8 grid as scan and as print, the 20 and 32 grids (ink maps of the reader's own pictures)
     if (w.k === 'tt' && window.TTStage && window.TT_DATA) w.st = window.TTStage(w.frame, { three: '../three.min.js', photo: url(im, 2400), dir: 'tt/', v: '93' });
