@@ -225,7 +225,8 @@ html.smooth .wc-frame{will-change:transform}
   .lay-wide .wc-x{object-fit:cover} }
 .wc-x{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
 /* flats and pile: each picture placed by the script (flLayout) at one common scale, then brought in one by one (flFrame) */
-.wc-set.lay-flats,.wc-set.lay-pile{display:block;left:0;top:0;width:100%;height:100%}
+.wc-set.lay-flats,.wc-set.lay-pile,.wc-set.lay-spec{display:block;left:0;top:0;width:100%;height:100%}
+.lay-spec .wc-it{position:absolute;flex:none;visibility:hidden}
 .lay-flats .wc-it,.lay-pile .wc-it{position:absolute;flex:none;opacity:0;will-change:opacity,transform}
 .lay-flats .wc-it:first-child{opacity:1}
 .wc-3d{object-fit:unset}
@@ -496,6 +497,11 @@ const ADD = { 'La Divina Commedia': [
 'Fourteen Years': [
   { before: 'F2562667422543983029815509045934', s: { lay: 'stack', it: [FYI('s0a', 2200, 759), FYI('s0b', 2200, 759)] } },
   { drop: 'F2562667422543983029815509045934' },
+  /* the archive sheet, over the whole frame: the fourteen typefaces A to Z, year by year (drawn from the glyphs, not a
+     picture), the X-ray they were taken from, the hospital slips, and the book's pages fanned out with their letters;
+     each comes in as the page is scrolled (specLayout, specFrame) */
+  { before: 'C2722144869747043827428899619111', s: { lay: 'spec', it: [{ t: 'g', ar: 1 }, FYI('sp-xray', 784, 1044), FYI('sp-card', 179, 241), FYI('sp-form', 303, 383), FYI('sp-rcpt', 176, 606), FYI('sp-fan', 1641, 1002)] } },
+  { drop: 'C2722144869747043827428899619111' },
 ] }, FULLW = { 'La Divina Commedia': 1 };
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
@@ -573,7 +579,7 @@ function buildWC(i, p, no, wk, links, host) {
   const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span></p>${body}</div>`;
   const setHTML = s => s.lay === 'full' ? `<img class="wc-m" alt="${p.t}, picture ${s.j + 1}" decoding="async">`
     : `<div class="wc-m wc-set lay-${s.lay}">${s.it.map(it => `<figure class="wc-it" style="--ar:${it.ar.toFixed(4)};--iar:${(1 / it.ar).toFixed(4)}">${it.t === 'v'
-      ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
+      ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'g' ? `<canvas class="wc-x wc-spec" role="img" aria-label="${p.t}: the fourteen typefaces, A to Z, 2010 to 2023"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
   const inner = `${S.map((s, k) => `<div class="wc-s${cls(s, k)}">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : s.kind === 'set' ? setHTML(s)
@@ -586,7 +592,7 @@ function buildWC(i, p, no, wk, links, host) {
   const frame = host || $('.wc-frame', sec), els = [...sec.querySelectorAll('.wc-s')];
   S.forEach((s, k) => { s.el = els[k]; s.m = $('.wc-m', els[k]); s.dim = $('.wc-dim', els[k]); s.src = ''; s.st = '';
     if (s.kind === 'set') { s.xs = [...els[k].querySelectorAll('.wc-x')]; if (!s.xs.length) s.xs = [s.m]; s.vids = s.xs.filter(x => x.tagName === 'VIDEO'); s.playing = false; s.ln = s.it.some(it => it.t === 'l'); s.lp = -1;
-      s.fl = s.lay === 'flats' || s.lay === 'pile'; s.w3 = s.it.some(it => it.t === 'w'); s.fp = -1; } });
+      s.fl = s.lay === 'flats' || s.lay === 'pile' || s.lay === 'spec'; s.w3 = s.it.some(it => it.t === 'w'); s.fp = -1; } });
   const w = { i, p, no, el: sec, frame, S, after, hosted: !!host, k: wk, top: 0, L: 1, a: [], d: [], pin: '', key: '', on: null, still: null, dark: false,
     txt: $('.wc-txt', sec), txtIn: $('.wc-txt-in', sec), full: $('.wc-full', sec), open: false, ot: 0, c: $('.wc-c', sec), snd: $('.wc-snd', sec), film: S.findIndex(s => s.kind === 'film'), playing: false, cnt: '', sets: !!SET || !!ADD[p.t] };
   /* the whole introduction: the pointer resting on the text (or a click / tap) opens it in full; leaving closes it */
@@ -1413,7 +1419,7 @@ function wcLayout(ch) {
   const w = ch.wc, n = w.S.length, sAR = vw / vh, mob = vw < 700;
   w.a = []; w.d = []; let acc = 0;
   w.S.forEach((s, k) => {
-    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : s.kind === 'set' && s.fl ? (s.lay === 'pile' ? 2.4 : 1 + .05 * s.it.length) : s.kind === 'set' && s.w3 ? 2 : s.kind === 'set' && s.ln ? 1.5 : s.kind === 'set' && s.vids.length ? .95 : k === 0 && w.hosted ? WC_FIRST : WC_UNIT); w.d.push(d); acc += d;
+    w.a.push(acc); const d = vh * (s.kind === 'film' ? WC_FILM : s.kind === 'set' && s.fl ? (s.lay === 'pile' ? 2.4 : s.lay === 'spec' ? 2.6 : 1 + .05 * s.it.length) : s.kind === 'set' && s.w3 ? 2 : s.kind === 'set' && s.ln ? 1.5 : s.kind === 'set' && s.vids.length ? .95 : k === 0 && w.hosted ? WC_FIRST : WC_UNIT); w.d.push(d); acc += d;
     s.st = '';
   });
   w.L = acc - w.d[n - 1] * .5 + vh * WC_TAIL;
@@ -1430,7 +1436,7 @@ function wcLoad(w, s) {
   if (s.src) return;
   if (s.kind === 'set') {
     s.src = 1;
-    s.it.forEach((it, q) => { const x = s.xs[q]; if (it.t === 'l') { lnBuild(x, it); return; } if (it.t === 'w') return; if (it.t === 'v') { x.poster = it.poster; x.preload = 'auto'; } x.src = w.mob ? it.srcS : it.src; });
+    s.it.forEach((it, q) => { const x = s.xs[q]; if (it.t === 'l') { lnBuild(x, it); return; } if (it.t === 'w' || it.t === 'g') return; if (it.t === 'v') { x.poster = it.poster; x.preload = 'auto'; } x.src = w.mob ? it.srcS : it.src; });
     return;
   }
   if (s.kind === 'film') { const f = FILM[w.i]; s.src = w.mob ? f.srcS : f.src; s.m.poster = w.mob ? f.posterS : f.poster; s.m.preload = 'auto'; s.m.src = s.src; return; }
@@ -1512,6 +1518,7 @@ function flLayout(w) {
   const R = flRegion(w, B), W = R.x1 - R.x0, H = R.y1 - R.y0;
   const place = (el, x, y, ww, hh) => { const st = el.style; st.left = x.toFixed(1) + 'px'; st.top = y.toFixed(1) + 'px'; st.width = ww.toFixed(1) + 'px'; st.height = hh.toFixed(1) + 'px'; };
   F.forEach(s => {
+    if (s.lay === 'spec') { s.fp = -1; specLayout(s, R); return; }
     const fig = [...s.m.children], ar = s.it.map(it => it.ar), brk = s.it.map(it => !!it.brk); s.fp = -1;
     const g = s.lay === 'pile' ? R.gut * .5 : R.gut * .9;
     let lo = 4, hi = H;
@@ -1529,6 +1536,98 @@ function flLayout(w) {
     } else s.ro = s.it.map((_, k) => k);
   });
 }
+/* Fourteen Years' archive sheet (lay 'spec'), as in the work's own film of it: on the left the fourteen typefaces, a
+   row to a year, each row a tall A, B–M over N–Y, a tall Z, black letters on white cells (the glyphs of fy-glyphs.js,
+   laid on their cells as in the X-ray stage); beside them the X-ray, under it the three hospital slips; to the right
+   the book's pages fanned out. Laid out over the whole frame (on a phone: the pages under the rest), in units of the
+   sheet's height. Scrolling brings in the rows one year after another (each wiped in from the left with a soft edge),
+   then the X-ray from the top, the slips one by one, and last the pages, wiped in from the front one. */
+const SPEC = { rows: 14, pitch: 1.279, wide: 7.24, xr: 784 / 1044, fan: 1641 / 1002 };
+const specH = () => (SPEC.rows - 1) * SPEC.pitch + 1;
+function specLayout(s, R) {
+  const fig = [...s.m.children], W = R.x1 - R.x0, H = R.y1 - R.y0, mob = vw < 700, sw = SPEC.wide / specH();
+  const c2 = .46, sl = [[179 / 241, .143], [303 / 383, .228], [176 / 606, .36]], sg = (c2 - sl.reduce((a, [r, h]) => a + r * h, 0)) / 2;
+  const put = (k, x, y, ww, hh) => { const st = fig[k].style; st.left = x.toFixed(1) + 'px'; st.top = y.toFixed(1) + 'px'; st.width = ww.toFixed(1) + 'px'; st.height = hh.toFixed(1) + 'px'; };
+  const left = (x, y, u) => {            // the typefaces, the X-ray and the slips, u high, from x, y
+    put(0, x, y, sw * u, u);
+    const x2 = x + (sw + .045) * u; put(1, x2, y, c2 * u, c2 / SPEC.xr * u);
+    let xs = x2; sl.forEach(([r, h], q) => { put(2 + q, xs, y + (1 - h) * u, r * h * u, h * u); xs += (r * h + sg) * u; });
+    return x2 + c2 * u;
+  };
+  if (!mob) {
+    const fh = .86, need = sw + .045 + c2 + .07 + fh * SPEC.fan, u = Math.min(H, W / need);
+    const spare = Math.max(0, W - need * u), g1 = .045 * u + Math.min(spare / 3, .2 * u), g2 = .07 * u + Math.min(spare * 2 / 3, .3 * u);
+    const tot = need * u + (g1 - .045 * u) + (g2 - .07 * u), x0 = R.x0 + (W - tot) / 2, y0 = R.y0 + (H - u) / 2;
+    put(0, x0, y0, sw * u, u);
+    const x2 = x0 + sw * u + g1; put(1, x2, y0, c2 * u, c2 / SPEC.xr * u);
+    let xs = x2; sl.forEach(([r, h], q) => { put(2 + q, xs, y0 + (1 - h) * u, r * h * u, h * u); xs += (r * h + sg) * u; });
+    put(5, x2 + c2 * u + g2, y0 + (1 - fh) * u, fh * SPEC.fan * u, fh * u);
+  } else {
+    const gap = R.gut, fw = W, fhh = fw / SPEC.fan, need = sw + .045 + c2, u = Math.max(40, Math.min(W / need, H - gap - fhh));
+    const y0 = R.y0 + Math.max(0, (H - u - gap - fhh) / 2);
+    left(R.x0 + (W - need * u) / 2, y0, u);
+    put(5, R.x0, y0 + u + gap, fw, fhh);
+  }
+  const c = s.xs[0], dpr = Math.min(window.devicePixelRatio || 1, 2), r = fig[0].style;
+  c.width = Math.round(parseFloat(r.width) * dpr); c.height = Math.round(parseFloat(r.height) * dpr); s.spOff = null;
+}
+function specSheet(cw, ch) {               // the fourteen rows, once, off screen
+  const G = window.FY_GLYPHS, o = document.createElement('canvas'); o.width = cw; o.height = ch;
+  const x = o.getContext('2d'), Rh = ch / specH(), TH = 600, P2 = specSheet.p || (specSheet.p = {});
+  const ff = getComputedStyle(document.body).fontFamily;
+  x.font = `700 ${(.288 * Rh).toFixed(2)}px ${ff}`; x.textBaseline = 'top'; x.fillStyle = '#fff';
+  const cell = (yi, gi, cx, cy, w, h) => {
+    x.save(); x.fillStyle = '#fff'; x.fillRect(cx, cy, w, h); x.beginPath(); x.rect(cx, cy, w, h); x.clip();
+    const g = G[yi][gi], sc = h / TH, key = yi + '_' + gi, pth = P2[key] || (P2[key] = new Path2D(g[1]));
+    x.translate(cx + (w - g[0] * sc) / 2, cy); x.scale(sc, sc); x.fillStyle = '#000'; x.fill(pth); x.restore();
+  };
+  for (let k = 0; k < SPEC.rows; k++) {
+    const y = k * SPEC.pitch * Rh;
+    x.fillText(String(2010 + k), 0, y - .02 * Rh);
+    const xa = .69 * Rh, big = .663 * Rh, xs = xa + big + .105 * Rh, pw = .428 * Rh, tw = .295 * Rh, th = .458 * Rh;
+    cell(k, 0, xa, y, big, Rh);
+    for (let q = 0; q < 12; q++) { cell(k, 1 + q, xs + q * pw, y, tw, th); cell(k, 13 + q, xs + q * pw, y + Rh - th, tw, th); }
+    cell(k, 25, xs + 11 * pw + tw + .116 * Rh, y, big, Rh);
+  }
+  return o;
+}
+function specFrame(s, P) {
+  const fig = s.m.children, c = s.xs[0];
+  if (!window.FY_GLYPHS) {                 // the glyphs come with the X-ray stage; fetch them if it was passed by
+    if (!specFrame.ld) { specFrame.ld = 1; const e = document.createElement('script'); e.src = 'fy/fy-glyphs.js?v=' + WSV; e.onload = () => { s.fp = -1; }; document.head.appendChild(e); }
+  } else if (c.width > 1) {
+    if (!s.spOff) s.spOff = specSheet(c.width, c.height);
+    const x = c.getContext('2d'), Rh = c.height / specH(), cw = c.width, soft = cw * .35;
+    x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, cw, c.height);
+    for (let k = 0; k < SPEC.rows; k++) {
+      const e = easeInOut(clamp((P - .03 - k * .03) / .13, 0, 1)); if (e <= 0) break;
+      const y0 = Math.max(0, Math.floor(k * SPEC.pitch * Rh - .1 * Rh)), h = Math.min(c.height - y0, Math.ceil(1.2 * Rh));
+      x.globalCompositeOperation = 'source-over'; x.drawImage(s.spOff, 0, y0, cw, h, 0, y0, cw, h);
+      if (e < 1) {
+        const pos = e * (cw + soft), g = x.createLinearGradient(pos - soft, 0, pos, 0);
+        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,1)');
+        x.globalCompositeOperation = 'destination-out'; x.fillStyle = g; x.fillRect(Math.max(0, pos - soft), y0, cw, h);
+      }
+    }
+    x.globalCompositeOperation = 'source-over';
+  }
+  fig[0].style.visibility = 'visible';
+  // a soft-edged wipe: angle, progress
+  const wipe = (el, deg, e) => {
+    const st = el.style;
+    if (e <= 0) { st.visibility = 'hidden'; return; }
+    st.visibility = 'visible';
+    if (e >= 1) { st.webkitMaskImage = st.maskImage = ''; return; }
+    const a = e * 140 - 40, m = `linear-gradient(${deg}deg, #000 ${a.toFixed(2)}%, transparent ${(a + 40).toFixed(2)}%)`;
+    st.webkitMaskImage = st.maskImage = m;
+  };
+  wipe(fig[1], 180, easeInOut(clamp((P - .4) / .22, 0, 1)));                  // the X-ray, from the top
+  for (let q = 0; q < 3; q++) {                                               // the slips, one by one, from below
+    const e = easeInOut(clamp((P - .52 - q * .06) / .14, 0, 1)), st = fig[2 + q].style;
+    st.visibility = e > 0 ? 'visible' : 'hidden'; st.opacity = e >= 1 ? '' : e.toFixed(3); st.transform = e >= 1 ? '' : `translate3d(0,${(14 * (1 - e)).toFixed(2)}px,0)`;
+  }
+  wipe(fig[5], 62, easeInOut(clamp((P - .62) / .36, 0, 1)));                 // the pages, from the front one
+}
 function flFrame(w, yy) {
   w.S.forEach((s, j) => {
     if ((!s.fl && !s.w3) || j === 0) return;
@@ -1537,6 +1636,7 @@ function flFrame(w, yy) {
     const P = Math.round(clamp((yy - y0) / (y1 - y0), 0, 1) * 1000) / 1000;
     if (P === s.fp) return; s.fp = P;
     if (s.w3) { if (window.LM) s.xs.forEach((c, q) => window.LM.draw(c, P, s.it[q].id, w.lmOpt)); return; }
+    if (s.lay === 'spec') { specFrame(s, P); return; }
     const fig = s.m.children, n = s.it.length;
     let P0 = 0;
     if (s.u) {   // the first spread: at first only its left page, in the middle of its place; it opens out to the whole spread
