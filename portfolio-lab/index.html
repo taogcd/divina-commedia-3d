@@ -498,22 +498,20 @@ const SETS = { 'Compressed Modernity': [
   { lay: 'model', it: [CMW('door')] },
   { lay: 'full', it: [CMI('g0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('g3', 2200, 1466), CMI('g4', 2200, 1466)] },
-  // each book's inner pages on one screen, all at one scale (a page is a page): the first spread opens out of a
-  // single page, then the rest come in one by one as the screen is scrolled, filling it around the text
-  CMB(true, CMF('gb', 2200, 390, 25)),
+  // each book on one screen, as photographed for the portfolio: its cover being written, then its pages opened out,
+  // each picture cut from that sheet and all at one scale; they come in one by one as the screen is scrolled, filling
+  // it around the text
+  { lay: 'flats', it: [CMI('gx01', 244, 341), CMI('gx02', 461, 341), CMI('gx03', 447, 341), CMI('gx04', 808, 341), CMI('gx05', 1552, 341), CMI('gx06', 458, 341), CMI('gx07', 852, 341), CMI('gx08', 1519, 341), CMI('gx09', 835, 341), CMI('gx10', 1594, 341), CMI('gx11', 1658, 341), CMI('gx12', 520, 341), CMI('gx13', 469, 341), CMI('gx14', 1553, 341), CMI('gx15', 433, 341), CMI('gx16', 429, 341), CMI('gx17', 843, 341), CMI('gx18', 824, 341), CMI('gx19', 434, 341), CMI('gx20', 1556, 341), CMI('gx21', 822, 341), CMI('gx22', 1618, 341), CMI('gx23', 1622, 341), CMI('gx24', 417, 341)] },
   { lay: 'full', it: [CMI('r0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('r1', 2200, 1467), CMI('r2', 2200, 1467)] },
-  CMB(false, CMF('bb', 1100, 397, 44)),
+  { lay: 'flats', it: [CMI('bx01', 246, 343), CMI('bx02', 249, 343), CMI('bx03', 419, 343), CMI('bx04', 807, 343), CMI('bx05', 1791, 343), CMI('bx06', 432, 343), CMI('bx07', 821, 343), CMI('bx08', 1506, 343), CMI('bx09', 840, 343), CMI('bx10', 1503, 343), CMI('bx11', 1640, 343), CMI('bx12', 486, 343), CMI('bx13', 436, 343), CMI('bx14', 1528, 343), CMI('bx15', 433, 343), CMI('bx16', 435, 343), CMI('bx17', 825, 343), CMI('bx18', 825, 343), CMI('bx19', 426, 343), CMI('bx20', 1529, 343), CMI('bx21', 827, 343), CMI('bx22', 1607, 343), CMI('bx23', 1625, 343), CMI('bx24', 417, 343)] },
   { lay: 'full', it: [CMI('d0', 2200, 1467)] },
   { lay: 'pair', it: [CMI('d1', 2200, 1327), CMI('d2', 2200, 1327)] },
-  // the red book: its three shadowed spreads first, then (from a new row) the rest of its pages as flat sheets
-  CMB(true, CMF('rs', 2200, 390, 3), CMF('rb', 1100, 397, 46, true)),
-  { lay: 'trio', it: [CMI('c0', 1998, 880), CMI('c1', 2200, 929), CMI('c2', 2137, 899)] },
-  // the three books photographed shut, half open and opened out, packed close over the whole screen; they come in
-  // shortest first
-  { lay: 'pile', it: [[1541], [467], [829], [447], [1564], [442], [859], [886], [1529], [454], [474], [863], [1513], [879], [442],
-    [1555], [484], [829], [455], [1518], [444], [859], [861], [1595], [835], [443], [1588], [858], [1576], [1529]].map(([w], q) => CMI('n' + pad(q + 1), w, 320)) },
+  { lay: 'flats', it: [CMI('rx01', 242, 330), CMI('rx02', 246, 330), CMI('rx03', 433, 330), CMI('rx04', 785, 330), CMI('rx05', 1799, 330), CMI('rx06', 427, 330), CMI('rx07', 818, 330), CMI('rx08', 1561, 330), CMI('rx09', 833, 330), CMI('rx10', 1482, 330), CMI('rx11', 742, 330), CMI('rx12', 1487, 330), CMI('rx13', 433, 330), CMI('rx14', 1525, 330), CMI('rx15', 431, 330), CMI('rx16', 429, 330), CMI('rx17', 821, 330), CMI('rx18', 805, 330), CMI('rx19', 433, 330), CMI('rx20', 1570, 330), CMI('rx21', 822, 330), CMI('rx22', 1600, 330), CMI('rx23', 1606, 330), CMI('rx24', 442, 330)] },
+  // the three books' fore-edges and their frayed cloth: stacked, the pages curling, the three stacked again
   { lay: 'full', it: [CMI('k0', 2200, 1467)] },
+  { lay: 'full', it: [CMI('q0', 2200, 1466)] },
+  { lay: 'full', it: [CMI('q1', 2200, 1466)] },
 ],
 /* Brick's, from its own folder: the factory (its walls of test cubes, scrap, pipes, the machines); the day's work in
    film (filling the moulds, the mould on the vibrating table, nails pressed into the wet cement, the round-head nails
