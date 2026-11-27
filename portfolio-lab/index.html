@@ -208,7 +208,14 @@ html.smooth .wc-frame{will-change:transform}
 /* a set: one to three pictures or film loops in a band above the text, side by side, each whole (contained) */
 .wc-set{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);
   display:flex;gap:calc(var(--gut) * 1.5);align-items:stretch;justify-content:center;object-fit:unset}
-.wc-set.lay-rows{flex-direction:column}
+.wc-set.lay-rows,.wc-set.lay-stack{flex-direction:column}
+/* stack: pictures one above the other, each across the whole width from margin to margin, down to the foot of the
+   frame (the text over them), each cut to its share of the height */
+@media (min-width:700px){ .wc-set.lay-stack{height:calc(var(--vhp,100vh) - var(--navh) - 40px - var(--m));gap:calc(var(--gut) * .9)}
+  .lay-stack .wc-it{flex:1 1 0}
+  .lay-stack .wc-x{object-fit:cover}
+  .lay-stack .wc-it:first-child .wc-x{object-position:50% 28%}
+  .lay-stack .wc-it:last-child .wc-x{object-position:50% 42%} }
 .wc-it{margin:0;position:relative;min-width:0;min-height:0;flex:var(--ar) 1 0}
 .lay-rows .wc-it{flex:var(--iar) 1 0}
 /* sheets: whole pages at the band's full height, side by side with an even gap, the group centred */
@@ -464,6 +471,7 @@ const CMB = (u, ...groups) => ({ lay: 'flats', u: !!u, it: [].concat(...groups) 
 const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (lm.js), opened as the page scrolls
 const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
+const FYI = (id, w, h) => ({ t: 'i', src: `fy/x/${id}.jpg?v=112`, srcS: `fy/x/${id}-s.jpg?v=112`, ar: w / h });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
 /* the Commedia's pictures stay as they are, full screen (upright ones whole between the bar and the foot), with these set
@@ -482,6 +490,12 @@ const ADD = { 'La Divina Commedia': [
   { before: 'dc-04', s: { lay: 'model', it: [CMW('big')] } },
   { before: 'dc-04', move: 'dc-13' },
   { before: 'dc-17h', s: { lay: 'model', it: [CMW('dragon')] } },
+],
+/* Fourteen Years: the sheet with two photographs of the paper (in the wind; laid open) as the two photographs, one
+   above the other, each drawn out across the whole width */
+'Fourteen Years': [
+  { before: 'F2562667422543983029815509045934', s: { lay: 'stack', it: [FYI('s0a', 2200, 759), FYI('s0b', 2200, 759)] } },
+  { drop: 'F2562667422543983029815509045934' },
 ] }, FULLW = { 'La Divina Commedia': 1 };
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
@@ -543,6 +557,7 @@ function buildWC(i, p, no, wk, links, host) {
     .concat(SET ? SET.map((x, q) => Object.assign({ kind: 'set', j: q + 1 }, x)) : []);
   if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
   (ADD[p.t] || []).forEach(a => {
+    if (a.drop) { const q = S.findIndex(s => s.kind === 'img' && s.im[0] === a.drop); if (q >= 0) S.splice(q, 1); return; }
     let mv = null; if (a.move) { const q = S.findIndex(s => s.kind === 'img' && s.im[0] === a.move); if (q >= 0) mv = S.splice(q, 1)[0]; }
     const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k < 0) return;
     S.splice(k, 0, mv || (a.im ? { kind: 'img', im: a.im, j: k } : Object.assign({ kind: 'set', j: k }, a.s)));
