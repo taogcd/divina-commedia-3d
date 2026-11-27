@@ -209,9 +209,10 @@ html.smooth .wc-frame{will-change:transform}
 .wc-set{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);
   display:flex;gap:calc(var(--gut) * 1.5);align-items:stretch;justify-content:center;object-fit:unset}
 .wc-set.lay-rows,.wc-set.lay-stack{flex-direction:column}
-/* stack: pictures one above the other, each across the whole width from margin to margin, down to the foot of the
+/* fit: one picture, whole, as large as the frame below the timeline allows (the text over it); stack: pictures one above the other, each across the whole width from margin to margin, down to the foot of the
    frame (the text over them), each cut to its share of the height */
-@media (min-width:700px){ .wc-set.lay-stack{height:calc(var(--vhp,100vh) - var(--navh) - 40px - var(--m));gap:calc(var(--gut) * .9)}
+@media (min-width:700px){ .wc-set.lay-stack,.wc-set.lay-fit{height:calc(var(--vhp,100vh) - var(--navh) - 40px - var(--m))}
+  .wc-set.lay-stack{gap:calc(var(--gut) * .9)}
   .lay-stack .wc-it{flex:1 1 0}
   .lay-stack .wc-x{object-fit:cover}
   .lay-stack .wc-it:first-child .wc-x{object-position:50% 28%}
@@ -472,7 +473,7 @@ const CMB = (u, ...groups) => ({ lay: 'flats', u: !!u, it: [].concat(...groups) 
 const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (lm.js), opened as the page scrolls
 const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
-const FYI = (id, w, h) => ({ t: 'i', src: `fy/x/${id}.jpg?v=112`, srcS: `fy/x/${id}-s.jpg?v=112`, ar: w / h });
+const FYI = (id, w, h, pos) => ({ t: 'i', src: `fy/x/${id}.jpg?v=114`, srcS: `fy/x/${id}-s.jpg?v=114`, ar: w / h, pos });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
 /* the Commedia's pictures stay as they are, full screen (upright ones whole between the bar and the foot), with these set
@@ -502,6 +503,12 @@ const ADD = { 'La Divina Commedia': [
      each comes in as the page is scrolled (specLayout, specFrame) */
   { before: 'C2722144869747043827428899619111', s: { lay: 'spec', it: [{ t: 'g', ar: 1 }, FYI('sp-xray', 784, 1044), FYI('sp-card', 179, 241), FYI('sp-form', 303, 383), FYI('sp-rcpt', 176, 606), FYI('sp-fan', 1641, 1002)] } },
   { drop: 'C2722144869747043827428899619111' },
+  // the paper in the wind against the sky, across the whole width
+  { before: 'P2956210945005156095204734063278', s: { lay: 'stack', it: [FYI('sky', 2200, 1466, '50% 56%')] } },
+  { drop: 'P2956210945005156095204734063278' },
+  // the J and the R: the book's pages cut from their ground, laid on the black, large in the middle of the frame
+  { before: 'C2897593352518410091031590916782', s: { lay: 'fit', it: [FYI('jr', 2800, 1346)] } },
+  { drop: 'C2897593352518410091031590916782' },
 ] }, FULLW = { 'La Divina Commedia': 1 };
 const SETS = { 'Compressed Modernity': [
   { lay: 'one', it: [CMV('v1')] },
@@ -579,7 +586,7 @@ function buildWC(i, p, no, wk, links, host) {
   const block = (hid) => `<div class="wc-tb"${hid ? ' aria-hidden="true"' : ''}><p class="wc-t"><span class="wc-no">${no}</span>${p.t}</p><p class="wc-meta">${p.y}<span>${p.f}</span></p>${body}</div>`;
   const setHTML = s => s.lay === 'full' ? `<img class="wc-m" alt="${p.t}, picture ${s.j + 1}" decoding="async">`
     : `<div class="wc-m wc-set lay-${s.lay}">${s.it.map(it => `<figure class="wc-it" style="--ar:${it.ar.toFixed(4)};--iar:${(1 / it.ar).toFixed(4)}">${it.t === 'v'
-      ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'g' ? `<canvas class="wc-x wc-spec" role="img" aria-label="${p.t}: the fourteen typefaces, A to Z, 2010 to 2023"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async">`}</figure>`).join('')}</div>`;
+      ? `<video class="wc-x" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>` : it.t === 'w' ? `<canvas class="wc-x wc-3d" role="img" aria-label="${p.t}, a model of the book in lines"></canvas>` : it.t === 'g' ? `<canvas class="wc-x wc-spec" role="img" aria-label="${p.t}: the fourteen typefaces, A to Z, 2010 to 2023"></canvas>` : it.t === 'l' ? `<svg class="wc-x wc-ln" viewBox="0 0 ${it.w} ${it.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${p.t}, drawing"></svg>` : `<img class="wc-x" alt="${p.t}" decoding="async"${it.pos ? ` style="object-position:${it.pos}"` : ''}>`}</figure>`).join('')}</div>`;
   const inner = `${S.map((s, k) => `<div class="wc-s${cls(s, k)}">${s.kind === 'film'
       ? `<video class="wc-m" muted loop playsinline preload="none" aria-label="${p.t}, film"></video>`
       : s.kind === 'set' ? setHTML(s)
