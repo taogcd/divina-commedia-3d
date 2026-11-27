@@ -5,6 +5,9 @@
    running down the row from 2010 to 2023. Then the fourteen J's close up into one body along a time axis, the slices
    between two years passing from one J into the next: the camera walks round it, comes to its front and travels down
    it, 2010 to 2023, and the last J comes to rest exactly on the J printed in the book, where the photograph takes over.
+   Before all this the stands hold the films the faces were taken from, one examination for each year (fy/films.jpg, 7 × 2):
+   a scanner line runs down each film and pushes it to black and white, then the letter draws the bright bone into its
+   strokes and lets the rest of the film go, the solid letter hollows into an X-ray of itself, and the exhibit takes over.
    Glyphs: fy/fy-glyphs.js (traced from the specimen, 14 × 26, tiles 600 units high). Needs THREE (r128). */
 window.FYStage = function (frame, opts) {
   'use strict';
@@ -15,8 +18,8 @@ window.FYStage = function (frame, opts) {
   const eo3 = t => 1 - Math.pow(1 - t, 3);
   const N = 14, TH = 600, TW = 384, J = 9, YEARS = Array.from({ length: N }, (_, k) => 2010 + k);
   // timeline (u)
-  const DARK = [0, .6], SET = [.45, .55], SET_ST = .035, CYC = [1.1, 2.6], CYC_ST = .03, GATHER = [4.0, .8];
-  const K0 = 4.8, K1 = 5.5, K2 = 6.05, K3 = 7.3, PH = [7.2, 7.7], END = 8.0;
+  const DARK = [0, .6], SET = [.45, .55], SET_ST = .035, MO = [1.05, .9], MO_ST = .05, CYC = [2.1, 2.6], CYC_ST = .05, GATHER = [5.3, .8];
+  const K0 = 6.1, K1 = 6.8, K2 = 7.35, K3 = 8.6, PH = [8.5, 9.0], END = 9.3;
   const FOV = 32, FOV_END = 104, DZ = 1, PER = 10;       // body: one unit per year, ten slices to a year
   const PJ = [313.95, 383.7], UG = 1 / TH;                 // the J's pivot (units) and world size of a unit
   const TINT = [.82, .93, 1];
@@ -29,7 +32,7 @@ window.FYStage = function (frame, opts) {
   frame.appendChild(cv); frame.appendChild(photo); frame.appendChild(ov);
   const ox = ov.getContext('2d');
   let T = null, R = null, scene, cam, G = null, P2 = [], vw = 1, vh = 1, dpr = 1, mobile = false, loaded = 0, key = '', g0 = null, font = '';
-  let cards = [], card = { w: 1, h: 1 }, ex = [], body = null, bodyMat = null, atlas = null, built = false;
+  let cards = [], card = { w: 1, h: 1 }, ex = [], body = null, bodyMat = null, atlas = null, built = false, films = null, sdTex = null;
 
   function js(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = rej; document.head.appendChild(el); }); }
   function load() {
@@ -90,6 +93,40 @@ window.FYStage = function (frame, opts) {
       v *= smoothstep(uN0, uN1, vD) * mix(1., face * 2.2, uKey);
       gl_FragColor = vec4(uTint * v * uA, 1.);
     }`;
+  // the film on its stand, becoming the year's A (films and the A's distance field: atlases 7 × 2)
+  const VS_F = `
+    varying vec2 vUv;
+    void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
+  const FS_F = `
+    precision highp float;
+    uniform sampler2D uFilm, uSD; uniform vec2 uCell; uniform float uM, uA, uTime; uniform vec3 uTint;
+    varying vec2 vUv;
+    float h21(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+      return mix(mix(h21(i), h21(i + vec2(1., 0.)), f.x), mix(h21(i + vec2(0., 1.)), h21(i + vec2(1., 1.)), f.x), f.y); }
+    vec2 cell(vec2 uv){ return vec2((uCell.x + uv.x) / 7., 1. - (uCell.y + 1. - uv.y) / 2.); }
+    void main(){
+      vec2 uv = vUv; float m = uM;
+      float sd = (texture2D(uSD, cell(uv)).r - .5) * .5;          // to the letter, in card heights, + outside
+      float f = texture2D(uFilm, cell(uv)).r;
+      float n = vn(uv * vec2(14., 22.)) * .6 + vn(uv * vec2(45., 70.)) * .4;
+      // the scanner: behind its line the film is black and white
+      float ys = 1.06 - smoothstep(0., .32, m) * 1.12;
+      float c = smoothstep(ys - .025, ys + .025, uv.y);
+      float line = exp(-abs(uv.y - ys) / .004) * (1. - smoothstep(.26, .32, m)) * .55;
+      // the letter draws the bright parts of the film into its strokes and pushes the rest away
+      float e = smoothstep(.28, .86, m);
+      float bias = e * clamp(-sd * mix(2., 75., e * e), -1.6, 1.6);
+      float thr = .58 + (n - .5) * .2 * (1. - e);
+      float hi = smoothstep(thr - .05, thr + .05, f + bias + (n - .5) * .3 * e * (1. - e));
+      float v = mix(f * .8, hi * (.74 + .26 * f) * .95, c);         // the bone still showing in the strokes
+      // the solid letter hollows into an X-ray of itself: the edge bright, inside a faint density
+      float h = smoothstep(.78, .95, m);
+      v = mix(v, v * .1 + exp(-abs(sd) / .0045) * .85, h);
+      v += line;
+      v *= .82 + .36 * h21(gl_FragCoord.xy + uTime);
+      gl_FragColor = vec4(uTint * v * uA, 1.);
+    }`;
   // quads stacked along z; px,py: the pivot (units); depth spread d (world), ns slices
   function stackGeo(ns, w, h, px, py, d) {
     const pos = [], uv = [], sl = [], idx = [];
@@ -117,6 +154,35 @@ window.FYStage = function (frame, opts) {
     g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
     g.setAttribute('aY', new T.Float32BufferAttribute(ay, 4)); g.setIndex(idx); return g;
   }
+  // each year's A as a signed distance field, laid out as xray() lays it out on its tile (two chamfer passes)
+  function sdAtlas() {
+    const sw = 128, sh = 200, c = document.createElement('canvas'); c.width = sw * 7; c.height = sh * 2;
+    const x = c.getContext('2d'), img = x.createImageData(c.width, c.height), BIG = 1e5;
+    const mk = document.createElement('canvas'); mk.width = sw; mk.height = sh; const mx = mk.getContext('2d');
+    const dIn = new Float32Array(sw * sh), dOut = new Float32Array(sw * sh);
+    const pass = (d) => {
+      for (let y = 0; y < sh; y++) for (let i = 0; i < sw; i++) { const o = y * sw + i; let v = d[o];
+        if (i > 0) v = Math.min(v, d[o - 1] + 1); if (y > 0) { v = Math.min(v, d[o - sw] + 1); if (i > 0) v = Math.min(v, d[o - sw - 1] + 1.4142); if (i < sw - 1) v = Math.min(v, d[o - sw + 1] + 1.4142); } d[o] = v; }
+      for (let y = sh - 1; y >= 0; y--) for (let i = sw - 1; i >= 0; i--) { const o = y * sw + i; let v = d[o];
+        if (i < sw - 1) v = Math.min(v, d[o + 1] + 1); if (y < sh - 1) { v = Math.min(v, d[o + sw] + 1); if (i < sw - 1) v = Math.min(v, d[o + sw + 1] + 1.4142); if (i > 0) v = Math.min(v, d[o + sw - 1] + 1.4142); } d[o] = v; }
+    };
+    for (let k = 0; k < N; k++) {
+      const s = sh / TH, gw = G[k][0][0];
+      mx.setTransform(1, 0, 0, 1, 0, 0); mx.fillStyle = '#000'; mx.fillRect(0, 0, sw, sh);
+      mx.translate((sw - gw * s) / 2, 0); mx.scale(s, s); mx.fillStyle = '#fff'; mx.fill(path(k, 0));
+      const a = mx.getImageData(0, 0, sw, sh).data;
+      for (let o = 0; o < sw * sh; o++) { const ins = a[o * 4] > 127; dIn[o] = ins ? BIG : 0; dOut[o] = ins ? 0 : BIG; }
+      pass(dIn); pass(dOut);
+      const cx = (k % 7) * sw, cy = Math.floor(k / 7) * sh;
+      for (let y = 0; y < sh; y++) for (let i = 0; i < sw; i++) {
+        const o = y * sw + i, cov = a[o * 4] / 255, d = (dOut[o] > 0 ? dOut[o] - 1 : 1 - dIn[o]) + (.5 - cov);
+        const v = Math.round(clamp(.5 + d / sh * 2, 0, 1) * 255), q = ((cy + y) * c.width + cx + i) * 4;
+        img.data[q] = img.data[q + 1] = img.data[q + 2] = v; img.data[q + 3] = 255;
+      }
+    }
+    x.putImageData(img, 0, 0);
+    const t = new T.CanvasTexture(c); t.minFilter = T.LinearFilter; t.generateMipmaps = false; return t;
+  }
   const xmat = (fs, uni) => new T.ShaderMaterial({ vertexShader: fs === FS_B ? VS_B : VS, fragmentShader: fs, uniforms: uni,
     transparent: true, blending: T.AdditiveBlending, depthTest: false, depthWrite: false, side: T.DoubleSide });
 
@@ -126,13 +192,20 @@ window.FYStage = function (frame, opts) {
     scene = new T.Scene(); cam = new T.PerspectiveCamera(FOV, 1, .01, 100);
     // exhibits: one stack each, its own film, redrawn when the letter changes
     const tw = mobile ? 160 : 256, th = Math.round(tw * TH / TW);
+    films = new T.Texture(); films.minFilter = T.LinearFilter; films.generateMipmaps = false;
+    if (opts.films) new T.TextureLoader().load(opts.films, (t) => { t.minFilter = T.LinearFilter; t.generateMipmaps = false; for (const e of ex) e.fm.uniforms.uFilm.value = t; key = ''; });
+    sdTex = sdAtlas();
+    const plane = new T.PlaneGeometry(1, 1);
     ex = YEARS.map((yr, k) => {
       const c = document.createElement('canvas'); c.width = tw; c.height = th;
       const tex = new T.CanvasTexture(c); tex.minFilter = T.LinearFilter; tex.generateMipmaps = false;
       const m = xmat(FS_EX, { uTex: { value: tex }, uA: { value: 0 }, uFlip: { value: 0 }, uTime: { value: 0 }, uTint: { value: new T.Vector3(...TINT) } });
       const g = new T.Group(), mesh = new T.Mesh(stackGeo(16, 1, 1, .5, .5, .26), m);
-      g.add(mesh); scene.add(g); mesh.frustumCulled = false;
-      return { k, c, x: c.getContext('2d'), tex, m, g, mesh, gl: -1 };
+      const fm = new T.ShaderMaterial({ vertexShader: VS_F, fragmentShader: FS_F, transparent: true, blending: T.AdditiveBlending, depthTest: false, depthWrite: false,
+        uniforms: { uFilm: { value: films }, uSD: { value: sdTex }, uCell: { value: new T.Vector2(k % 7, Math.floor(k / 7)) }, uM: { value: 0 }, uA: { value: 0 }, uTime: { value: 0 }, uTint: { value: new T.Vector3(...TINT) } } });
+      const fp = new T.Mesh(plane, fm); fp.frustumCulled = false;
+      g.add(mesh); g.add(fp); scene.add(g); mesh.frustumCulled = false;
+      return { k, c, x: c.getContext('2d'), tex, m, g, mesh, fm, fp, gl: -1 };
     });
     // the body along the time axis, every year's J on one film
     const aw = mobile ? 200 : 300, ah = Math.round(aw * TH / TW);
@@ -232,8 +305,12 @@ window.FYStage = function (frame, opts) {
       e.g.position.copy(p0.lerp(p1, g));
       e.g.rotation.set(0, turn, 0);
       e.g.scale.set(lerp(Wd, TW * UG, g), lerp(H, TH * UG, g), lerp(H, TH * UG, g) * lerp(1, .9, g));
-      e.m.uniforms.uA.value = st * exA * (1 - .25 * g);
-      e.g.visible = st * exA > .002;
+      // the film first, becoming the letter; the exhibit takes over as it hollows
+      const mo = clamp((u - MO[0] - e.k * MO_ST) / MO[1], 0, 1);
+      const fa = st * (1 - smt(.86, 1, mo)), xa = st * exA * (1 - .25 * g) * smt(.72, 1, mo);
+      e.fm.uniforms.uM.value = mo; e.fm.uniforms.uA.value = fa; e.fm.uniforms.uTime.value = time;
+      e.m.uniforms.uA.value = xa;
+      e.fp.visible = fa > .002; e.mesh.visible = xa > .002; e.g.visible = e.fp.visible || e.mesh.visible;
     }
     // ----- the camera -----
     const pre = { p: V(0, 0, Zc), t: V(0, 0, 0) };
