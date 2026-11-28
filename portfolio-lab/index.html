@@ -476,7 +476,7 @@ const CMB = (u, ...groups) => ({ lay: 'flats', u: !!u, it: [].concat(...groups) 
 const CMW = id => ({ t: 'w', id, ar: 16 / 9 });                     // a model drawn in lines (lm.js), opened as the page scrolls
 const CML = (id, w, h) => ({ t: 'l', id, w, h, ar: w / h });      // a drawing as line data (cm/lines.js), drawn as the page scrolls
 const CMV = id => ({ t: 'v', src: `cm/x/${id}.mp4?v=97`, srcS: `cm/x/${id}-s.mp4?v=97`, poster: `cm/x/${id}.jpg?v=97`, ar: 16 / 9 });
-const FYI = (id, w, h, pos) => ({ t: 'i', src: `fy/x/${id}.jpg?v=116`, srcS: `fy/x/${id}-s.jpg?v=116`, ar: w / h, pos });
+const FYI = (id, w, h, pos) => ({ t: 'i', src: `fy/x/${id}.jpg?v=118`, srcS: `fy/x/${id}-s.jpg?v=118`, ar: w / h, pos });
 const BRI = (id, w, h) => ({ t: 'i', src: `br/x/${id}.jpg?v=91`, srcS: `br/x/${id}-s.jpg?v=91`, ar: w / h });
 const BRV = id => ({ t: 'v', src: `br/x/${id}.mp4?v=90`, srcS: `br/x/${id}-s.mp4?v=90`, poster: `br/x/${id}.jpg?v=91`, ar: 16 / 9 });
 /* the Commedia's pictures stay as they are, full screen (upright ones whole between the bar and the foot), with these set
@@ -530,7 +530,7 @@ const ADD = { 'La Divina Commedia': [
   // the book in the hand, in black and white (in the places of the two pictures of hands holding the book, and after)
   { before: 'S2956232580969919220253309850286', s: { lay: 'fit', it: [FYI('bwB', 3200, 1600)] } },
   { drop: 'S2956232580969919220253309850286' },
-  { before: 'F2956232896003414511065032348334', s: { lay: 'fit', it: [FYI('bwC', 3200, 1600)] } },
+  { before: 'F2956232896003414511065032348334', s: { lay: 'fit', it: [FYI('bwC', 3200, 1391)] } },
   { drop: 'F2956232896003414511065032348334' },
   { end: 1, s: { lay: 'fit', it: [FYI('bw04s', 3200, 1600)] } },
   { end: 1, s: { lay: 'fit', it: [FYI('bwD', 3200, 1600)] } },
