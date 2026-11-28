@@ -204,6 +204,7 @@ html.smooth .wc-frame{will-change:transform}
 /* a model in lines across the whole screen */
 .wc-set.lay-model{left:0;top:0;width:100%;height:100%;display:block}
 .lay-model .wc-it{position:absolute;inset:0;flex:none}
+@media (min-width:700px){ .wc-s.band.ffull .wc-m{left:0;top:0;width:100%;height:100%;object-fit:cover} }
 .wc-s.band .wc-m{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);object-fit:contain;transform-origin:50% 50%}
 /* a set: one to three pictures or film loops in a band above the text, side by side, each whole (contained) */
 .wc-set{left:var(--m);top:calc(var(--navh) + 40px);width:calc(100% - 2 * var(--m));height:calc(var(--vhp,100vh) - var(--navh) - 40px - 30vh - var(--m) - 18px);
@@ -461,7 +462,9 @@ const WS = { 'Compressed Modernity': 'cm', 'Fourteen Years': 'fy', 'Brick': 'br'
    The Commedia's film is the second picture: it plays (muted, looping) while it is on screen; sound on request. */
 const FILM = { 0: { at: 1, src: 'dc/dc-film.mp4', srcS: 'dc/dc-film-s.mp4', poster: 'dc/dc-film.jpg', posterS: 'dc/dc-film-s.jpg', ar: 16 / 9 },
   // Compressed Modernity's film, at the end
-  1: { at: 1e3, src: 'cm/x/cm-film.mp4?v=97', srcS: 'cm/x/cm-film-s.mp4?v=97', poster: 'cm/x/cm-film.jpg?v=97', posterS: 'cm/x/cm-film-s.jpg?v=97', ar: 16 / 9 } };
+  1: { at: 1e3, src: 'cm/x/cm-film.mp4?v=97', srcS: 'cm/x/cm-film-s.mp4?v=97', poster: 'cm/x/cm-film.jpg?v=97', posterS: 'cm/x/cm-film-s.jpg?v=97', ar: 16 / 9 },
+  // Fourteen Years' film, at the end, after the pictures added to the chapter
+  2: { at: 1e3, src: 'fy/x/fy-film.mp4?v=119', srcS: 'fy/x/fy-film-s.mp4?v=119', poster: 'fy/x/fy-film.jpg?v=119', posterS: 'fy/x/fy-film-s.jpg?v=119', ar: 16 / 9, full: 1 } };
 /* Compressed Modernity's pictures, from the work's own folder: after the stage's last photograph, sets of one to three
    pictures or film loops (never more than three to a screen), each whole on the black: the paper in the wind (from the
    film); rubbing, in red and in green; trials on paper and the survey drawings of the ground; then each book where it
@@ -593,7 +596,7 @@ function buildWC(i, p, no, wk, links, host) {
   const SET = SETS[p.t];
   const S = (SET ? [first] : [first].concat(p.i.map((_, j) => j).filter(j => j !== first))).map(j => ({ kind: 'img', im: p.i[j], j }))
     .concat(SET ? SET.map((x, q) => Object.assign({ kind: 'set', j: q + 1 }, x)) : []);
-  if (FILM[i]) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
+  if (FILM[i] && FILM[i].at < 1e3) S.splice(FILM[i].at, 0, Object.assign({ kind: 'film' }, FILM[i]));
   (ADD[p.t] || []).forEach(a => {
     if (a.drop) { const q = S.findIndex(s => s.kind === 'img' && s.im[0] === a.drop); if (q >= 0) S.splice(q, 1); return; }
     if (a.end) { S.push(Object.assign({ kind: 'set', j: S.length }, a.s)); return; }
@@ -602,10 +605,11 @@ function buildWC(i, p, no, wk, links, host) {
     const k = S.findIndex(s => s.kind === 'img' && s.im[0] === a.before); if (k < 0) return;
     S.splice(k, 0, mv || (a.im ? { kind: 'img', im: a.im, j: k } : Object.assign({ kind: 'set', j: k }, a.s)));
   });
+  if (FILM[i] && FILM[i].at >= 1e3) S.push(Object.assign({ kind: 'film' }, FILM[i]));
   // a picture after a model dissolves in over it, rather than rising from below
   S.forEach((s, k) => { s.xf = k > 0 && S[k - 1].lay === 'model'; });
   // full screen (the Commedia: upright pictures whole between the bar and the foot) or in the band above the text
-  const FULL = !!FULLW[p.t], cls = (s, k) => host && k === 0 ? '' : FULL ? (s.kind === 'img' && s.im[3] > s.im[2] ? ' tall' : '') : s.kind === 'img' || s.kind === 'film' ? ' band' : '';
+  const FULL = !!FULLW[p.t], cls = (s, k) => host && k === 0 ? '' : FULL ? (s.kind === 'img' && s.im[3] > s.im[2] ? ' tall' : '') : s.kind === 'img' || s.kind === 'film' ? ' band' + (s.full ? ' ffull' : '') : '';
   const sec = document.createElement(host ? 'div' : 'section');
   sec.className = host ? 'wc wc-in' : 'wc'; sec.setAttribute('aria-label', `${p.t}: pictures`);
   const TX = (window.TAO_TEXT || {})[p.t] || [['p', p.l]];
