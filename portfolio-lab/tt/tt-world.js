@@ -1,4 +1,4 @@
-/* TIMETABLE RESOLUTION STUDY, drawn in light on black: how one table is set again and again.
+/* TIMETABLE, drawn in light on black: how one table is set again and again.
    The 1928 scan of Table 13 (after Kinross) is cut into its seven fields: title, table number, page, service,
    stations, time matrix, footnotes. The fields move, still as scan, into the 8 grid (4 × 2 fields), are typeset
    there as the modern print, then move into the 20 grid (5 × 4) and the 32 grid (8 × 4); each layout is the work's
